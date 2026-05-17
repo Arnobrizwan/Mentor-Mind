@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart' hide MaterialType;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +8,10 @@ import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/data/models/learning_material.dart';
 import 'package:mentor_minds/data/models/material_search_hit.dart';
 import 'package:mentor_minds/data/models/session_search_hit.dart';
+import 'package:mentor_minds/data/repositories/auth_repository.dart';
+import 'package:mentor_minds/data/repositories/materials_repository.dart';
+import 'package:mentor_minds/data/repositories/sessions_repository.dart';
+import 'package:mentor_minds/data/repositories/subscriptions_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -99,12 +101,20 @@ class SearchState {
 // ---------------------------------------------------------------------------
 
 class SearchViewModel extends StateNotifier<SearchState> {
-  SearchViewModel() : super(const SearchState()) {
+  SearchViewModel(
+    this._authRepo,
+    this._sessionsRepo,
+    this._materialsRepo,
+    this._subscriptionsRepo,
+  ) : super(const SearchState()) {
     _init();
   }
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AuthRepository _authRepo;
+  final SessionsRepository _sessionsRepo;
+  final MaterialsRepository _materialsRepo;
+  final SubscriptionsRepository _subscriptionsRepo;
+
   Timer? _debounce;
 
   Future<void> _init() async {
@@ -121,12 +131,10 @@ class SearchViewModel extends StateNotifier<SearchState> {
   }
 
   Future<void> _loadPremium() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+    final uid = _authRepo.currentUser?.uid;
+    if (uid == null) return;
     try {
-      final doc = await _firestore.collection('users').doc(user.uid).get();
-      final type =
-          (doc.data()?['subscriptionType'] as String?)?.toLowerCase();
+      final type = await _subscriptionsRepo.getSubscriptionType(uid);
       if (!mounted) return;
       state = state.copyWith(isPremium: type == 'premium');
     } catch (_) {}
@@ -160,8 +168,8 @@ class SearchViewModel extends StateNotifier<SearchState> {
   Future<void> _runSearch(String q) async {
     try {
       final parts = await Future.wait([
-        searchMaterials(q),
-        searchSessions(_auth.currentUser?.uid, q, state.isPremium),
+        _searchMaterials(q),
+        _searchSessions(_authRepo.currentUser?.uid, q, state.isPremium),
       ]);
       if (!mounted) return;
       state = state.copyWith(
@@ -227,67 +235,54 @@ class SearchViewModel extends StateNotifier<SearchState> {
   }
 
   // -------------------------------------------------------------------------
-  // searchMaterials — Firestore title prefix + subject exact match
+  // _searchMaterials — delegates to MaterialsRepository
   // -------------------------------------------------------------------------
 
-  Future<List<MaterialSearchHit>> searchMaterials(String query) async {
-    final q = query.trim();
-    if (q.isEmpty) return const [];
-
-    // 1. Title prefix query — idiomatic Firestore "starts with".
-    //    Note: this is case-sensitive. For a production-grade, case-insensitive
-    //    search we'd index a `titleLower` field on each doc. For MVP we also
-    //    run a lowercased variant to catch common cases.
-    final queries = <Future<QuerySnapshot<Map<String, dynamic>>>>[
-      _titlePrefixQuery(q),
-      if (q[0].toUpperCase() != q[0])
-        _titlePrefixQuery(q[0].toUpperCase() + q.substring(1)),
-    ];
-
-    // 2. Subject exact-match if the query matches a known subject prefix.
-    final matchingSubject = _kKnownSubjects.firstWhere(
-      (s) => s.toLowerCase().startsWith(q.toLowerCase()),
-      orElse: () => '',
+  Future<List<MaterialSearchHit>> _searchMaterials(String query) async {
+    final rawDocs = await _materialsRepo.searchMaterialDocs(
+      query,
+      knownSubjects: _kKnownSubjects,
     );
-    if (matchingSubject.isNotEmpty) {
-      queries.add(
-        _firestore
-            .collection('materials')
-            .where('subject', isEqualTo: matchingSubject)
-            .orderBy('createdAt', descending: true)
-            .limit(10)
-            .get(),
-      );
-    }
-
-    final snaps = await Future.wait(queries);
     final byId = <String, LearningMaterial>{};
-    for (final snap in snaps) {
-      for (final doc in snap.docs) {
-        final m = LearningMaterial.fromDoc(doc);
-        byId[m.materialId] = m;
-      }
+    for (final raw in rawDocs) {
+      // Reconstruct a LearningMaterial from the raw map. We reuse the
+      // QueryDocumentSnapshot-based factory by wrapping it as a fake doc; instead
+      // the repo returns raw maps so we use the fromMap path if available,
+      // or a lightweight reconstruction.
+      final id = raw['id'] as String? ?? '';
+      final m = _materialFromRaw(id, raw);
+      byId[id] = m;
     }
     return byId.values
         .map(MaterialSearchHit.fromLearningMaterial)
         .toList(growable: false);
   }
 
-  Future<QuerySnapshot<Map<String, dynamic>>> _titlePrefixQuery(String q) {
-    final end = '$q';
-    return _firestore
-        .collection('materials')
-        .where('title', isGreaterThanOrEqualTo: q)
-        .where('title', isLessThan: end)
-        .limit(10)
-        .get();
+  LearningMaterial _materialFromRaw(String id, Map<String, dynamic> raw) {
+    return LearningMaterial(
+      materialId: id,
+      title: (raw['title'] as String?)?.trim().isNotEmpty == true
+          ? (raw['title'] as String).trim()
+          : 'Untitled',
+      subject: (raw['subject'] as String?) ?? 'General',
+      level: (raw['level'] as String?) ?? 'O Level',
+      type: MaterialTypeX.parse(raw['type'] as String?) ?? MaterialType.note,
+      fileUrl: (raw['fileUrl'] as String?) ?? (raw['url'] as String?) ?? '',
+      thumbnailUrl: raw['thumbnailUrl'] as String?,
+      uploadedBy: raw['uploadedBy'] as String?,
+      views: (raw['views'] as num?)?.toInt() ?? 0,
+      createdAt: raw['createdAt'] is DateTime
+          ? raw['createdAt'] as DateTime
+          : DateTime.now(),
+    );
   }
 
   // -------------------------------------------------------------------------
-  // searchSessions — client-side content filter, scoped by premium
+  // _searchSessions — client-side content filter, scoped by premium tier.
+  // Delegates to SessionsRepository which owns the Firestore query.
   // -------------------------------------------------------------------------
 
-  Future<List<SessionSearchHit>> searchSessions(
+  Future<List<SessionSearchHit>> _searchSessions(
     String? uid,
     String query,
     bool isPremium,
@@ -295,30 +290,21 @@ class SearchViewModel extends StateNotifier<SearchState> {
     final q = query.trim().toLowerCase();
     if (uid == null || q.isEmpty) return const [];
 
-    Query<Map<String, dynamic>> base = _firestore
-        .collection('sessions')
-        .where('userId', isEqualTo: uid)
-        .orderBy('updatedAt', descending: true);
+    final since =
+        isPremium ? null : DateTime.now().subtract(_kFreeSessionWindow);
 
-    if (!isPremium) {
-      final cutoff = DateTime.now().subtract(_kFreeSessionWindow);
-      base = base.where(
-        'updatedAt',
-        isGreaterThan: Timestamp.fromDate(cutoff),
-      );
-    }
+    final docs = await _sessionsRepo.searchSessionDocs(
+      uid,
+      limit: 100,
+      since: since,
+    );
 
-    final snap = await base.limit(100).get();
     final hits = <SessionSearchHit>[];
-
-    for (final doc in snap.docs) {
-      final data = doc.data();
+    for (final data in docs) {
       final messages = ((data['messages'] as List?) ?? const [])
           .whereType<Map>()
           .toList();
 
-      // Find the matched message (first hit) so we can use its content
-      // as the preview.
       Map? matchedMsg;
       for (final m in messages) {
         final content = (m['content'] as String?) ?? '';
@@ -339,14 +325,30 @@ class SearchViewModel extends StateNotifier<SearchState> {
           ? (matchedMsg['content'] as String?) ?? ''
           : (lastQ.isNotEmpty ? lastQ : title);
 
+      // updatedAt is returned as a Timestamp from Firestore (raw map from repo).
+      // The repo layer does NOT decode timestamps in searchSessionDocs because
+      // the field is used only here as a display value. We decode it locally.
+      final dynamic rawTs = data['updatedAt'];
+      DateTime updatedAt;
+      if (rawTs is DateTime) {
+        updatedAt = rawTs;
+      } else {
+        // cloud_firestore Timestamp — access via dynamic to avoid importing
+        // the Firestore SDK in this viewmodel.
+        try {
+          updatedAt = (rawTs as dynamic).toDate() as DateTime;
+        } catch (_) {
+          updatedAt = DateTime.now();
+        }
+      }
+
       hits.add(SessionSearchHit(
-        id: doc.id,
+        id: data['id'] as String? ?? '',
         subject: (data['subject'] as String?) ?? 'General',
         preview: preview,
         messageCount:
             (data['messageCount'] as num?)?.toInt() ?? messages.length,
-        updatedAt:
-            (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        updatedAt: updatedAt,
       ));
     }
 
@@ -362,7 +364,12 @@ class SearchViewModel extends StateNotifier<SearchState> {
 
 final searchViewModelProvider =
     StateNotifierProvider.autoDispose<SearchViewModel, SearchState>(
-  (ref) => SearchViewModel(),
+  (ref) => SearchViewModel(
+    ref.read(authRepositoryProvider),
+    ref.read(sessionsRepositoryProvider),
+    ref.read(materialsRepositoryProvider),
+    ref.read(subscriptionsRepositoryProvider),
+  ),
 );
 
 // ---------------------------------------------------------------------------

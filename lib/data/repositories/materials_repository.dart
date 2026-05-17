@@ -129,23 +129,59 @@ class MaterialsRepository {
   }
 
   // -------------------------------------------------------------------------
-  // searchMaterials — title prefix + subject exact-match queries.
-  // Returns decoded LearningMaterial list (D-02 compliant).
+  // searchMaterialDocs — title prefix + subject exact-match queries.
+  // Runs both original-case and title-case variants to improve hit rate on
+  // case-sensitive Firestore starts-with queries. Returns raw maps (no
+  // QuerySnapshot leak — D-02 compliant). The '' suffix is the standard
+  // Firestore "prefix search" upper bound.
   // -------------------------------------------------------------------------
 
-  Future<List<Map<String, dynamic>>> searchMaterialDocs(String query) async {
+  Future<List<Map<String, dynamic>>> searchMaterialDocs(
+    String query, {
+    List<String> knownSubjects = const [],
+  }) async {
     final q = query.trim();
     if (q.isEmpty) return const [];
 
-    // Title prefix queries (case-sensitive Firestore starts-with pattern).
+    final end = '$q';
     final futures = <Future<QuerySnapshot<Map<String, dynamic>>>>[
       _firestore
           .collection('materials')
           .where('title', isGreaterThanOrEqualTo: q)
-          .where('title', isLessThan: q)
+          .where('title', isLessThan: end)
           .limit(10)
           .get(),
     ];
+
+    // Also try title-case variant for case-insensitive improvement.
+    if (q[0].toUpperCase() != q[0]) {
+      final cap = q[0].toUpperCase() + q.substring(1);
+      final capEnd = '$cap';
+      futures.add(
+        _firestore
+            .collection('materials')
+            .where('title', isGreaterThanOrEqualTo: cap)
+            .where('title', isLessThan: capEnd)
+            .limit(10)
+            .get(),
+      );
+    }
+
+    // Subject exact-match if query matches a known subject prefix.
+    final matchingSubject = knownSubjects.firstWhere(
+      (s) => s.toLowerCase().startsWith(q.toLowerCase()),
+      orElse: () => '',
+    );
+    if (matchingSubject.isNotEmpty) {
+      futures.add(
+        _firestore
+            .collection('materials')
+            .where('subject', isEqualTo: matchingSubject)
+            .orderBy('createdAt', descending: true)
+            .limit(10)
+            .get(),
+      );
+    }
 
     final snaps = await Future.wait(futures);
     final byId = <String, Map<String, dynamic>>{};

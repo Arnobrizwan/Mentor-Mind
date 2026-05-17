@@ -1,7 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:mentor_minds/data/repositories/auth_repository.dart';
+import 'package:mentor_minds/data/repositories/users_repository.dart';
 
 // ---------------------------------------------------------------------------
 // State
@@ -48,13 +50,16 @@ enum SplashDestination {
 // ---------------------------------------------------------------------------
 
 class SplashViewModel extends StateNotifier<SplashState> {
-  SplashViewModel() : super(const SplashState());
+  SplashViewModel(this._authRepo, this._usersRepo) : super(const SplashState());
+
+  final AuthRepository _authRepo;
+  final UsersRepository _usersRepo;
 
   Future<SplashDestination> resolveDestination() async {
     state = state.copyWith(isLoading: true);
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = _authRepo.currentUser;
 
       if (user != null) {
         return await _resolveRoleDestination(user.uid);
@@ -72,12 +77,8 @@ class SplashViewModel extends StateNotifier<SplashState> {
 
   Future<SplashDestination> _resolveRoleDestination(String uid) async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
-
-      final role = (doc.data()?['role'] as String?)?.trim() ?? 'student';
+      final data = await _usersRepo.getUserDocRaw(uid);
+      final role = (data?['role'] as String?)?.trim() ?? 'student';
       state = state.copyWith(isLoading: false, userRole: role);
 
       return switch (role) {
@@ -116,5 +117,8 @@ class SplashViewModel extends StateNotifier<SplashState> {
 // state = ... that then hangs the splash sequence.
 final splashViewModelProvider =
     StateNotifierProvider<SplashViewModel, SplashState>(
-  (ref) => SplashViewModel(),
+  (ref) => SplashViewModel(
+    ref.read(authRepositoryProvider),
+    ref.read(usersRepositoryProvider),
+  ),
 );

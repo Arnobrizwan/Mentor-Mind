@@ -1,17 +1,18 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuthException, FirebaseException;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mentor_minds/data/models/profile_stats.dart';
 import 'package:mentor_minds/data/models/profile_user.dart';
+import 'package:mentor_minds/data/repositories/auth_repository.dart';
+import 'package:mentor_minds/data/repositories/sessions_repository.dart';
+import 'package:mentor_minds/data/repositories/storage_repository.dart';
+import 'package:mentor_minds/data/repositories/users_repository.dart';
 
 // ---------------------------------------------------------------------------
 // State
@@ -61,17 +62,22 @@ class ProfileState {
 // ---------------------------------------------------------------------------
 
 class ProfileViewModel extends StateNotifier<ProfileState> {
-  ProfileViewModel() : super(const ProfileState()) {
-    final uid = _auth.currentUser?.uid;
+  ProfileViewModel(
+    this._authRepo,
+    this._usersRepo,
+    this._sessionsRepo,
+    this._storageRepo,
+  ) : super(const ProfileState()) {
+    final uid = _authRepo.currentUser?.uid;
     if (uid != null) loadProfile(uid);
   }
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
-  final GoogleSignIn _google = GoogleSignIn();
+  final AuthRepository _authRepo;
+  final UsersRepository _usersRepo;
+  final SessionsRepository _sessionsRepo;
+  final StorageRepository _storageRepo;
 
-  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSub;
+  StreamSubscription<ProfileUser>? _userSub;
   String? _boundUid;
 
   // -------------------------------------------------------------------------
@@ -85,23 +91,13 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
 
     state = state.copyWith(isLoading: true, clearError: true);
 
-    _userSub = _firestore
-        .collection('users')
-        .doc(uid)
-        .snapshots()
+    _userSub = _usersRepo
+        .watchProfileUser(uid)
         .listen(
-      (snap) {
-        final data = snap.data();
-        if (data == null) {
-          state = state.copyWith(
-            isLoading: false,
-            error: 'Your profile is missing. Please contact support.',
-          );
-          return;
-        }
+      (user) {
         state = state.copyWith(
           isLoading: false,
-          user: ProfileUser.fromDoc(uid, data, _auth.currentUser),
+          user: user,
           clearError: true,
         );
       },
@@ -130,7 +126,7 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
       state = state.copyWith(error: 'Name cannot be empty');
       return false;
     }
-    final user = _auth.currentUser;
+    final user = _authRepo.currentUser;
     if (user == null) return false;
 
     state = state.copyWith(isEditing: true, clearError: true);
@@ -139,29 +135,23 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
       final updates = <String, dynamic>{
         'name': trimmed,
         'displayName': trimmed,
-        'updatedAt': FieldValue.serverTimestamp(),
       };
 
       if (avatarFile != null) {
         state = state.copyWith(uploadingAvatar: true);
-        final ref = _storage.ref('avatars/${user.uid}.jpg');
-        await ref.putFile(
-          File(avatarFile.path),
-          SettableMetadata(contentType: 'image/jpeg'),
+        final url = await _storageRepo.uploadImage(
+          uid: user.uid,
+          file: File(avatarFile.path),
+          suffix: 'avatar.jpg',
         );
-        final url = await ref.getDownloadURL();
         updates['avatarUrl'] = url;
         updates['photoUrl'] = url; // keep legacy field in sync
-        await user.updatePhotoURL(url);
+        await _authRepo.updatePhotoURL(url);
         state = state.copyWith(uploadingAvatar: false);
       }
 
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .set(updates, SetOptions(merge: true));
-
-      await user.updateDisplayName(trimmed);
+      await _usersRepo.setUserFields(user.uid, updates);
+      await _authRepo.updateDisplayName(trimmed);
 
       state = state.copyWith(isEditing: false);
       return true;
@@ -194,7 +184,7 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
     required String currentPassword,
     required String newPassword,
   }) async {
-    final user = _auth.currentUser;
+    final user = _authRepo.currentUser;
     final email = user?.email;
     if (user == null || email == null || email.isEmpty) {
       return 'You are signed out. Please log in again.';
@@ -205,12 +195,8 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
 
     state = state.copyWith(isEditing: true, clearError: true);
     try {
-      final credential = EmailAuthProvider.credential(
-        email: email,
-        password: currentPassword,
-      );
-      await user.reauthenticateWithCredential(credential);
-      await user.updatePassword(newPassword);
+      await _authRepo.reauthenticateWithPassword(email, currentPassword);
+      await _authRepo.updatePassword(newPassword);
       state = state.copyWith(isEditing: false);
       return null;
     } on FirebaseAuthException catch (e) {
@@ -235,14 +221,11 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
   // -------------------------------------------------------------------------
 
   Future<bool> updateSubjects(List<String> subjects) async {
-    final uid = _auth.currentUser?.uid;
+    final uid = _authRepo.currentUser?.uid;
     if (uid == null) return false;
     state = state.copyWith(isEditing: true, clearError: true);
     try {
-      await _firestore.collection('users').doc(uid).set({
-        'subjects': subjects,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      await _usersRepo.setUserFields(uid, {'subjects': subjects});
       state = state.copyWith(isEditing: false);
       return true;
     } catch (e) {
@@ -255,14 +238,11 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
   }
 
   Future<bool> updateLevel(String level) async {
-    final uid = _auth.currentUser?.uid;
+    final uid = _authRepo.currentUser?.uid;
     if (uid == null) return false;
     state = state.copyWith(isEditing: true, clearError: true);
     try {
-      await _firestore.collection('users').doc(uid).set({
-        'level': level,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      await _usersRepo.setUserFields(uid, {'level': level});
       state = state.copyWith(isEditing: false);
       return true;
     } catch (e) {
@@ -275,12 +255,10 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
   }
 
   Future<bool> toggleNotifications(bool enabled) async {
-    final uid = _auth.currentUser?.uid;
+    final uid = _authRepo.currentUser?.uid;
     if (uid == null) return false;
     try {
-      await _firestore.collection('users').doc(uid).set({
-        'notificationsEnabled': enabled,
-      }, SetOptions(merge: true));
+      await _usersRepo.setUserFields(uid, {'notificationsEnabled': enabled});
       return true;
     } catch (e) {
       state = state.copyWith(error: 'Could not update notifications: $e');
@@ -295,10 +273,7 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
   /// Signs out of both providers and clears local prefs except the
   /// `onboarding_complete` flag. Caller should navigate to /auth/login.
   Future<void> logout() async {
-    try {
-      await _google.signOut();
-    } catch (_) {/* not a Google user — ignore */}
-    await _auth.signOut();
+    await _authRepo.signOut();
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -317,7 +292,7 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
   /// Returns null on success; user-facing error string otherwise.
   /// Caller should navigate to /onboarding on success.
   Future<String?> deleteAccount() async {
-    final user = _auth.currentUser;
+    final user = _authRepo.currentUser;
     if (user == null) return 'You are already signed out.';
 
     state = state.copyWith(isEditing: true, clearError: true);
@@ -327,29 +302,21 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
       // 1. Delete user-owned docs while security rules still permit it.
       //    Spec calls for /users/{uid}; we also clean up /rewards/{uid} and
       //    any owned /sessions so they don't become orphaned.
-      final sessions = await _firestore
-          .collection('sessions')
-          .where('userId', isEqualTo: uid)
-          .get();
-      final batch = _firestore.batch();
-      for (final doc in sessions.docs) {
-        batch.delete(doc.reference);
+      //    getSessionRefs returns D-02 batch-exception DocumentReferences.
+      final sessionRefs = await _sessionsRepo.getSessionRefs(uid);
+      final batch = _usersRepo.startBatch();
+      for (final ref in sessionRefs) {
+        batch.delete(ref);
       }
-      batch.delete(_firestore.collection('rewards').doc(uid));
-      batch.delete(_firestore.collection('users').doc(uid));
+      batch.delete(_usersRepo.rewardsDocRef(uid));
+      batch.delete(_usersRepo.userDocRef(uid));
       await batch.commit();
 
       // 2. Delete avatar from Storage (best-effort — not all users have one).
-      try {
-        await _storage.ref('avatars/$uid.jpg').delete();
-      } catch (_) {}
+      await _storageRepo.deleteByPath('avatars/$uid.jpg');
 
-      // 3. Delete the auth user.
-      await user.delete();
-
-      try {
-        await _google.signOut();
-      } catch (_) {}
+      // 3. Delete the auth user (also signs out of Google if applicable).
+      await _authRepo.deleteAccount();
 
       state = state.copyWith(isEditing: false);
       return null;
@@ -371,25 +338,14 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
 
   Future<void> fetchStats(String uid) async {
     try {
-      final results = await Future.wait<dynamic>([
-        _firestore
-            .collection('sessions')
-            .where('userId', isEqualTo: uid)
-            .count()
-            .get(),
-        _firestore
-            .collection('users')
-            .doc(uid)
-            .collection('usage')
-            .get(),
+      final results = await Future.wait([
+        _sessionsRepo.countSessions(uid),
+        _usersRepo.getUsageHistory(uid),
       ]);
 
-      final sessionsAgg = results[0] as AggregateQuerySnapshot;
-      final usageSnap =
-          results[1] as QuerySnapshot<Map<String, dynamic>>;
-
-      final sessionCount = sessionsAgg.count ?? 0;
-      final streak = _computeStreak(usageSnap.docs.map((d) => d.id).toList());
+      final sessionCount = results[0] as int;
+      final usageDocs = results[1] as List<Map<String, dynamic>>;
+      final streak = _computeStreak(usageDocs.map((d) => d['id'] as String).toList());
       final points = state.user?.points ?? 0;
 
       state = state.copyWith(
@@ -465,5 +421,10 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
 
 final profileViewModelProvider =
     StateNotifierProvider<ProfileViewModel, ProfileState>(
-  (ref) => ProfileViewModel(),
+  (ref) => ProfileViewModel(
+    ref.read(authRepositoryProvider),
+    ref.read(usersRepositoryProvider),
+    ref.read(sessionsRepositoryProvider),
+    ref.read(storageRepositoryProvider),
+  ),
 );

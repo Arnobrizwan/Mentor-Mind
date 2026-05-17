@@ -232,6 +232,39 @@ class RewardsRepository {
     final doc = await _firestore.collection('users').doc(uid).get();
     return doc.data();
   }
+
+  // -------------------------------------------------------------------------
+  // watchRewardsRaw — streams /rewards/{uid} as a raw Map with Timestamps
+  // decoded to DateTime. Used by RewardsViewModel for badge-merging logic
+  // that requires access to the earnedAt sub-map as typed DateTime values.
+  // Raw access is intentional: the viewmodel handles the complex badge-merge
+  // logic; structured decoding would discard intermediate fields needed there.
+  // -------------------------------------------------------------------------
+
+  Stream<Map<String, dynamic>> watchRewardsRaw(String uid) {
+    return _firestore
+        .collection('rewards')
+        .doc(uid)
+        .snapshots()
+        .map((doc) {
+      final raw = doc.data() ?? const <String, dynamic>{};
+      // Decode earnedAt sub-map: Timestamp → DateTime so the viewmodel
+      // never needs to import cloud_firestore.
+      final earnedAt = raw['earnedAt'];
+      if (earnedAt is Map) {
+        final decoded = <String, dynamic>{};
+        earnedAt.forEach((key, value) {
+          if (value is Timestamp) {
+            decoded[key.toString()] = value.toDate();
+          } else {
+            decoded[key.toString()] = value;
+          }
+        });
+        return <String, dynamic>{...raw, 'earnedAt': decoded};
+      }
+      return raw;
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------

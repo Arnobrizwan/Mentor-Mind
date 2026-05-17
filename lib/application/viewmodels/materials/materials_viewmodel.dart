@@ -1,9 +1,10 @@
 import 'dart:async';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' show DocumentSnapshot;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:mentor_minds/data/models/learning_material.dart';
+import 'package:mentor_minds/data/repositories/materials_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Filter sentinel values — lowercase, as specified
@@ -87,37 +88,20 @@ class MaterialsState {
 // ---------------------------------------------------------------------------
 
 class MaterialsViewModel extends StateNotifier<MaterialsState> {
-  MaterialsViewModel() : super(const MaterialsState()) {
+  MaterialsViewModel(this._materialsRepo) : super(const MaterialsState()) {
     loadMaterials(reset: true);
   }
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  DocumentSnapshot<Map<String, dynamic>>? _lastDoc;
+  final MaterialsRepository _materialsRepo;
+
+  // D-02 cursor-pagination exception: DocumentSnapshot is the Firestore cursor
+  // type required for paginating getMaterials(). It is stored only within the
+  // viewmodel (never surfaced to the UI layer) and passed back to the repo on
+  // subsequent page loads. The alternative (storing a page-index int) would
+  // require a skip-based query which Firestore does not support.
+  DocumentSnapshot? _lastDoc;
+
   Timer? _searchDebounce;
-
-  // -------------------------------------------------------------------------
-  // Query composition — applies server-side filters.
-  // Firestore composite-index requirements documented in BACKEND_SETUP.md /
-  // firestore.indexes.json. On first run of a new filter combination,
-  // Firestore will log a console URL to auto-create the missing index.
-  // -------------------------------------------------------------------------
-
-  Query<Map<String, dynamic>> _buildQuery() {
-    Query<Map<String, dynamic>> q = _firestore
-        .collection('materials')
-        .orderBy('createdAt', descending: true);
-
-    if (state.selectedSubject != kSubjectAll) {
-      q = q.where('subject', isEqualTo: state.selectedSubject);
-    }
-    if (state.selectedLevel != kLevelBoth) {
-      q = q.where('level', isEqualTo: state.selectedLevel);
-    }
-    if (state.selectedType != null) {
-      q = q.where('type', isEqualTo: state.selectedType!.name);
-    }
-    return q;
-  }
 
   // -------------------------------------------------------------------------
   // Load / paginate
@@ -135,38 +119,34 @@ class MaterialsViewModel extends StateNotifier<MaterialsState> {
         clearError: true,
       );
     } else {
-      if (state.isLoading ||
-          state.isLoadingMore ||
-          !state.hasMore) {
+      if (state.isLoading || state.isLoadingMore || !state.hasMore) {
         return;
       }
       state = state.copyWith(isLoadingMore: true);
     }
 
     try {
-      Query<Map<String, dynamic>> q = _buildQuery();
-      if (_lastDoc != null) {
-        q = q.startAfterDocument(_lastDoc!);
-      }
-      q = q.limit(kPageSize);
+      final result = await _materialsRepo.getMaterials(
+        subject: state.selectedSubject == kSubjectAll
+            ? null
+            : state.selectedSubject,
+        level: state.selectedLevel == kLevelBoth ? null : state.selectedLevel,
+        type: state.selectedType,
+        startAfter: _lastDoc,
+        limit: kPageSize,
+      );
 
-      final snap = await q.get();
-      if (snap.docs.isNotEmpty) {
-        _lastDoc = snap.docs.last;
-      }
+      _lastDoc = result.lastDoc;
 
-      final newItems = snap.docs
-          .map(LearningMaterial.fromDoc)
-          .toList(growable: false);
-      final merged =
-          reset ? newItems : [...state.materials, ...newItems];
+      final newItems = result.items;
+      final merged = reset ? newItems : [...state.materials, ...newItems];
 
       state = state.copyWith(
         isLoading: false,
         isLoadingMore: false,
         materials: merged,
         filteredMaterials: _applySearch(merged, state.searchQuery),
-        hasMore: snap.docs.length == kPageSize,
+        hasMore: newItems.length == kPageSize,
       );
     } catch (_) {
       state = state.copyWith(
@@ -261,10 +241,7 @@ class MaterialsViewModel extends StateNotifier<MaterialsState> {
     );
 
     try {
-      await _firestore
-          .collection('materials')
-          .doc(materialId)
-          .update({'views': FieldValue.increment(1)});
+      await _materialsRepo.incrementViewCount(materialId);
     } catch (_) {
       // Server didn't take it — harmless; next load will reconcile.
     }
@@ -279,5 +256,5 @@ class MaterialsViewModel extends StateNotifier<MaterialsState> {
 
 final materialsViewModelProvider =
     StateNotifierProvider.autoDispose<MaterialsViewModel, MaterialsState>(
-  (ref) => MaterialsViewModel(),
+  (ref) => MaterialsViewModel(ref.read(materialsRepositoryProvider)),
 );

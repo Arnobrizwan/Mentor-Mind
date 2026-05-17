@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:mentor_minds/data/models/dashboard_user.dart';
+import 'package:mentor_minds/data/models/leaderboard_entry.dart';
 import 'package:mentor_minds/data/models/profile_user.dart';
 import 'package:mentor_minds/data/services/firebase_providers.dart';
 
@@ -147,6 +148,97 @@ class UsersRepository {
   }
 
   // -------------------------------------------------------------------------
+  // incrementUsageMessageCount — increments messageCount + updates lastMessageAt
+  // on /users/{uid}/usage/{dateKey}. Called by ChatViewModel after each message.
+  // -------------------------------------------------------------------------
+
+  Future<void> incrementUsageMessageCount(String uid, String dateKey) async {
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('usage')
+        .doc(dateKey)
+        .set({
+      'date': dateKey,
+      'messageCount': FieldValue.increment(1),
+      'lastMessageAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  // -------------------------------------------------------------------------
+  // awardSessionPoints — batch: increments points on /users/{uid} and appends
+  // a history entry to /rewards/{uid}. Called by ChatViewModel after sessions.
+  // -------------------------------------------------------------------------
+
+  Future<void> awardSessionPoints(
+    String uid,
+    String action,
+    int amount,
+  ) async {
+    final batch = _firestore.batch();
+    batch.update(_firestore.collection('users').doc(uid), {
+      'points': FieldValue.increment(amount),
+    });
+    batch.set(
+      _firestore.collection('rewards').doc(uid),
+      {
+        'userId': uid,
+        'points': FieldValue.increment(amount),
+        'history': FieldValue.arrayUnion([
+          {
+            'type': action,
+            'points': amount,
+            'at': Timestamp.now(),
+          }
+        ]),
+      },
+      SetOptions(merge: true),
+    );
+    await batch.commit();
+  }
+
+  // -------------------------------------------------------------------------
+  // awardDailyLogin — atomic batch: marks login rewarded in usage doc and
+  // increments points in both /users/{uid} and /rewards/{uid}.
+  // Called by DashboardViewModel to award the daily login bonus.
+  // -------------------------------------------------------------------------
+
+  Future<void> awardDailyLogin(
+    String uid,
+    String dateKey, {
+    int amount = 5,
+  }) async {
+    // Mark the usage doc as rewarded.
+    await setUsageDoc(uid, dateKey, {
+      'date': dateKey,
+      'loginRewarded': true,
+      'loginRewardedAt': FieldValue.serverTimestamp(),
+    });
+
+    // Atomically increment points and append history via batch.
+    final batch = _firestore.batch();
+    batch.update(_firestore.collection('users').doc(uid), {
+      'points': FieldValue.increment(amount),
+    });
+    batch.set(
+      _firestore.collection('rewards').doc(uid),
+      {
+        'userId': uid,
+        'points': FieldValue.increment(amount),
+        'history': FieldValue.arrayUnion([
+          {
+            'type': 'daily_login',
+            'points': amount,
+            'date': dateKey,
+          }
+        ]),
+      },
+      SetOptions(merge: true),
+    );
+    await batch.commit();
+  }
+
+  // -------------------------------------------------------------------------
   // startBatch — returns a WriteBatch for atomic multi-doc writes.
   // This leaks a Firestore-specific type to callers — intentional per D-02:
   // "batch handles are the only documented exception." Callers use batch
@@ -169,6 +261,107 @@ class UsersRepository {
   /// For use in WriteBatch ops only. (D-02 batch exception)
   DocumentReference<Map<String, dynamic>> sessionDocRef(String sessionId) =>
       _firestore.collection('sessions').doc(sessionId);
+
+  // -------------------------------------------------------------------------
+  // watchUserDocRaw — streams /users/{uid} as a raw Map.
+  // Used by RewardsViewModel as a fallback source for points and subject tags
+  // when the /rewards/{uid} doc hasn't been created yet.
+  // -------------------------------------------------------------------------
+
+  Stream<Map<String, dynamic>> watchUserDocRaw(String uid) {
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .map((doc) => doc.data() ?? const <String, dynamic>{});
+  }
+
+  // -------------------------------------------------------------------------
+  // getLeaderboard — top-N users by points plus the current user's rank.
+  // Returns a record: top contains the ranked list; currentUserRow is non-null
+  // only when the current user is NOT already in the top list.
+  // -------------------------------------------------------------------------
+
+  Future<({List<LeaderboardEntry> top, LeaderboardEntry? currentUserRow})>
+      getLeaderboard(String currentUid, {int limit = 10}) async {
+    final snap = await _firestore
+        .collection('users')
+        .orderBy('points', descending: true)
+        .limit(limit)
+        .get();
+
+    final entries = <LeaderboardEntry>[];
+    var rank = 0;
+    var currentUserInTop = false;
+    for (final doc in snap.docs) {
+      rank += 1;
+      final data = doc.data();
+      String name = (data['name'] as String?)?.trim() ??
+          (data['displayName'] as String?)?.trim() ??
+          'Learner';
+      if (name.isEmpty) name = 'Learner';
+      String? avatar = (data['avatarUrl'] as String?)?.trim();
+      if (avatar == null || avatar.isEmpty) {
+        avatar = (data['photoUrl'] as String?)?.trim();
+      }
+      final isCurrentUser = doc.id == currentUid;
+      if (isCurrentUser) currentUserInTop = true;
+      entries.add(LeaderboardEntry(
+        uid: doc.id,
+        name: name,
+        avatarUrl: (avatar?.isEmpty ?? true) ? null : avatar,
+        points: (data['points'] as num?)?.toInt() ?? 0,
+        subject: (data['subjects'] as List?)?.isNotEmpty == true
+            ? (data['subjects'] as List).first.toString()
+            : null,
+        rank: rank,
+        isCurrentUser: isCurrentUser,
+      ));
+    }
+
+    LeaderboardEntry? currentUserRow;
+    if (!currentUserInTop) {
+      // Best-effort fetch for the current user's own doc so we can show their
+      // approximate rank even when they're outside the top-N list.
+      try {
+        final userDoc = await _firestore.collection('users').doc(currentUid).get();
+        final data = userDoc.data();
+        if (data != null) {
+          final userPoints = (data['points'] as num?)?.toInt() ?? 0;
+          // Approximate rank via count query — not exact but good enough for UI.
+          final countSnap = await _firestore
+              .collection('users')
+              .where('points', isGreaterThan: userPoints)
+              .count()
+              .get();
+          final approxRank = (countSnap.count ?? 0) + 1;
+          String name = (data['name'] as String?)?.trim() ??
+              (data['displayName'] as String?)?.trim() ??
+              'Learner';
+          if (name.isEmpty) name = 'Learner';
+          String? avatar = (data['avatarUrl'] as String?)?.trim();
+          if (avatar == null || avatar.isEmpty) {
+            avatar = (data['photoUrl'] as String?)?.trim();
+          }
+          currentUserRow = LeaderboardEntry(
+            uid: currentUid,
+            name: name,
+            avatarUrl: (avatar?.isEmpty ?? true) ? null : avatar,
+            points: userPoints,
+            subject: (data['subjects'] as List?)?.isNotEmpty == true
+                ? (data['subjects'] as List).first.toString()
+                : null,
+            rank: approxRank,
+            isCurrentUser: true,
+          );
+        }
+      } catch (_) {
+        // Non-fatal — the current user row is optional UI sugar.
+      }
+    }
+
+    return (top: entries, currentUserRow: currentUserRow);
+  }
 }
 
 // ---------------------------------------------------------------------------

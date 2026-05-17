@@ -2,13 +2,14 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:mentor_minds/core/services/gemini_service.dart';
 import 'package:mentor_minds/data/models/chat_message.dart';
+import 'package:mentor_minds/data/repositories/auth_repository.dart';
+import 'package:mentor_minds/data/repositories/sessions_repository.dart';
+import 'package:mentor_minds/data/repositories/storage_repository.dart';
+import 'package:mentor_minds/data/repositories/users_repository.dart';
 
 // ---------------------------------------------------------------------------
 // State
@@ -106,14 +107,21 @@ class ChatState {
 // ---------------------------------------------------------------------------
 
 class ChatViewModel extends StateNotifier<ChatState> {
-  ChatViewModel(this._gemini) : super(const ChatState()) {
+  ChatViewModel(
+    this._gemini,
+    this._authRepo,
+    this._usersRepo,
+    this._sessionsRepo,
+    this._storageRepo,
+  ) : super(const ChatState()) {
     _loadContext();
   }
 
   final GeminiService _gemini;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final AuthRepository _authRepo;
+  final UsersRepository _usersRepo;
+  final SessionsRepository _sessionsRepo;
+  final StorageRepository _storageRepo;
   final Random _random = Random();
 
   // -------------------------------------------------------------------------
@@ -121,19 +129,22 @@ class ChatViewModel extends StateNotifier<ChatState> {
   // -------------------------------------------------------------------------
 
   Future<void> _loadContext() async {
-    final user = _auth.currentUser;
+    final user = _authRepo.currentUser;
     if (user == null) {
       state = state.copyWith(isLoading: false, canSendMessage: false);
       return;
     }
 
     try {
-      final userRef = _firestore.collection('users').doc(user.uid);
-      final usageRef = userRef.collection('usage').doc(_todayKey());
+      final uid = user.uid;
+      final todayKey = _todayKey();
 
-      final results = await Future.wait([userRef.get(), usageRef.get()]);
-      final data = results[0].data() ?? <String, dynamic>{};
-      final usage = results[1].data() ?? <String, dynamic>{};
+      final results = await Future.wait([
+        _usersRepo.getUserDocRaw(uid),
+        _usersRepo.getUsageDoc(uid, todayKey),
+      ]);
+      final data = results[0] ?? <String, dynamic>{};
+      final usage = results[1] ?? <String, dynamic>{};
 
       final subjects = ((data['subjects'] as List?) ?? const [])
           .map((e) => e.toString())
@@ -252,7 +263,12 @@ class ChatViewModel extends StateNotifier<ChatState> {
       String finalText = '';
 
       if (imageFile != null && state.isPremium) {
-        uploadedUrl = await _uploadImage(imageFile);
+        final uid = _authRepo.currentUser!.uid;
+        uploadedUrl = await _storageRepo.uploadImage(
+          uid: uid,
+          file: imageFile,
+          suffix: '${_random.nextInt(99999)}.jpg',
+        );
         _updateMessage(userMsg.id, imageUrl: uploadedUrl);
 
         final bytes = await imageFile.readAsBytes();
@@ -324,13 +340,8 @@ class ChatViewModel extends StateNotifier<ChatState> {
   // -------------------------------------------------------------------------
 
   Future<void> _saveSession() async {
-    final uid = _auth.currentUser?.uid;
+    final uid = _authRepo.currentUser?.uid;
     if (uid == null) return;
-
-    final sessions = _firestore.collection('sessions');
-    var sid = state.sessionId;
-    final ref = sid == null ? sessions.doc() : sessions.doc(sid);
-    sid ??= ref.id;
 
     final lastUserMsg = state.messages
         .where((m) => m.role == MessageRole.user)
@@ -342,21 +353,23 @@ class ChatViewModel extends StateNotifier<ChatState> {
         : 'Chat session';
 
     try {
-      await ref.set({
-        'userId': uid,
-        'subject': state.selectedSubject,
-        'level': state.selectedLevel,
-        'title': title,
-        'lastQuestion': lastUserMsg?.content ?? '',
-        'messageCount': state.messages.length,
-        'messages':
-            state.messages.map((m) => m.toMap()).toList(growable: false),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'createdAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      final newSid = await _sessionsRepo.saveSession(
+        uid,
+        {
+          'userId': uid,
+          'subject': state.selectedSubject,
+          'level': state.selectedLevel,
+          'title': title,
+          'lastQuestion': lastUserMsg?.content ?? '',
+          'messageCount': state.messages.length,
+          'messages':
+              state.messages.map((m) => m.toMap()).toList(growable: false),
+        },
+        sessionId: state.sessionId,
+      );
 
-      if (state.sessionId != sid && mounted) {
-        state = state.copyWith(sessionId: sid);
+      if (state.sessionId != newSid && mounted) {
+        state = state.copyWith(sessionId: newSid);
       }
     } catch (_) {
       // Non-fatal — chat continues regardless of persistence.
@@ -366,9 +379,7 @@ class ChatViewModel extends StateNotifier<ChatState> {
   Future<void> loadSession(String sessionId) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final doc =
-          await _firestore.collection('sessions').doc(sessionId).get();
-      final data = doc.data();
+      final data = await _sessionsRepo.getSession(sessionId);
       if (data == null) {
         state = state.copyWith(isLoading: false, error: 'Session not found.');
         return;
@@ -396,65 +407,28 @@ class ChatViewModel extends StateNotifier<ChatState> {
   }
 
   // -------------------------------------------------------------------------
-  // Storage + usage + rewards side-effects
+  // Usage + rewards side-effects
   // -------------------------------------------------------------------------
 
-  Future<String> _uploadImage(File file) async {
-    final uid = _auth.currentUser!.uid;
-    final name =
-        '${DateTime.now().millisecondsSinceEpoch}_${_random.nextInt(99999)}.jpg';
-    final ref = _storage.ref().child('uploads').child(uid).child(name);
-    await ref.putFile(file);
-    return ref.getDownloadURL();
-  }
-
   Future<void> _incrementUsage() async {
-    final uid = _auth.currentUser?.uid;
+    final uid = _authRepo.currentUser?.uid;
     if (uid == null) return;
     try {
-      await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('usage')
-          .doc(_todayKey())
-          .set({
-        'date': _todayKey(),
-        'messageCount': FieldValue.increment(1),
-        'lastMessageAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      await _usersRepo.incrementUsageMessageCount(uid, _todayKey());
     } catch (_) {
       // Silent.
     }
   }
 
   Future<void> _awardPoints(String type) async {
-    final uid = _auth.currentUser?.uid;
+    final uid = _authRepo.currentUser?.uid;
     if (uid == null) return;
     final amount = switch (type) {
       'complete_session' => 2,
       _ => 1,
     };
     try {
-      final batch = _firestore.batch();
-      batch.update(_firestore.collection('users').doc(uid), {
-        'points': FieldValue.increment(amount),
-      });
-      batch.set(
-        _firestore.collection('rewards').doc(uid),
-        {
-          'userId': uid,
-          'points': FieldValue.increment(amount),
-          'history': FieldValue.arrayUnion([
-            {
-              'type': type,
-              'points': amount,
-              'at': Timestamp.now(),
-            }
-          ]),
-        },
-        SetOptions(merge: true),
-      );
-      await batch.commit();
+      await _usersRepo.awardSessionPoints(uid, type, amount);
     } catch (_) {
       // Silent.
     }
@@ -509,5 +483,11 @@ final geminiServiceProvider = Provider<GeminiService>((ref) {
 final chatViewModelProvider =
     StateNotifierProvider.autoDispose<ChatViewModel, ChatState>((ref) {
   final gemini = ref.watch(geminiServiceProvider);
-  return ChatViewModel(gemini);
+  return ChatViewModel(
+    gemini,
+    ref.read(authRepositoryProvider),
+    ref.read(usersRepositoryProvider),
+    ref.read(sessionsRepositoryProvider),
+    ref.read(storageRepositoryProvider),
+  );
 });

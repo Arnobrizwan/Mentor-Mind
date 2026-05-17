@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,6 +9,9 @@ import 'package:mentor_minds/data/models/history_entry.dart';
 import 'package:mentor_minds/data/models/leaderboard_entry.dart';
 import 'package:mentor_minds/data/models/locked_badge.dart';
 import 'package:mentor_minds/data/models/milestone.dart';
+import 'package:mentor_minds/data/repositories/auth_repository.dart';
+import 'package:mentor_minds/data/repositories/rewards_repository.dart';
+import 'package:mentor_minds/data/repositories/users_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Static badge catalog — the full set of achievable badges. Earned badge IDs
@@ -151,16 +152,21 @@ class RewardsState {
 // ---------------------------------------------------------------------------
 
 class RewardsViewModel extends StateNotifier<RewardsState> {
-  RewardsViewModel() : super(const RewardsState()) {
-    final uid = _auth.currentUser?.uid;
+  RewardsViewModel(
+    this._authRepo,
+    this._usersRepo,
+    this._rewardsRepo,
+  ) : super(const RewardsState()) {
+    final uid = _authRepo.currentUser?.uid;
     if (uid != null) _bind(uid);
   }
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final AuthRepository _authRepo;
+  final UsersRepository _usersRepo;
+  final RewardsRepository _rewardsRepo;
 
-  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _rewardsSub;
-  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSub;
+  StreamSubscription<Map<String, dynamic>>? _rewardsSub;
+  StreamSubscription<Map<String, dynamic>>? _userSub;
 
   void _bind(String uid) {
     _rewardsSub?.cancel();
@@ -168,10 +174,10 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     // Rewards doc — badges + history + authoritative points.
-    _rewardsSub =
-        _firestore.collection('rewards').doc(uid).snapshots().listen(
-      (snap) {
-        final data = snap.data() ?? const <String, dynamic>{};
+    _rewardsSub = _rewardsRepo
+        .watchRewardsRaw(uid)
+        .listen(
+      (data) {
         _mergeRewards(data);
       },
       onError: (_) {
@@ -183,10 +189,10 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
     );
 
     // Users doc — fallback for points and subject tag.
-    _userSub = _firestore.collection('users').doc(uid).snapshots().listen(
-      (snap) {
-        final data = snap.data();
-        if (data == null) return;
+    _userSub = _usersRepo
+        .watchUserDocRaw(uid)
+        .listen(
+      (data) {
         final pointsFromUser = (data['points'] as num?)?.toInt();
         if (pointsFromUser != null && state.points == 0) {
           state = state.copyWith(points: pointsFromUser);
@@ -211,7 +217,12 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
     final rawEarnedAt = data['earnedAt'];
     if (rawEarnedAt is Map) {
       rawEarnedAt.forEach((key, value) {
-        if (value is Timestamp) earnedAtMap[key.toString()] = value.toDate();
+        // Timestamp.toDate() — cloud_firestore Timestamp is handled by the
+        // repository layer. We receive raw maps; the timestamp is already
+        // decoded to DateTime in the watchRewardsRaw stream.
+        if (value is DateTime) {
+          earnedAtMap[key.toString()] = value;
+        }
       });
     }
 
@@ -314,73 +325,19 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
   // -------------------------------------------------------------------------
 
   Future<void> fetchLeaderboard() async {
-    final uid = _auth.currentUser?.uid;
+    final uid = _authRepo.currentUser?.uid;
     if (uid == null) return;
     try {
-      final top = await _firestore
-          .collection('users')
-          .orderBy('points', descending: true)
-          .limit(10)
-          .get();
-
-      final entries = <LeaderboardEntry>[];
-      var rank = 0;
-      for (final doc in top.docs) {
-        rank += 1;
-        entries.add(_toLeaderboardEntry(doc, rank, doc.id == uid));
-      }
-
-      // If current user not in top 10, compute their rank separately.
-      LeaderboardEntry? currentUserRow;
-      final alreadyInTop = entries.any((e) => e.isCurrentUser);
-      if (!alreadyInTop) {
-        final me = await _firestore.collection('users').doc(uid).get();
-        final myPoints = (me.data()?['points'] as num?)?.toInt() ?? 0;
-        final higher = await _firestore
-            .collection('users')
-            .where('points', isGreaterThan: myPoints)
-            .count()
-            .get();
-        final myRank = (higher.count ?? 0) + 1;
-        currentUserRow = _toLeaderboardEntry(me, myRank, true);
-      }
-
+      final result = await _usersRepo.getLeaderboard(uid, limit: 10);
       state = state.copyWith(
-        leaderboardTop: entries,
-        currentUserRow: currentUserRow,
-        clearCurrentUserRow: currentUserRow == null,
+        leaderboardTop: result.top,
+        currentUserRow: result.currentUserRow,
+        clearCurrentUserRow: result.currentUserRow == null,
       );
     } catch (e) {
       debugPrint('fetchLeaderboard error: $e');
       // Leave prior leaderboard; don't surface to user since it's not blocking.
     }
-  }
-
-  LeaderboardEntry _toLeaderboardEntry(
-    DocumentSnapshot<Map<String, dynamic>> doc,
-    int rank,
-    bool isCurrent,
-  ) {
-    final data = doc.data() ?? const <String, dynamic>{};
-    String name = (data['name'] as String?)?.trim() ??
-        (data['displayName'] as String?)?.trim() ??
-        'Learner';
-    if (name.isEmpty) name = 'Learner';
-    String? avatar = (data['avatarUrl'] as String?)?.trim();
-    if (avatar == null || avatar.isEmpty) {
-      avatar = (data['photoUrl'] as String?)?.trim();
-    }
-    final subjects = (data['subjects'] as List?) ?? const [];
-    final subject = subjects.isNotEmpty ? subjects.first.toString() : null;
-    return LeaderboardEntry(
-      uid: doc.id,
-      name: name,
-      avatarUrl: (avatar?.isEmpty ?? true) ? null : avatar,
-      points: (data['points'] as num?)?.toInt() ?? 0,
-      subject: subject,
-      rank: rank,
-      isCurrentUser: isCurrent,
-    );
   }
 
   /// Pull-to-refresh entry point — re-fetches leaderboard and re-applies
@@ -403,5 +360,9 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
 
 final rewardsViewModelProvider =
     StateNotifierProvider<RewardsViewModel, RewardsState>(
-  (ref) => RewardsViewModel(),
+  (ref) => RewardsViewModel(
+    ref.read(authRepositoryProvider),
+    ref.read(usersRepositoryProvider),
+    ref.read(rewardsRepositoryProvider),
+  ),
 );

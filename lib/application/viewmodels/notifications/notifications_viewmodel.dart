@@ -1,11 +1,13 @@
 import 'dart:async';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseException;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:mentor_minds/data/models/app_notification.dart';
+import 'package:mentor_minds/data/repositories/auth_repository.dart';
+import 'package:mentor_minds/data/repositories/notifications_repository.dart';
+import 'package:mentor_minds/data/repositories/users_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Filter strings — match the `type` field on notification docs. 'all' is a
@@ -69,26 +71,30 @@ class NotificationsState {
 // ---------------------------------------------------------------------------
 
 class NotificationsViewModel extends StateNotifier<NotificationsState> {
-  NotificationsViewModel() : super(const NotificationsState()) {
+  NotificationsViewModel(
+    this._authRepo,
+    this._usersRepo,
+    this._notificationsRepo,
+  ) : super(const NotificationsState()) {
     // Auto-bind if auth and role are available. Role comes from the user doc;
     // if we don't know it yet, start with 'student' and the caller may
     // invoke streamNotifications(uid, role) explicitly once known.
-    final uid = _auth.currentUser?.uid;
+    final uid = _authRepo.currentUser?.uid;
     if (uid != null) {
       _resolveRoleAndStream(uid);
     }
   }
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final AuthRepository _authRepo;
+  final UsersRepository _usersRepo;
+  final NotificationsRepository _notificationsRepo;
 
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _sub;
+  StreamSubscription<List<AppNotification>>? _sub;
 
   Future<void> _resolveRoleAndStream(String uid) async {
     try {
-      final userDoc = await _firestore.collection('users').doc(uid).get();
-      final role =
-          (userDoc.data()?['role'] as String?)?.trim() ?? 'student';
+      final data = await _usersRepo.getUserDocRaw(uid);
+      final role = (data?['role'] as String?)?.trim() ?? 'student';
       streamNotifications(uid, role);
     } catch (_) {
       // Best-effort: stream against 'all' only so the user still sees
@@ -106,15 +112,10 @@ class NotificationsViewModel extends StateNotifier<NotificationsState> {
     _sub?.cancel();
     state = state.copyWith(isLoading: true);
 
-    _sub = _firestore
-        .collection('notifications')
-        .where('recipientRole', whereIn: ['all', role])
-        .orderBy('timestamp', descending: true)
-        .snapshots()
+    _sub = _notificationsRepo
+        .watchNotifications(role)
         .listen(
-      (snap) {
-        final items =
-            snap.docs.map(AppNotification.fromDoc).toList(growable: false);
+      (items) {
         final unread = items.where((n) => !n.read).length;
         state = state.copyWith(
           notifications: items,
@@ -137,10 +138,7 @@ class NotificationsViewModel extends StateNotifier<NotificationsState> {
 
   Future<void> markAsRead(String notificationId) async {
     try {
-      await _firestore
-          .collection('notifications')
-          .doc(notificationId)
-          .update({'read': true});
+      await _notificationsRepo.markRead(notificationId);
     } on FirebaseException catch (e) {
       debugPrint('markAsRead error: ${e.code} — ${e.message}');
     }
@@ -153,20 +151,26 @@ class NotificationsViewModel extends StateNotifier<NotificationsState> {
 
   Future<void> markAllAsRead(String uid, String role) async {
     try {
-      final snap = await _firestore
-          .collection('notifications')
-          .where('recipientRole', whereIn: ['all', role])
-          .where('read', isEqualTo: false)
-          .get();
-      if (snap.docs.isEmpty) return;
-
-      final batch = _firestore.batch();
-      for (final doc in snap.docs) {
-        batch.update(doc.reference, {'read': true});
-      }
-      await batch.commit();
+      await _notificationsRepo.markAllRead(role);
     } on FirebaseException catch (e) {
       debugPrint('markAllAsRead error: ${e.code} — ${e.message}');
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // markAllAsReadForCurrentUser — resolves uid and role internally so the
+  // calling screen does not need direct Firebase access.
+  // -------------------------------------------------------------------------
+
+  Future<void> markAllAsReadForCurrentUser() async {
+    final uid = _authRepo.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      final data = await _usersRepo.getUserDocRaw(uid);
+      final role = (data?['role'] as String?)?.trim() ?? 'student';
+      await _notificationsRepo.markAllRead(role);
+    } on FirebaseException catch (e) {
+      debugPrint('markAllAsReadForCurrentUser error: ${e.code} — ${e.message}');
     }
   }
 
@@ -176,10 +180,7 @@ class NotificationsViewModel extends StateNotifier<NotificationsState> {
 
   Future<void> deleteNotification(String notificationId) async {
     try {
-      await _firestore
-          .collection('notifications')
-          .doc(notificationId)
-          .delete();
+      await _notificationsRepo.deleteNotification(notificationId);
     } on FirebaseException catch (e) {
       debugPrint('deleteNotification error: ${e.code} — ${e.message}');
     }
@@ -232,5 +233,9 @@ class NotificationsViewModel extends StateNotifier<NotificationsState> {
 
 final notificationsViewModelProvider =
     StateNotifierProvider<NotificationsViewModel, NotificationsState>(
-  (ref) => NotificationsViewModel(),
+  (ref) => NotificationsViewModel(
+    ref.read(authRepositoryProvider),
+    ref.read(usersRepositoryProvider),
+    ref.read(notificationsRepositoryProvider),
+  ),
 );

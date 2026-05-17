@@ -1,14 +1,14 @@
 import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuthException, FirebaseException, User;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mentor_minds/core/utils/validators.dart';
+import 'package:mentor_minds/data/repositories/auth_repository.dart';
+import 'package:mentor_minds/data/repositories/users_repository.dart';
 
 // ---------------------------------------------------------------------------
 // State
@@ -61,14 +61,13 @@ enum AuthDestination {
 // ---------------------------------------------------------------------------
 
 class AuthViewModel extends StateNotifier<AuthState> {
-  AuthViewModel() : super(const AuthState());
+  AuthViewModel(this._authRepo, this._usersRepo) : super(const AuthState());
+
+  final AuthRepository _authRepo;
+  final UsersRepository _usersRepo;
 
   static const MethodChannel _nativeConfigChannel =
       MethodChannel('mentor_minds/native_config');
-
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _google = GoogleSignIn();
 
   static final RegExp _emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
@@ -95,10 +94,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      final cred = await _auth.signInWithEmailAndPassword(
-        email: e,
-        password: password,
-      );
+      final cred = await _authRepo.signInWithEmail(e, password);
       final user = cred.user;
       if (user == null) {
         state = state.copyWith(
@@ -142,20 +138,13 @@ class AuthViewModel extends StateNotifier<AuthState> {
         return null;
       }
 
-      final googleUser = await _google.signIn();
-      if (googleUser == null) {
+      final cred = await _authRepo.signInWithGoogle();
+      if (cred == null) {
         // User dismissed the picker — silent return to idle
         state = state.copyWith(isLoading: false);
         return null;
       }
 
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final cred = await _auth.signInWithCredential(credential);
       final user = cred.user;
       if (user == null) {
         state = state.copyWith(
@@ -273,10 +262,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
     final trimmedEmail = email.trim();
 
     try {
-      final cred = await _auth.createUserWithEmailAndPassword(
-        email: trimmedEmail,
-        password: password,
-      );
+      final cred = await _authRepo.registerWithEmail(trimmedEmail, password);
       final user = cred.user;
       if (user == null) {
         state = state.copyWith(
@@ -287,13 +273,16 @@ class AuthViewModel extends StateNotifier<AuthState> {
         return null;
       }
 
-      await user.updateDisplayName(trimmedName);
+      await _authRepo.updateDisplayName(trimmedName);
 
       final (level, subjects) = await _readOnboardingSelection();
 
-      final batch = _firestore.batch();
-      final userRef = _firestore.collection('users').doc(user.uid);
-      final rewardsRef = _firestore.collection('rewards').doc(user.uid);
+      // Write user doc and rewards doc atomically via batch.
+      // userDocRef / rewardsDocRef are batch-helper getters on UsersRepository
+      // per D-02 documented batch exception.
+      final batch = _usersRepo.startBatch();
+      final userRef = _usersRepo.userDocRef(user.uid);
+      final rewardsRef = _usersRepo.rewardsDocRef(user.uid);
 
       batch.set(userRef, {
         'uid': user.uid,
@@ -309,7 +298,6 @@ class AuthViewModel extends StateNotifier<AuthState> {
         // Teachers require admin approval before gaining teacher features
         'isApproved': role != 'teacher',
         'emailVerified': false,
-        'createdAt': FieldValue.serverTimestamp(),
       });
       batch.set(rewardsRef, {
         'userId': user.uid,
@@ -319,7 +307,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
       });
 
       await batch.commit();
-      await user.sendEmailVerification();
+      await _authRepo.sendEmailVerification();
 
       state = AuthState(user: user);
       return AuthDestination.studentDashboard;
@@ -339,7 +327,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
       debugPrint(
           'registerWithEmail FirebaseException: [${ex.plugin}/${ex.code}] ${ex.message}');
       final msg = ex.code == 'permission-denied'
-          ? 'We created your account but couldn’t save your profile '
+          ? 'We created your account but couldn\'t save your profile '
               '(permission denied). Check Firestore rules.'
           : 'Registration hit a server error: ${ex.message ?? ex.code}';
       state = state.copyWith(
@@ -379,15 +367,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      final user = state.user ?? _auth.currentUser;
-      if (user == null) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Session expired. Please register or sign in again.',
-        );
-        return false;
-      }
-      await user.sendEmailVerification();
+      await _authRepo.sendEmailVerification();
       state = state.copyWith(isLoading: false);
       return true;
     } on FirebaseAuthException catch (ex) {
@@ -406,12 +386,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
   }
 
   Future<void> signOut() async {
-    try {
-      await _google.signOut();
-    } catch (_) {
-      // Google sign-out can fail if not signed in with Google — ignore.
-    }
-    await _auth.signOut();
+    await _authRepo.signOut();
     state = const AuthState();
   }
 
@@ -428,7 +403,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      await _auth.sendPasswordResetEmail(email: e);
+      await _authRepo.sendPasswordReset(e);
       state = state.copyWith(isLoading: false);
       return true;
     } on FirebaseAuthException catch (ex) {
@@ -451,25 +426,23 @@ class AuthViewModel extends StateNotifier<AuthState> {
   // -------------------------------------------------------------------------
 
   Future<void> _ensureUserDoc(User user) async {
-    final docRef = _firestore.collection('users').doc(user.uid);
-    final snapshot = await docRef.get();
-    if (snapshot.exists) return;
+    final existing = await _usersRepo.getUserDocRaw(user.uid);
+    if (existing != null) return;
 
-    await docRef.set({
+    await _usersRepo.setUserFields(user.uid, {
       'uid': user.uid,
       'email': user.email,
       'displayName': user.displayName,
       'photoUrl': user.photoURL,
       'role': 'student',
       'subscriptionType': 'free',
-      'createdAt': FieldValue.serverTimestamp(),
     });
   }
 
   Future<AuthDestination> _resolveRoleDestination(String uid) async {
     try {
-      final doc = await _firestore.collection('users').doc(uid).get();
-      final role = (doc.data()?['role'] as String?)?.trim() ?? 'student';
+      final data = await _usersRepo.getUserDocRaw(uid);
+      final role = (data?['role'] as String?)?.trim() ?? 'student';
       return switch (role) {
         'admin' => AuthDestination.admin,
         'teacher' => AuthDestination.teacherDashboard,
@@ -529,5 +502,8 @@ class AuthViewModel extends StateNotifier<AuthState> {
 
 final authViewModelProvider =
     StateNotifierProvider.autoDispose<AuthViewModel, AuthState>(
-  (ref) => AuthViewModel(),
+  (ref) => AuthViewModel(
+    ref.read(authRepositoryProvider),
+    ref.read(usersRepositoryProvider),
+  ),
 );

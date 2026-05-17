@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,6 +10,11 @@ import 'package:mentor_minds/data/models/material_item.dart';
 import 'package:mentor_minds/data/models/rewards_snapshot.dart';
 import 'package:mentor_minds/data/models/session_item.dart';
 import 'package:mentor_minds/data/models/subject_progress.dart';
+import 'package:mentor_minds/data/repositories/auth_repository.dart';
+import 'package:mentor_minds/data/repositories/materials_repository.dart';
+import 'package:mentor_minds/data/repositories/notifications_repository.dart';
+import 'package:mentor_minds/data/repositories/sessions_repository.dart';
+import 'package:mentor_minds/data/repositories/users_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Subject → brand color mapping (shared helper)
@@ -185,20 +188,28 @@ BadgeItem _mapBadge(String id) {
 // ---------------------------------------------------------------------------
 
 class DashboardViewModel extends StateNotifier<DashboardState> {
-  DashboardViewModel()
-      : super(DashboardState(
+  DashboardViewModel(
+    this._usersRepo,
+    this._sessionsRepo,
+    this._materialsRepo,
+    this._notificationsRepo,
+    this._authRepo,
+  ) : super(DashboardState(
           dailyChallengeResetsAt: _nextMidnight(DateTime.now()),
         )) {
     _init();
   }
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final UsersRepository _usersRepo;
+  final SessionsRepository _sessionsRepo;
+  final MaterialsRepository _materialsRepo;
+  final NotificationsRepository _notificationsRepo;
+  final AuthRepository _authRepo;
 
-  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _userSub;
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _sessionsSub;
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _materialsSub;
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _notifSub;
+  StreamSubscription<DashboardUser>? _userSub;
+  StreamSubscription<List<SessionItem>>? _sessionsSub;
+  StreamSubscription<List<MaterialItem>>? _materialsSub;
+  StreamSubscription<int>? _notifSub;
 
   // Track the last inputs we opened dependent streams for, so we only
   // resubscribe when the relevant user fields actually change.
@@ -213,7 +224,7 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   // -------------------------------------------------------------------------
 
   void _init() {
-    final user = _auth.currentUser;
+    final user = _authRepo.currentUser;
     if (user == null) {
       state = state.copyWith(
         isLoading: false,
@@ -238,27 +249,10 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   // -------------------------------------------------------------------------
 
   void _streamUser(String uid) {
-    _userSub = _firestore
-        .collection('users')
-        .doc(uid)
-        .snapshots()
+    _userSub = _usersRepo
+        .watchDashboardUser(uid, _authRepo.currentUser?.displayName)
         .listen(
-      (doc) {
-        final data = doc.data();
-        if (data == null) {
-          state = state.copyWith(
-            isLoading: false,
-            error: 'Your profile is missing. Please contact support.',
-          );
-          return;
-        }
-
-        final userObj = DashboardUser.fromDoc(
-          uid,
-          data,
-          _auth.currentUser?.displayName,
-        );
-
+      (userObj) {
         state = state.copyWith(
           isLoading: false,
           user: userObj,
@@ -292,18 +286,11 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   // -------------------------------------------------------------------------
 
   void _streamRecentSessions(String uid) {
-    _sessionsSub = _firestore
-        .collection('sessions')
-        .where('userId', isEqualTo: uid)
-        .orderBy('updatedAt', descending: true)
-        .limit(3)
-        .snapshots()
+    _sessionsSub = _sessionsRepo
+        .watchRecentSessions(uid, limit: 3)
         .listen(
-      (snap) {
-        state = state.copyWith(
-          recentSessions:
-              snap.docs.map(SessionItem.fromDoc).toList(growable: false),
-        );
+      (sessions) {
+        state = state.copyWith(recentSessions: sessions);
       },
       onError: (_) {
         // Non-fatal — leave prior sessions list alone.
@@ -323,19 +310,11 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
       return;
     }
 
-    final capped = subjects.take(10).toList();
-    _materialsSub = _firestore
-        .collection('materials')
-        .where('subject', whereIn: capped)
-        .orderBy('createdAt', descending: true)
-        .limit(6)
-        .snapshots()
+    _materialsSub = _materialsRepo
+        .streamDashboardMaterialsBySubjects(subjects, limit: 6)
         .listen(
-      (snap) {
-        state = state.copyWith(
-          materials:
-              snap.docs.map(MaterialItem.fromDoc).toList(growable: false),
-        );
+      (materials) {
+        state = state.copyWith(materials: materials);
       },
       onError: (_) {
         // Non-fatal — likely a missing composite index on first run.
@@ -349,14 +328,11 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
 
   void _streamNotifications(String role) {
     _notifSub?.cancel();
-    _notifSub = _firestore
-        .collection('notifications')
-        .where('recipientRole', whereIn: ['all', role])
-        .where('read', isEqualTo: false)
-        .snapshots()
+    _notifSub = _notificationsRepo
+        .watchUnreadCount(role)
         .listen(
-      (snap) {
-        state = state.copyWith(notificationCount: snap.size);
+      (count) {
+        state = state.copyWith(notificationCount: count);
       },
       onError: (_) {
         // Non-fatal.
@@ -371,16 +347,10 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
 
   Future<void> _fetchStreak(String uid) async {
     try {
-      final snap = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('usage')
-          .orderBy(FieldPath.documentId, descending: true)
-          .limit(45)
-          .get();
+      final docs = await _usersRepo.getUsageHistory(uid, limit: 45);
 
       final byKey = {
-        for (final d in snap.docs) d.id: d.data(),
+        for (final d in docs) d['id'] as String: d,
       };
 
       final now = DateTime.now();
@@ -415,46 +385,13 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   Future<void> _awardDailyLoginIfNeeded(String uid) async {
     try {
       final todayKey = _usageKey(DateTime.now());
-      final usageRef = _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('usage')
-          .doc(todayKey);
 
-      final usageDoc = await usageRef.get();
-      if (usageDoc.data()?['loginRewarded'] == true) return;
+      // Check if already rewarded today.
+      final usageData = await _usersRepo.getUsageDoc(uid, todayKey);
+      if (usageData?['loginRewarded'] == true) return;
 
-      final userRef = _firestore.collection('users').doc(uid);
-      final rewardsRef = _firestore.collection('rewards').doc(uid);
-
-      final batch = _firestore.batch();
-      batch.set(
-        usageRef,
-        {
-          'date': todayKey,
-          'loginRewarded': true,
-          'loginRewardedAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      );
-      batch.update(userRef, {'points': FieldValue.increment(5)});
-      // Keep /rewards/{uid}.points in sync — the rewards doc is the ledger.
-      batch.set(
-        rewardsRef,
-        {
-          'userId': uid,
-          'points': FieldValue.increment(5),
-          'history': FieldValue.arrayUnion([
-            {
-              'type': 'daily_login',
-              'points': 5,
-              'date': todayKey,
-            }
-          ]),
-        },
-        SetOptions(merge: true),
-      );
-      await batch.commit();
+      // Delegate the atomic batch write (usage + points + rewards) to the repo.
+      await _usersRepo.awardDailyLogin(uid, todayKey, amount: 5);
 
       if (!mounted) return;
       state = state.copyWith(
@@ -479,7 +416,7 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   }
 
   Future<void> refresh() async {
-    final uid = _auth.currentUser?.uid;
+    final uid = _authRepo.currentUser?.uid;
     if (uid == null) return;
     await _fetchStreak(uid);
     // Streams push fresh data automatically — no explicit re-read needed.
@@ -518,5 +455,11 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
 
 final dashboardViewModelProvider =
     StateNotifierProvider.autoDispose<DashboardViewModel, DashboardState>(
-  (ref) => DashboardViewModel(),
+  (ref) => DashboardViewModel(
+    ref.read(usersRepositoryProvider),
+    ref.read(sessionsRepositoryProvider),
+    ref.read(materialsRepositoryProvider),
+    ref.read(notificationsRepositoryProvider),
+    ref.read(authRepositoryProvider),
+  ),
 );

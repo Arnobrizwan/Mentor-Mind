@@ -1,5 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -74,12 +72,9 @@ class _Header extends ConsumerWidget {
           if (unreadCount > 0)
             TextButton(
               onPressed: () async {
-                final uid = FirebaseAuth.instance.currentUser?.uid;
-                if (uid == null) return;
-                final role = await _resolveRole(uid);
                 await ref
                     .read(notificationsViewModelProvider.notifier)
-                    .markAllAsRead(uid, role);
+                    .markAllAsReadForCurrentUser();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -105,15 +100,6 @@ class _Header extends ConsumerWidget {
     );
   }
 
-  Future<String> _resolveRole(String uid) async {
-    try {
-      final doc =
-          await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      return (doc.data()?['role'] as String?)?.trim() ?? 'student';
-    } catch (_) {
-      return 'student';
-    }
-  }
 }
 
 // ---------------------------------------------------------------------------
