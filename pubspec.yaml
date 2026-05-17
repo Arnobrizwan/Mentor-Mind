@@ -52,6 +52,14 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^4.0.0
 
+  # Lints (Phase 1 / D-08, QUAL-04)
+  # custom_lint 0.7.7 was specified in PLAN but does not exist on pub.dev;
+  # latest in ^0.7.x is 0.7.6 (next: 0.8.1 which bumps analyzer major).
+  custom_lint: ^0.7.6
+  riverpod_lint: ^2.6.5
+  mentormind_lints:
+    path: tool/lints
+
   # Test harness (Phase 1 / CI-07)
   mocktail: ^1.0.5
   fake_cloud_firestore: ^3.1.0
