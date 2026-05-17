@@ -8,6 +8,11 @@ import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
 import 'package:mentor_minds/application/viewmodels/rewards/rewards_viewmodel.dart';
+import 'package:mentor_minds/data/models/earned_badge.dart';
+import 'package:mentor_minds/data/models/history_entry.dart';
+import 'package:mentor_minds/data/models/leaderboard_entry.dart';
+import 'package:mentor_minds/data/models/locked_badge.dart';
+import 'package:mentor_minds/data/models/milestone.dart';
 
 class RewardsScreen extends ConsumerWidget {
   const RewardsScreen({super.key});

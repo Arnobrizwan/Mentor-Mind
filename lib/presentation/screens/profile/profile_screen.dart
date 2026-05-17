@@ -10,6 +10,8 @@ import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
 import 'package:mentor_minds/application/viewmodels/profile/profile_viewmodel.dart';
+import 'package:mentor_minds/data/models/profile_stats.dart';
+import 'package:mentor_minds/data/models/profile_user.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});

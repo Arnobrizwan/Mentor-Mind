@@ -12,6 +12,7 @@ import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
 import 'package:mentor_minds/application/viewmodels/materials/materials_viewmodel.dart';
+import 'package:mentor_minds/data/models/learning_material.dart';
 
 class MaterialsScreen extends ConsumerStatefulWidget {
   const MaterialsScreen({super.key});

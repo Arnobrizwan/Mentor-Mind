@@ -5,6 +5,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:mentor_minds/data/models/badge_info.dart';
+import 'package:mentor_minds/data/models/leaderboard_entry.dart';
+import 'package:mentor_minds/data/models/points_history.dart';
+import 'package:mentor_minds/data/models/rewards_doc.dart';
+
 // ---------------------------------------------------------------------------
 // Point awards per action. Authoritative — writers elsewhere in the app
 // call awardPoints(uid, '<action>') and the value is looked up here so we
@@ -27,23 +32,6 @@ const _pointsMap = <String, int>{
 // from scalar counters on /users/{uid}. If a counter is missing, the check
 // is simply skipped (the badge stays locked).
 // ---------------------------------------------------------------------------
-
-class BadgeInfo {
-  final String id;
-  final String emoji;
-  final String name;
-  final String description;
-  final String unlockHint;
-  final int? target;
-  const BadgeInfo({
-    required this.id,
-    required this.emoji,
-    required this.name,
-    required this.description,
-    required this.unlockHint,
-    this.target,
-  });
-}
 
 const _catalog = <BadgeInfo>[
   BadgeInfo(
@@ -103,65 +91,6 @@ const _catalog = <BadgeInfo>[
     target: 100,
   ),
 ];
-
-// ---------------------------------------------------------------------------
-// Models
-// ---------------------------------------------------------------------------
-
-class RewardsDoc {
-  final String userId;
-  final int points;
-  final List<String> badges;
-  final List<PointsHistory> history;
-  const RewardsDoc({
-    required this.userId,
-    required this.points,
-    required this.badges,
-    required this.history,
-  });
-
-  static const empty =
-      RewardsDoc(userId: '', points: 0, badges: [], history: []);
-}
-
-class PointsHistory {
-  final String action;
-  final int pointsAwarded;
-  final DateTime? timestamp;
-  const PointsHistory({
-    required this.action,
-    required this.pointsAwarded,
-    required this.timestamp,
-  });
-
-  factory PointsHistory.fromMap(Map<String, dynamic> m) {
-    final ts = m['timestamp'];
-    return PointsHistory(
-      action: (m['action'] as String?)?.trim() ?? 'unknown',
-      pointsAwarded: (m['pointsAwarded'] as num?)?.toInt() ??
-          (m['points'] as num?)?.toInt() ??
-          0,
-      timestamp: ts is Timestamp ? ts.toDate() : null,
-    );
-  }
-}
-
-class LeaderboardEntry {
-  final String uid;
-  final String name;
-  final String? avatarUrl;
-  final int points;
-  final int rank;
-  final bool isCurrentUser;
-  const LeaderboardEntry({
-    required this.uid,
-    required this.name,
-    required this.avatarUrl,
-    required this.points,
-    required this.rank,
-    required this.isCurrentUser,
-  });
-}
 
 // ---------------------------------------------------------------------------
 // State
@@ -497,6 +426,7 @@ class GamificationViewModel extends StateNotifier<GamificationState> {
           name: name,
           avatarUrl: (avatar?.isEmpty ?? true) ? null : avatar,
           points: (data['points'] as num?)?.toInt() ?? 0,
+          subject: null, // gamification context has no per-entry subject tag
           rank: rank,
           isCurrentUser: currentUid != null && doc.id == currentUid,
         ));

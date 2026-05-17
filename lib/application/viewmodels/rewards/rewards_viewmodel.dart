@@ -5,28 +5,18 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:mentor_minds/data/models/badge_info.dart';
+import 'package:mentor_minds/data/models/earned_badge.dart';
+import 'package:mentor_minds/data/models/history_entry.dart';
+import 'package:mentor_minds/data/models/leaderboard_entry.dart';
+import 'package:mentor_minds/data/models/locked_badge.dart';
+import 'package:mentor_minds/data/models/milestone.dart';
+
 // ---------------------------------------------------------------------------
 // Static badge catalog — the full set of achievable badges. Earned badge IDs
 // come from /rewards/{uid}.badges; we join against this catalog to render
 // cards for both earned and locked states.
 // ---------------------------------------------------------------------------
-
-class BadgeInfo {
-  final String id;
-  final String emoji;
-  final String name;
-  final String description;
-  final String unlockHint; // Short hint shown under locked cards
-  final int? target; // Numeric target for progress bar, if applicable
-  const BadgeInfo({
-    required this.id,
-    required this.emoji,
-    required this.name,
-    required this.description,
-    required this.unlockHint,
-    this.target,
-  });
-}
 
 const _allBadges = <BadgeInfo>[
   BadgeInfo(
@@ -100,89 +90,6 @@ const _allBadges = <BadgeInfo>[
 // ---------------------------------------------------------------------------
 
 const _milestones = <int>[50, 100, 200, 500, 1000, 2500, 5000];
-
-class Milestone {
-  final int target;
-  final int current;
-  final String rewardHint;
-  const Milestone({
-    required this.target,
-    required this.current,
-    required this.rewardHint,
-  });
-
-  int get remaining => target - current;
-  double get progress =>
-      target <= 0 ? 1 : (current / target).clamp(0.0, 1.0);
-  bool get isMaxed => target == 0;
-
-  static const maxed = Milestone(target: 0, current: 0, rewardHint: '');
-}
-
-// ---------------------------------------------------------------------------
-// History & leaderboard models
-// ---------------------------------------------------------------------------
-
-class HistoryEntry {
-  final String action;
-  final String icon;
-  final int points;
-  final DateTime? timestamp;
-  const HistoryEntry({
-    required this.action,
-    required this.icon,
-    required this.points,
-    required this.timestamp,
-  });
-
-  factory HistoryEntry.fromMap(Map<String, dynamic> m) {
-    final ts = m['timestamp'];
-    return HistoryEntry(
-      action: (m['action'] as String?)?.trim() ?? 'Points earned',
-      icon: (m['icon'] as String?)?.trim().isNotEmpty == true
-          ? (m['icon'] as String).trim()
-          : '✨',
-      points: (m['points'] as num?)?.toInt() ?? 0,
-      timestamp: ts is Timestamp ? ts.toDate() : null,
-    );
-  }
-}
-
-class LeaderboardEntry {
-  final String uid;
-  final String name;
-  final String? avatarUrl;
-  final int points;
-  final String? subject; // top subject tag
-  final int rank;
-  final bool isCurrentUser;
-  const LeaderboardEntry({
-    required this.uid,
-    required this.name,
-    required this.avatarUrl,
-    required this.points,
-    required this.subject,
-    required this.rank,
-    required this.isCurrentUser,
-  });
-}
-
-class EarnedBadge {
-  final BadgeInfo info;
-  final DateTime? earnedAt;
-  final bool recentlyEarned;
-  const EarnedBadge({
-    required this.info,
-    required this.earnedAt,
-    required this.recentlyEarned,
-  });
-}
-
-class LockedBadge {
-  final BadgeInfo info;
-  final int? currentProgress;
-  const LockedBadge({required this.info, required this.currentProgress});
-}
 
 // ---------------------------------------------------------------------------
 // State

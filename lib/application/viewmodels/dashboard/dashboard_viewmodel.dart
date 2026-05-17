@@ -6,6 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:mentor_minds/core/constants/app_colors.dart';
+import 'package:mentor_minds/data/models/badge_item.dart';
+import 'package:mentor_minds/data/models/dashboard_user.dart';
+import 'package:mentor_minds/data/models/material_item.dart';
+import 'package:mentor_minds/data/models/rewards_snapshot.dart';
+import 'package:mentor_minds/data/models/session_item.dart';
+import 'package:mentor_minds/data/models/subject_progress.dart';
 
 // ---------------------------------------------------------------------------
 // Subject → brand color mapping (shared helper)
@@ -25,162 +31,6 @@ const _subjectColors = <String, Color>{
 };
 
 Color _colorForSubject(String s) => _subjectColors[s] ?? AppColors.kPrimary;
-
-List<Color> _gradientForSubject(String s) {
-  final base = _colorForSubject(s);
-  final hsl = HSLColor.fromColor(base);
-  final darker = hsl
-      .withLightness((hsl.lightness - 0.18).clamp(0.0, 1.0))
-      .toColor();
-  return [base, darker];
-}
-
-// ---------------------------------------------------------------------------
-// Data models
-// ---------------------------------------------------------------------------
-
-class DashboardUser {
-  final String uid;
-  final String name;
-  final String firstName;
-  final String role;
-  final int points;
-  final List<String> subjects;
-  final String level;
-  final List<String> badgeIds;
-
-  const DashboardUser({
-    required this.uid,
-    required this.name,
-    required this.firstName,
-    required this.role,
-    required this.points,
-    required this.subjects,
-    required this.level,
-    required this.badgeIds,
-  });
-
-  factory DashboardUser.fromDoc(
-    String uid,
-    Map<String, dynamic> data,
-    String? authDisplayName,
-  ) {
-    final rawName = (data['name'] as String?)?.trim();
-    final name = (rawName?.isNotEmpty ?? false)
-        ? rawName!
-        : (authDisplayName?.trim().isNotEmpty == true
-            ? authDisplayName!.trim()
-            : 'Learner');
-    return DashboardUser(
-      uid: uid,
-      name: name,
-      firstName: name.split(RegExp(r'\s+')).first,
-      role: (data['role'] as String?)?.trim() ?? 'student',
-      points: (data['points'] as num?)?.toInt() ?? 0,
-      subjects: ((data['subjects'] as List?) ?? const [])
-          .map((e) => e.toString())
-          .toList(growable: false),
-      level: (data['level'] as String?) ?? '',
-      badgeIds: ((data['badges'] as List?) ?? const [])
-          .map((e) => e.toString())
-          .toList(growable: false),
-    );
-  }
-}
-
-class RewardsSnapshot {
-  final int points;
-  final List<String> badgeIds;
-  const RewardsSnapshot({this.points = 0, this.badgeIds = const []});
-}
-
-class SubjectProgress {
-  final String name;
-  final double progress; // 0..1
-  final Color color;
-  const SubjectProgress({
-    required this.name,
-    required this.progress,
-    required this.color,
-  });
-}
-
-class SessionItem {
-  final String id;
-  final String subject;
-  final Color subjectColor;
-  final String question;
-  final DateTime timestamp;
-  const SessionItem({
-    required this.id,
-    required this.subject,
-    required this.subjectColor,
-    required this.question,
-    required this.timestamp,
-  });
-
-  factory SessionItem.fromDoc(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    final data = doc.data();
-    final subject = (data['subject'] as String?) ?? 'General';
-    final question = (data['lastQuestion'] as String?) ??
-        (data['title'] as String?) ??
-        'Recent question';
-    final ts = (data['updatedAt'] as Timestamp?)?.toDate() ??
-        (data['createdAt'] as Timestamp?)?.toDate() ??
-        DateTime.now();
-    return SessionItem(
-      id: doc.id,
-      subject: subject,
-      subjectColor: _colorForSubject(subject),
-      question: question,
-      timestamp: ts,
-    );
-  }
-}
-
-class MaterialItem {
-  final String id;
-  final String title;
-  final String level;
-  final String subject;
-  final List<Color> gradient;
-  const MaterialItem({
-    required this.id,
-    required this.title,
-    required this.level,
-    required this.subject,
-    required this.gradient,
-  });
-
-  factory MaterialItem.fromDoc(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    final data = doc.data();
-    final subject = (data['subject'] as String?) ?? 'General';
-    return MaterialItem(
-      id: doc.id,
-      title: (data['title'] as String?) ?? 'Untitled',
-      level: (data['level'] as String?) ?? '',
-      subject: subject,
-      gradient: _gradientForSubject(subject),
-    );
-  }
-}
-
-class BadgeItem {
-  final String id;
-  final String name;
-  final IconData icon;
-  final Color color;
-  const BadgeItem({
-    required this.id,
-    required this.name,
-    required this.icon,
-    required this.color,
-  });
-}
 
 // ---------------------------------------------------------------------------
 // State

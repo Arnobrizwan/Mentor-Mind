@@ -7,60 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mentor_minds/core/constants/app_colors.dart';
-import 'package:mentor_minds/application/viewmodels/materials/materials_viewmodel.dart';
-
-// ---------------------------------------------------------------------------
-// Models
-// ---------------------------------------------------------------------------
-
-class MaterialSearchHit {
-  final String id;
-  final String title;
-  final String subject;
-  final String level;
-  final MaterialType type;
-  final DateTime createdAt;
-
-  const MaterialSearchHit({
-    required this.id,
-    required this.title,
-    required this.subject,
-    required this.level,
-    required this.type,
-    required this.createdAt,
-  });
-
-  factory MaterialSearchHit.fromLearningMaterial(LearningMaterial m) {
-    return MaterialSearchHit(
-      id: m.materialId,
-      title: m.title,
-      subject: m.subject,
-      level: m.level,
-      type: m.type,
-      createdAt: m.createdAt,
-    );
-  }
-
-  Color get subjectColor => subjectColorFor(subject);
-}
-
-class SessionSearchHit {
-  final String id;
-  final String subject;
-  final String preview;
-  final int messageCount;
-  final DateTime updatedAt;
-
-  const SessionSearchHit({
-    required this.id,
-    required this.subject,
-    required this.preview,
-    required this.messageCount,
-    required this.updatedAt,
-  });
-
-  Color get subjectColor => subjectColorFor(subject);
-}
+import 'package:mentor_minds/data/models/learning_material.dart';
+import 'package:mentor_minds/data/models/material_search_hit.dart';
+import 'package:mentor_minds/data/models/session_search_hit.dart';
 
 // ---------------------------------------------------------------------------
 // Constants

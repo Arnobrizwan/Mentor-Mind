@@ -13,6 +13,7 @@ import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
 import 'package:mentor_minds/application/viewmodels/tutor/chat_viewmodel.dart';
+import 'package:mentor_minds/data/models/chat_message.dart';
 
 class TutorScreen extends ConsumerStatefulWidget {
   const TutorScreen({super.key});

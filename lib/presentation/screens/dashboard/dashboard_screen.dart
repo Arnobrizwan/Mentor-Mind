@@ -10,6 +10,10 @@ import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
 import 'package:mentor_minds/application/viewmodels/dashboard/dashboard_viewmodel.dart';
+import 'package:mentor_minds/data/models/badge_item.dart';
+import 'package:mentor_minds/data/models/material_item.dart';
+import 'package:mentor_minds/data/models/session_item.dart';
+import 'package:mentor_minds/data/models/subject_progress.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
