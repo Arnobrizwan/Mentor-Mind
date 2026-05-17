@@ -1,0 +1,14 @@
+# dart_test.yaml — Phase 1 test tag configuration.
+# Tags partition the test suite so CI can run subsets:
+#   `flutter test --tags unit`       — fast unit tests only
+#   `flutter test --tags widget`     — widget tests
+#   `flutter test --tags emulator`   — emulator-dependent integration tests (Plan 09)
+#
+# Test files opt into tags via @Tags(['unit']) at the top of the file
+# or via the `tags:` parameter on individual test/testWidgets calls.
+# Untagged tests still run with the default `flutter test` invocation.
+# Tags become mandatory for the emulator test (Plan 09).
+tags:
+  unit:
+  widget:
+  emulator:
