@@ -5,8 +5,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mentor_minds/core/utils/validators.dart';
 
-@Tags(['unit'])
-
 void main() {
   group('Validators', () {
     // -----------------------------------------------------------------------

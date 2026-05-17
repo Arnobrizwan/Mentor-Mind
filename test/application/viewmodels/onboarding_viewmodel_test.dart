@@ -8,8 +8,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mentor_minds/application/viewmodels/onboarding/onboarding_viewmodel.dart';
 
-@Tags(['unit'])
-
 void main() {
   group('OnboardingViewModel', () {
     setUp(() {
