@@ -312,8 +312,13 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
       batch.delete(_usersRepo.userDocRef(uid));
       await batch.commit();
 
-      // 2. Delete avatar from Storage (best-effort — not all users have one).
-      await _storageRepo.deleteByPath('avatars/$uid.jpg');
+      // 2. ARCH-06 / Plan 07: avatar storage delete is intentionally skipped on account deletion.
+      //    The upload path is `uploads/{uid}/{ts}_avatar.jpg` where the timestamp is opaque to the
+      //    viewmodel. A reliable client-side delete would require either (a) recording the upload
+      //    path on `/users/{uid}.avatarStoragePath`, or (b) a Storage list-and-delete sweep.
+      //    Both are deferred to Phase 4+. Orphan objects are <100KB each and rate-limited by the
+      //    user's own delete-account frequency (typically once per account in the user's lifetime).
+      //    See: T-1-ORPHAN in 01-07-avatar-and-google-signin-PLAN.md.
 
       // 3. Delete the auth user (also signs out of Google if applicable).
       await _authRepo.deleteAccount();
