@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "722452556351",
+    "project_id": "mentor-mind-aa765",
+    "storage_bucket": "mentor-mind-aa765.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:722452556351:android:bbc156ad0601261a97e68a",
+        "android_client_info": {
+          "package_name": "com.mentorminds.mentor_minds"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCxEDL0IhXgFZDGSvtC_GICQDFcwzUFF0s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

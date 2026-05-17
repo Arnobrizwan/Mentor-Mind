@@ -1,0 +1,25 @@
+rules_version = '2';
+
+// Cloud Storage rules for MentorMinds.
+// Only path the client currently writes is uploads/{uid}/... (image attach in
+// the AI tutor). Scoped per-user + image-only + size cap.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // uploads/{uid}/<anything>  — user-owned diagram/photo uploads for MentorBot.
+    match /uploads/{uid}/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.size < 5 * 1024 * 1024  // 5 MB cap
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Default deny — any other path is blocked until a rule is added above.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

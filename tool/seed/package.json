@@ -1,0 +1,12 @@
+{
+  "name": "mentor-minds-seed",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Firestore seed data for MentorMinds dev/demo.",
+  "scripts": {
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.1"
+  }
+}
