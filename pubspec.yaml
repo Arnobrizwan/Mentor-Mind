@@ -13,13 +13,9 @@ dependencies:
     sdk: flutter
 
   # State management
+  flutter_riverpod: ^2.6.1
   hooks_riverpod: ^2.5.1
   flutter_hooks: ^0.20.5
-  riverpod_annotation: ^2.3.5
-
-  # DI
-  get_it: ^7.7.0
-  injectable: ^2.4.4
 
   # Navigation
   go_router: ^14.2.7
@@ -52,10 +48,16 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  build_runner: ^2.4.12
-  riverpod_generator: ^2.4.3
-  injectable_generator: ^2.6.2
+  integration_test:
+    sdk: flutter
   flutter_lints: ^4.0.0
+
+  # Test harness (Phase 1 / CI-07)
+  mocktail: ^1.0.5
+  fake_cloud_firestore: ^3.1.0
+  firebase_auth_mocks: ^0.14.2
+  golden_toolkit: ^0.15.0
+  network_image_mock: ^2.1.1
 
 flutter:
   uses-material-design: true
