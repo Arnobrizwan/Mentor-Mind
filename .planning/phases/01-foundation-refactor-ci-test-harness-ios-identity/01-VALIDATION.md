@@ -45,7 +45,7 @@ created: 2026-05-17
 | Plan slug (planned) | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---|---|---|---|---|---|---|---|---|
 | 01-w0-deps-and-emulators | 1 | CI-07, QUAL-06 | T-1-W0 | Test deps resolve, unused codegen deps removed | unit | `flutter pub get && flutter test` | ❌ W0 | ⬜ pending |
-| 01-w0-emulator-config | 1 | CI-06 | T-1-W0 | Emulator suite boots Auth+Firestore+Storage+Functions | integration | `firebase emulators:start --only auth,firestore,storage,functions --import=tool/emulator-data` | ❌ W0 | ⬜ pending |
+| 01-w0-emulator-config | 1 | CI-06 | T-1-W0 | Emulator suite boots Auth+Firestore+Storage (Functions deferred to Phase 2 per D-10) | integration | `firebase emulators:start --only auth,firestore,storage --import=tool/emulator-data` | ✅ Plan 09 | ✅ closed |
 | 01-w0-anchor-tests | 1 | CI-04, CI-05, CI-07 | — | Five anchor tests exercise each new dev_dep at least once | unit + widget + integration | `flutter test --coverage && flutter test integration_test/ --dart-define=USE_EMULATOR=true` | ❌ W0 | ⬜ pending |
 | 02-refactor-pure-git-mv | 2 | ARCH-01, ARCH-02 | — | `git log --follow` continuity preserved; layered tree exists | static | `git log --follow lib/presentation/screens/dashboard_screen.dart \| head -5` returns ≥2 commits | ❌ W0 | ⬜ pending |
 | 03-layer-lint-rule | 2 | ARCH-01, ARCH-03, QUAL-04 | T-1-LAYER | Presentation cannot import `package:mentor_minds/data/...`; viewmodels cannot import `package:firebase_*` | lint | `dart run custom_lint` exits 0 | ❌ W0 | ⬜ pending |
