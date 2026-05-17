@@ -47,3 +47,11 @@ app.*.map.json
 # Claude Code local config
 .claude/
 .cursor/
+
+# Secrets — never commit
+**/service-account*.json
+**/serviceAccountKey*.json
+*.pem
+*.key
+.env
+.env.*
