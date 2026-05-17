@@ -126,6 +126,53 @@ For everyday dev, drop this into a launch config:
 
 ---
 
+## Phase 1 — iOS Identity Migration Checklist
+
+Run these 4 manual steps BEFORE resuming the executor (which will run `flutterfire configure` and `flutter build ios --no-codesign`).
+
+- [ ] **(1) Register new iOS app in Firebase Console**
+      Visit: https://console.firebase.google.com/project/mentor-mind-aa765/settings/general
+      Click "Add app" → iOS.
+      Bundle ID: `com.mentorminds.mentorMinds`  (exact case: capital M in mentorMinds)
+      App nickname: `MentorMinds iOS (v1.0)` (optional)
+      App Store ID: leave blank for now
+      Click "Register app".
+
+- [ ] **(2) Download replacement GoogleService-Info.plist**
+      On the same page after registration, click "Download GoogleService-Info.plist".
+      Verify the downloaded file contains both `<key>CLIENT_ID</key>` and `<key>REVERSED_CLIENT_ID</key>` entries.
+      Move/copy the file to `ios/Runner/GoogleService-Info.plist`, OVERWRITING the existing file.
+      Verify with: `grep -c 'CLIENT_ID\|REVERSED_CLIENT_ID' ios/Runner/GoogleService-Info.plist` → expected 2 or more.
+
+- [ ] **(3) Re-associate APNs auth key (.p8) with the new iOS app**
+      Visit: https://console.firebase.google.com/project/mentor-mind-aa765/settings/cloudmessaging
+      Under "Apple app configuration" select the NEW iOS app (com.mentorminds.mentorMinds).
+      Under "APNs Authentication Key" click "Upload".
+      Upload the SAME .p8 file already associated with the old app — Apple .p8 keys are per-Team, not per-bundle-id, so no new key generation is required.
+      Confirm "Key ID" and "Team ID" populate after upload.
+
+- [ ] **(4) Confirm Apple Developer Portal App ID exists**
+      Visit: https://developer.apple.com/account/resources/identifiers
+      Confirm that `com.mentorminds.mentorMinds` either (a) appears explicitly as an Identifier, or (b) is covered by a wildcard provisioning profile your Apple Team uses for development builds.
+      If neither (a) nor (b): create an explicit App ID for `com.mentorminds.mentorMinds` with default capabilities. For Phase 1 (development builds only), default auto-provisioning is sufficient — explicit App ID with Push capability is required at Phase 6 (FCM).
+
+Once all 4 boxes are checked AND the new GoogleService-Info.plist is in place at `ios/Runner/GoogleService-Info.plist`, run these CLI verification checks:
+
+```bash
+# Check 1 — new plist has the Google Sign-In keys (expected: 2 or more)
+grep -c 'CLIENT_ID\|REVERSED_CLIENT_ID' ios/Runner/GoogleService-Info.plist
+
+# Check 2 — plist BUNDLE_ID matches the new id (expected: 1 match)
+grep -A1 'BUNDLE_ID' ios/Runner/GoogleService-Info.plist | grep 'com.mentorminds.mentorMinds'
+
+# Check 3 — BACKEND_SETUP.md has 4 checked boxes (expected: 4 or more)
+grep -c '^\s*- \[x\]' BACKEND_SETUP.md
+```
+
+Then type "approved" in the chat to resume the executor (which will run `flutterfire configure`, `pod install`, and `flutter build ios --no-codesign`).
+
+---
+
 ## Troubleshooting
 
 **"Missing or insufficient permissions"** — rule denied the write. In the console, open **Firestore → Rules Playground**, paste the exact path + action, and trace which rule dropped it.
