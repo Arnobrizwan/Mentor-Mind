@@ -55,3 +55,12 @@ app.*.map.json
 *.key
 .env
 .env.*
+
+# Firebase Emulator Suite (local-only artifacts)
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+database-debug.log
+pubsub-debug.log
+storage-debug.log
+.firebase/
