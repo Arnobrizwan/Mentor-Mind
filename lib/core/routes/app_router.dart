@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/auth/login_screen.dart';
-import '../../features/auth/register_screen.dart';
-import '../../features/dashboard/dashboard_screen.dart';
-import '../../features/materials/materials_screen.dart';
-import '../../features/notifications/notifications_screen.dart';
-import '../../features/onboarding/onboarding_screen.dart';
-import '../../features/profile/profile_screen.dart';
-import '../../features/rewards/rewards_screen.dart';
-import '../../features/search/search_screen.dart';
-import '../../features/splash/splash_screen.dart';
-import '../../features/tutor/tutor_screen.dart';
+import 'package:mentor_minds/presentation/screens/auth/login_screen.dart';
+import 'package:mentor_minds/presentation/screens/auth/register_screen.dart';
+import 'package:mentor_minds/presentation/screens/dashboard/dashboard_screen.dart';
+import 'package:mentor_minds/presentation/screens/materials/materials_screen.dart';
+import 'package:mentor_minds/presentation/screens/notifications/notifications_screen.dart';
+import 'package:mentor_minds/presentation/screens/onboarding/onboarding_screen.dart';
+import 'package:mentor_minds/presentation/screens/profile/profile_screen.dart';
+import 'package:mentor_minds/presentation/screens/rewards/rewards_screen.dart';
+import 'package:mentor_minds/presentation/screens/search/search_screen.dart';
+import 'package:mentor_minds/presentation/screens/splash/splash_screen.dart';
+import 'package:mentor_minds/presentation/screens/tutor/tutor_screen.dart';
 
 // Route name constants — always navigate by name, never by path string.
 abstract final class AppRoutes {
