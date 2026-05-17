@@ -56,11 +56,12 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyB9xmghvdBhWrKRzEDnGiu7vyPvuHWIS10',
-    appId: '1:722452556351:ios:823964b9f46ebc2f97e68a',
+    appId: '1:722452556351:ios:a3b947b673f29cf997e68a',
     messagingSenderId: '722452556351',
     projectId: 'mentor-mind-aa765',
     storageBucket: 'mentor-mind-aa765.firebasestorage.app',
-    iosBundleId: 'com.arnobrizwan.mentorminds',
+    iosClientId: '722452556351-clb5opngp2jgp0jko6hophqja9tp38en.apps.googleusercontent.com',
+    iosBundleId: 'com.mentorminds.mentorMinds',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
