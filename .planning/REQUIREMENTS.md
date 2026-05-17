@@ -261,17 +261,147 @@ Deferred to a future milestone.
 
 ## Traceability
 
-Filled in by the roadmapper. Each requirement maps to exactly one phase.
+Each v1 requirement maps to exactly one phase. Phases are defined in `.planning/ROADMAP.md`.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by gsd-roadmapper) | — | Pending |
+| ARCH-01 | Phase 1 | Pending |
+| ARCH-02 | Phase 1 | Pending |
+| ARCH-03 | Phase 1 | Pending |
+| ARCH-04 | Phase 1 | Pending |
+| ARCH-05 | Phase 1 | Pending |
+| ARCH-06 | Phase 1 | Pending |
+| ARCH-07 | Phase 1 | Pending |
+| CI-01 | Phase 1 | Pending |
+| CI-02 | Phase 1 | Pending |
+| CI-03 | Phase 1 | Pending |
+| CI-04 | Phase 1 | Pending |
+| CI-05 | Phase 1 | Pending |
+| CI-06 | Phase 1 | Pending |
+| CI-07 | Phase 1 | Pending |
+| FUNC-01 | Phase 2 | Pending |
+| FUNC-02 | Phase 2 | Pending |
+| FUNC-03 | Phase 2 | Pending |
+| FUNC-04 | Phase 2 | Pending |
+| FUNC-05 | Phase 2 | Pending |
+| FUNC-06 | Phase 2 | Pending |
+| AI-01 | Phase 3 | Pending |
+| AI-02 | Phase 3 | Pending |
+| AI-03 | Phase 3 | Pending |
+| AI-04 | Phase 3 | Pending |
+| AI-05 | Phase 3 | Pending |
+| AI-06 | Phase 3 | Pending |
+| AI-07 | Phase 3 | Pending |
+| AI-08 | Phase 3 | Pending |
+| AI-09 | Phase 3 | Pending |
+| AI-10 | Phase 3 | Pending |
+| REWD-01 | Phase 4 | Pending |
+| REWD-02 | Phase 4 | Pending |
+| REWD-03 | Phase 4 | Pending |
+| REWD-04 | Phase 4 | Pending |
+| REWD-05 | Phase 4 | Pending |
+| REWD-06 | Phase 4 | Pending |
+| REWD-07 | Phase 4 | Pending |
+| PAY-01 | Phase 5 | Pending |
+| PAY-02 | Phase 5 | Pending |
+| PAY-03 | Phase 5 | Pending |
+| PAY-04 | Phase 5 | Pending |
+| PAY-05 | Phase 5 | Pending |
+| PAY-06 | Phase 5 | Pending |
+| PAY-07 | Phase 5 | Pending |
+| PAY-08 | Phase 5 | Pending |
+| PAY-09 | Phase 5 | Pending |
+| PAY-10 | Phase 5 | Pending |
+| AUTH-01 | Phase 7 | Pending |
+| AUTH-02 | Phase 7 | Pending |
+| AUTH-03 | Phase 7 | Pending |
+| AUTH-04 | Phase 7 | Pending |
+| AUTH-05 | Phase 7 | Pending |
+| AUTH-06 | Phase 7 | Pending |
+| AUTH-07 | Phase 7 | Pending |
+| ONBD-01 | Phase 7 | Pending |
+| ONBD-02 | Phase 7 | Pending |
+| ONBD-03 | Phase 7 | Pending |
+| ONBD-04 | Phase 7 | Pending |
+| SPLA-01 | Phase 7 | Pending |
+| SPLA-02 | Phase 7 | Pending |
+| SPLA-03 | Phase 7 | Pending |
+| DASH-01 | Phase 7 | Pending |
+| DASH-02 | Phase 6 | Pending |
+| DASH-03 | Phase 7 | Pending |
+| DASH-04 | Phase 7 | Pending |
+| DASH-05 | Phase 7 | Pending |
+| DASH-06 | Phase 7 | Pending |
+| DASH-07 | Phase 7 | Pending |
+| TUTR-01 | Phase 7 | Pending |
+| TUTR-02 | Phase 7 | Pending |
+| TUTR-03 | Phase 7 | Pending |
+| TUTR-04 | Phase 7 | Pending |
+| TUTR-05 | Phase 7 | Pending |
+| TUTR-06 | Phase 7 | Pending |
+| TUTR-07 | Phase 7 | Pending |
+| MATS-01 | Phase 7 | Pending |
+| MATS-02 | Phase 7 | Pending |
+| MATS-03 | Phase 7 | Pending |
+| MATS-04 | Phase 7 | Pending |
+| MATS-05 | Phase 7 | Pending |
+| MATS-06 | Phase 7 | Pending |
+| SRCH-01 | Phase 7 | Pending |
+| SRCH-02 | Phase 7 | Pending |
+| SRCH-03 | Phase 7 | Pending |
+| SRCH-04 | Phase 7 | Pending |
+| SRCH-05 | Phase 7 | Pending |
+| PROF-01 | Phase 7 | Pending |
+| PROF-02 | Phase 7 | Pending |
+| PROF-03 | Phase 7 | Pending |
+| PROF-04 | Phase 7 | Pending |
+| PROF-05 | Phase 7 | Pending |
+| PROF-06 | Phase 7 | Pending |
+| PROF-07 | Phase 7 | Pending |
+| RWRD-01 | Phase 7 | Pending |
+| RWRD-02 | Phase 7 | Pending |
+| RWRD-03 | Phase 7 | Pending |
+| RWRD-04 | Phase 7 | Pending |
+| RWRD-05 | Phase 7 | Pending |
+| RWRD-06 | Phase 7 | Pending |
+| NOTF-01 | Phase 6 | Pending |
+| NOTF-02 | Phase 6 | Pending |
+| NOTF-03 | Phase 6 | Pending |
+| NOTF-04 | Phase 6 | Pending |
+| NOTF-05 | Phase 6 | Pending |
+| NOTF-06 | Phase 6 | Pending |
+| NOTF-07 | Phase 6 | Pending |
+| NOTF-08 | Phase 6 | Pending |
+| ADMN-01 | Phase 5 | Pending |
+| ADMN-02 | Phase 5 | Pending |
+| ADMN-03 | Phase 5 | Pending |
+| ADMN-04 | Phase 5 | Pending |
+| ADMN-05 | Phase 5 | Pending |
+| ADMN-06 | Phase 5 | Pending |
+| ADMN-07 | Phase 5 | Pending |
+| ADMN-08 | Phase 5 | Pending |
+| SHRD-01 | Phase 7 | Pending |
+| SHRD-02 | Phase 7 | Pending |
+| SHRD-03 | Phase 7 | Pending |
+| OBSV-01 | Phase 7 | Pending |
+| OBSV-02 | Phase 7 | Pending |
+| OBSV-03 | Phase 7 | Pending |
+| OBSV-04 | Phase 7 | Pending |
+| OBSV-05 | Phase 7 | Pending |
+| QUAL-01 | Phase 7 | Pending |
+| QUAL-02 | Phase 7 | Pending |
+| QUAL-03 | Phase 7 | Pending |
+| QUAL-04 | Phase 1 | Pending |
+| QUAL-05 | Phase 7 | Pending |
+| QUAL-06 | Phase 1 | Pending |
 
 **Coverage:**
-- v1 requirements: ~110 total (see categorical lists above)
-- Mapped to phases: 0 (pre-roadmap)
-- Unmapped: ~110 ⚠️ — will be 0 after roadmap
+- v1 requirements: 129 total
+- Mapped to phases: 129 (100%)
+- Unmapped: 0
+
+**Per-phase counts:** P1=16, P2=6, P3=10, P4=7, P5=18, P6=9, P7=63
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-17 after initial definition*
+*Last updated: 2026-05-17 after roadmap created (traceability populated by gsd-roadmapper)*
