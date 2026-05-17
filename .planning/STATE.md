@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 1 plans committed; executor spawn hit usage limit before any work shipped
-last_updated: "2026-05-17T10:55:00.000Z"
-last_activity: 2026-05-17 -- Phase 1 planned (11 plans, 16 reqs); execution paused — usage resets 8:40pm Asia/Kuala_Lumpur. worktrees disabled in config so future executor spawns see committed planning artifacts.
+status: executing
+stopped_at: Phase 1 context gathered
+last_updated: "2026-05-17T12:44:37.069Z"
+last_activity: 2026-05-17 -- Phase 01 execution started
 progress:
   total_phases: 7
   completed_phases: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** A student preparing for O/A Levels can ask MentorBot a subject question and get a useful, curriculum-aligned answer in under 10 seconds — every single day, on a free tier that still feels usable.
-**Current focus:** Phase 1 — Foundation (Refactor, CI, Test Harness, iOS Identity)
+**Current focus:** Phase 01 — foundation-refactor-ci-test-harness-ios-identity
 
 ## Current Position
 
-Phase: 1 of 7 (Foundation — Refactor, CI, Test Harness, iOS Identity)
-Plan: 0 of 11 in current phase
-Status: Ready to execute (paused — usage limit, resume after 8:40pm Asia/Kuala_Lumpur)
-Last activity: 2026-05-17 -- Phase 1 planning complete; first executor spawn aborted on usage cap
+Phase: 01 (foundation-refactor-ci-test-harness-ios-identity) — EXECUTING
+Plan: 1 of 11
+Status: Executing Phase 01
+Last activity: 2026-05-17 -- Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
 

@@ -138,7 +138,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation — Refactor, CI, Test Harness, iOS Identity | 0/TBD | Not started | - |
+| 1. Foundation — Refactor, CI, Test Harness, iOS Identity | 1/11 | In Progress|  |
 | 2. Cloud Functions Scaffolding + App Check | 0/TBD | Not started | - |
 | 3. Gemini Proxy + Server-Side Rate Limiting | 0/TBD | Not started | - |
 | 4. Server-Authoritative Rewards + Rules Lockdown | 0/TBD | Not started | - |
