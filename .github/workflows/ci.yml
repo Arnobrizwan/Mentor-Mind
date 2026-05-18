@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel in-progress CI runs for the same PR/branch when a new push arrives.
+# Different PRs run in independent concurrency groups.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Job 1 — Flutter: analyze + custom_lint + test with coverage  (CI-01, CI-02)
+  # ─────────────────────────────────────────────────────────────────────────────
+  flutter:
+    name: Flutter analyze + lint + test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pin Flutter to the exact SDK version used in local development so
+      # CI and dev never diverge.  cache: true enables both the Flutter SDK
+      # cache and the pub cache automatically (no separate actions/cache step
+      # needed).
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.41.3'
+          cache: true
+
+      # Resolve app dependencies.
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      # tool/lints/ is the project-local custom_lint plugin (Plan 02).
+      # Its own pub deps must be resolved before `dart run custom_lint` can
+      # find the plugin classes at analysis time.
+      - name: Resolve tool/lints/ dependencies
+        run: cd tool/lints && dart pub get
+
+      # Static analysis gate (CI-01).
+      # --fatal-warnings (NOT --fatal-infos): the codebase carries ~154 info-level
+      # hits (deprecated withOpacity, prefer_const) that are tracked as Phase 7
+      # burndown work.  Failing on them would red-light P1 CI before Phase 7 lands.
+      - name: Static analysis
+        run: flutter analyze --fatal-warnings
+
+      # Custom lint gate — layered_imports rule enforcing presentation → application
+      # → data import direction (Plan 02 / QUAL-04).
+      # IMPORTANT: dart run custom_lint is a SEPARATE step from flutter analyze;
+      # custom_lint does not run as part of flutter analyze (RESEARCH Pitfall 4).
+      - name: Custom lint (layered_imports)
+        run: dart run custom_lint
+
+      # Unit + widget tests with coverage (CI-02).
+      # integration_test/ is NOT included — flutter test only picks up test/**
+      # by default.  The emulator integration test requires a device target and
+      # Firebase emulators; those run locally only in Phase 1.  Phase 7 may add
+      # a macOS runner for full CI integration.
+      - name: Unit + widget tests with coverage
+        run: flutter test --coverage
+
+      # Upload coverage/lcov.info as a job artifact (CI-02).
+      # Codecov / Coveralls integration is deferred to Phase 7 so Phase 1 CI has
+      # zero third-party service dependencies.  The artifact is retained for 30 days
+      # and is accessible from the Actions run summary.
+      - name: Upload coverage artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Job 2 — Cloud Functions: lint + build stub  (CI-03)
+  # Phase 1: functions/ directory does not exist yet (added in Phase 2).
+  # This job is a deliberate no-op stub so the workflow file is in its final
+  # shape from day one, and Phase 2 only needs to fill in the steps without
+  # touching the trigger / concurrency / job-name plumbing.
+  #
+  # Phase 2 replacement plan:
+  #   - Remove `if: false` guard.
+  #   - Add `dorny/paths-filter@v3` to gate the job on `functions/**` changes.
+  #   - Replace the echo step with:
+  #       - name: Install functions deps
+  #         run: cd functions && npm ci
+  #       - name: Lint + build TypeScript
+  #         run: cd functions && npm run lint && npm run build
+  # ─────────────────────────────────────────────────────────────────────────────
+  functions:
+    name: Cloud Functions lint + build (stub until Phase 2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: false  # Phase 1: functions/ does not exist; replaced in Phase 2
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Functions CI stub
+        run: echo "Functions CI stub — no-op until Phase 2"
+        # Phase 2 will replace this with:
+        #   cd functions && npm ci && npm run lint && npm run build
