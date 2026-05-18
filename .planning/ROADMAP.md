@@ -16,7 +16,7 @@ Each phase ships a runnable app. UI polish is deliberately last because polishin
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation — Refactor, CI, Test Harness, iOS Identity** - Layer the codebase into `presentation/application/data`, scaffold GitHub Actions + Firebase Emulator Suite, fix avatar upload + iOS Google Sign-In, align bundle ID to `com.mentorminds.mentorMinds`, bump iOS deployment target 13→14.
+- [x] **Phase 1: Foundation — Refactor, CI, Test Harness, iOS Identity** - Layer the codebase into `presentation/application/data`, scaffold GitHub Actions + Firebase Emulator Suite, fix avatar upload + iOS Google Sign-In, align bundle ID to `com.mentorminds.mentorMinds`, bump iOS deployment target 13→14. (completed 2026-05-18)
 - [ ] **Phase 2: Cloud Functions Scaffolding + App Check** - Stand up TypeScript `functions/` monorepo in `asia-south1`, deploy no-op `ping` callable, activate App Check (App Attest release + Debug dev), wire billing alert + Artifact Registry cleanup before any real callable lands.
 - [ ] **Phase 3: Gemini Proxy + Server-Side Rate Limiting** - Move Gemini behind `mentorBotChat` callable reading the key from Secret Manager, enforce 30 text + 3 image per UTC+6 day in a single transaction, remove `--dart-define=GEMINI_API_KEY` and rotate the leaked key.
 - [ ] **Phase 4: Server-Authoritative Rewards + Rules Lockdown** - Replace client `FieldValue.increment('points')` with idempotent `onSessionWrite` trigger writing to `/rewards/{uid}/ledger/{autoId}`; deploy `firestore.rules` lockdown in the same deploy with a rules-unit-testing suite that proves the lockdown.
@@ -138,7 +138,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation — Refactor, CI, Test Harness, iOS Identity | 10/11 | In Progress|  |
+| 1. Foundation — Refactor, CI, Test Harness, iOS Identity | 11/11 | Complete   | 2026-05-18 |
 | 2. Cloud Functions Scaffolding + App Check | 0/TBD | Not started | - |
 | 3. Gemini Proxy + Server-Side Rate Limiting | 0/TBD | Not started | - |
 | 4. Server-Authoritative Rewards + Rules Lockdown | 0/TBD | Not started | - |
