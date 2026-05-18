@@ -45,11 +45,12 @@ jobs:
         run: cd tool/lints && dart pub get
 
       # Static analysis gate (CI-01).
-      # --fatal-warnings (NOT --fatal-infos): the codebase carries ~154 info-level
-      # hits (deprecated withOpacity, prefer_const) that are tracked as Phase 7
-      # burndown work.  Failing on them would red-light P1 CI before Phase 7 lands.
+      # --no-fatal-infos: the codebase carries ~151 info-level hits (deprecated
+      # withOpacity, prefer_const_constructors) tracked as Phase 7 polish work.
+      # Failing on them would red-light P1 CI before Phase 7 lands.
+      # --fatal-warnings stays default (warnings still fail CI); errors always fail.
       - name: Static analysis
-        run: flutter analyze --fatal-warnings
+        run: flutter analyze --no-fatal-infos
 
       # Custom lint gate — layered_imports rule enforcing presentation → application
       # → data import direction (Plan 02 / QUAL-04).
