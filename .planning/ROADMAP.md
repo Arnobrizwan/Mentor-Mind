@@ -51,7 +51,19 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. App Check is activated in `main.dart` with App Attest provider on iOS 14+ release builds and the Debug provider on dev/CI; debug tokens are documented in `BACKEND_SETUP.md` and the CI debug token is loaded from a GitHub Actions secret.
   4. GCP Billing budget alert is configured at $10/month wired to admin email, and Artifact Registry has a retention policy keeping only the last 3 versions of each function image.
   5. `cloud_functions ^5.x` Flutter SDK is in `pubspec.yaml`, wired through `lib/data/services/`, and a "call ping" smoke test passes against the emulator.
-**Plans**: TBD
+**Plans**: 11 plans
+Plans:
+- [ ] 02-01-PLAN.md — functions/ TypeScript Node 20 monorepo scaffold (package.json, tsconfig.json, eslintrc, prettierrc, gitignore, lockfile)
+- [ ] 02-02-PLAN.md — functions/src/lib/ helpers (admin.ts + errors.ts fully; gemini/rate_limit/claims stubs)
+- [ ] 02-03-PLAN.md — ping callable in functions/src/index.ts (onCall, region asia-south1, enforceAppCheck: true)
+- [ ] 02-04-PLAN.md — firebase.json emulators.functions.port = 5001
+- [ ] 02-05-PLAN.md — BACKEND_SETUP.md Phase 2 section (billing-enable + $10/mo budget + Artifact Registry + region pin + kill-switch + debug token + CI secret)
+- [ ] 02-06-PLAN.md — App Check activation in lib/main.dart + App Attest entitlements + firebase_app_check ^0.3.2+9 dep
+- [ ] 02-07-PLAN.md — cloud_functions ^5.6.2 dep + firebase_functions_provider + PingResponse + PingRepository
+- [ ] 02-08-PLAN.md — useFunctionsEmulator wired in emulator_setup.dart + lib/main.dart USE_EMULATOR block
+- [ ] 02-09-PLAN.md — integration_test/ping_smoke_test.dart against Functions emulator
+- [ ] 02-10-PLAN.md — Lift .github/workflows/ci.yml functions: job (dorny/paths-filter@v4 + npm ci + lint + build)
+- [ ] 02-11-PLAN.md — Phase closeout (VALIDATION close + ROADMAP + REQUIREMENTS + STATE + Apple Developer Program checkpoint)
 **UI hint**: no
 
 > **Rationale & non-negotiables.** Per PITFALLS #1, App Check MUST be live before any callable enforces it — wire it on a no-op `ping` first so a dev outage doesn't cost a Gemini outage. Per PITFALLS #8, billing alert + region pin + Artifact Registry cleanup are day-zero, not a follow-up — `minInstances: 1` defaulted costs ~$25/mo at zero traffic. `asia-south1` is non-negotiable for Bangladesh users; changing region later requires redeploying clients. iOS 14+ (ARCH-05 from P1) is what makes App Attest viable.
