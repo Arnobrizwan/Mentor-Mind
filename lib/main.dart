@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -58,6 +59,7 @@ void main() async {
     FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
     await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
     await FirebaseStorage.instance.useStorageEmulator('localhost', 9199);
+    FirebaseFunctions.instance.useFunctionsEmulator('localhost', 5001);
   }
 
   runApp(const ProviderScope(child: MentorMindsApp()));
