@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 3 context gathered
-last_updated: "2026-05-19T08:14:18.996Z"
-last_activity: 2026-05-19 -- Phase 03 planning complete
+stopped_at: Phase 3 PR-1 pre-billing subset complete (4/15) — paused at 03-04 live Vertex checkpoint pending GCP billing enable
+last_updated: "2026-05-19T09:30:00.000Z"
+last_activity: 2026-05-19 -- Phase 03 plans 03-01, 03-02, 03-03, 03-05 executed (PR-1 pre-billing safe subset)
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 37
-  completed_plans: 22
-  percent: 29
+  total_plans: 52
+  completed_plans: 26
+  percent: 50
 ---
 
 # Project State
@@ -21,16 +21,41 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** A student preparing for O/A Levels can ask MentorBot a subject question and get a useful, curriculum-aligned answer in under 10 seconds — every single day, on a free tier that still feels usable.
-**Current focus:** Phase 03 — Gemini proxy + server-side rate limiting
+**Current focus:** Phase 03 — Gemini proxy + server-side rate limiting (4/15 plans landed; blocked on GCP billing)
 
 ## Current Position
 
 Phase: 3
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-05-19 -- Phase 03 planning complete
+Plan: 03-04 (blocking-human checkpoint — live Vertex AI model availability probe)
+Status: Paused — billing prerequisite outstanding
+Last activity: 2026-05-19 -- Plans 03-01, 03-02, 03-03, 03-05 committed to main (28/28 jest tests green; build + lint clean)
 
-Progress: [██████████] 100%
+Progress: [███░░░░░░░] 27% (4/15 phase-3 plans)
+
+## Phase 03 Resume Gate (BLOCKING)
+
+Plans 03-04, 03-06, 03-07, 03-08, 03-09, 03-10, 03-11, 03-12, 03-13, 03-14, 03-15 are paused pending the following human actions on `mentor-mind-aa765`:
+
+1. **Enable GCP billing** (`gcloud billing projects describe mentor-mind-aa765 --format='value(billingEnabled)'` returns `False` as of 2026-05-19T08:54Z):
+   ```bash
+   gcloud billing projects link mentor-mind-aa765 --billing-account=0121EC-5D572E-57FEE1
+   ```
+2. **Enable Vertex AI API**:
+   ```bash
+   gcloud config set project mentor-mind-aa765
+   gcloud services enable aiplatform.googleapis.com
+   ```
+3. **Set up Application Default Credentials** for the 03-04 probe:
+   ```bash
+   gcloud auth application-default login
+   ```
+4. **Run the model availability probe** (created in 03-04 Task 1, not yet executed):
+   ```bash
+   node functions/tool/verify-model-availability.js
+   ```
+   Report back `a` / `b` / `c` / `d` per 03-04-model-availability-checkpoint-PLAN.md §Task 2.
+
+Resume command (once billing is on): `/gsd-execute-phase 03 --wave 2` — picks up at 03-04, then proceeds through 03-06, 03-07 (Wave 3), Wave 4 (PR-2: backend setup + firestore rules), Wave 5-6 (PR-3: Dart-side swap), Wave 7 (closeout).
 
 ## Performance Metrics
 
@@ -93,6 +118,12 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-19T02:49:02.641Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-gemini-proxy-server-side-rate-limiting/03-CONTEXT.md
+Last session: 2026-05-19T09:30:00Z
+Stopped at: Phase 3 PR-1 pre-billing subset complete (4/15) — paused at 03-04 live-Vertex checkpoint
+Resume file: .planning/phases/03-gemini-proxy-server-side-rate-limiting/03-04-model-availability-checkpoint-PLAN.md
+Last 4 commits on main:
+- 3e0182f docs(03-05): complete rate-limit-transaction plan summary
+- fa8229a feat(functions): fill rate_limit.ts — transactional daily + burst + monthly + premium bypass
+- a8bd02e docs(03-03): complete vertex-gemini-client plan summary
+- 5d6d5c9 feat(functions): replace gemini.ts stub with Vertex AI client + GeminiClient seam + fake
+Test suite: 28/28 green (quota 7 + gemini 8 + rate_limit 13). Build + lint clean.
