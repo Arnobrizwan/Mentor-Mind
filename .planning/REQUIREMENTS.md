@@ -279,12 +279,12 @@ Each v1 requirement maps to exactly one phase. Phases are defined in `.planning/
 | CI-05 | Phase 1 | Pending |
 | CI-06 | Phase 1 | Pending |
 | CI-07 | Phase 1 | Pending |
-| FUNC-01 | Phase 2 | Pending |
+| FUNC-01 | Phase 2 | Complete |
 | FUNC-02 | Phase 2 | Complete |
-| FUNC-03 | Phase 2 | Pending |
-| FUNC-04 | Phase 2 | Pending |
-| FUNC-05 | Phase 2 | Pending |
-| FUNC-06 | Phase 2 | Pending |
+| FUNC-03 | Phase 2 | Complete |
+| FUNC-04 | Phase 2 | Complete |
+| FUNC-05 | Phase 2 | Complete |
+| FUNC-06 | Phase 2 | Complete |
 | AI-01 | Phase 3 | Pending |
 | AI-02 | Phase 3 | Pending |
 | AI-03 | Phase 3 | Pending |

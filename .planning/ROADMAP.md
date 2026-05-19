@@ -17,7 +17,7 @@ Each phase ships a runnable app. UI polish is deliberately last because polishin
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation — Refactor, CI, Test Harness, iOS Identity** - Layer the codebase into `presentation/application/data`, scaffold GitHub Actions + Firebase Emulator Suite, fix avatar upload + iOS Google Sign-In, align bundle ID to `com.mentorminds.mentorMinds`, bump iOS deployment target 13→14. (completed 2026-05-18)
-- [ ] **Phase 2: Cloud Functions Scaffolding + App Check** - Stand up TypeScript `functions/` monorepo in `asia-south1`, deploy no-op `ping` callable, activate App Check (App Attest release + Debug dev), wire billing alert + Artifact Registry cleanup before any real callable lands.
+- [x] **Phase 2: Cloud Functions Scaffolding + App Check** - Stand up TypeScript `functions/` monorepo in `asia-south1`, deploy no-op `ping` callable, activate App Check (App Attest release + Debug dev), wire billing alert + Artifact Registry cleanup before any real callable lands. (completed 2026-05-19)
 - [ ] **Phase 3: Gemini Proxy + Server-Side Rate Limiting** - Move Gemini behind `mentorBotChat` callable reading the key from Secret Manager, enforce 30 text + 3 image per UTC+6 day in a single transaction, remove `--dart-define=GEMINI_API_KEY` and rotate the leaked key.
 - [ ] **Phase 4: Server-Authoritative Rewards + Rules Lockdown** - Replace client `FieldValue.increment('points')` with idempotent `onSessionWrite` trigger writing to `/rewards/{uid}/ledger/{autoId}`; deploy `firestore.rules` lockdown in the same deploy with a rules-unit-testing suite that proves the lockdown.
 - [ ] **Phase 5: Stripe Subscriptions + Premium Claims + Admin Panel** - Ship v2-ready `/subscriptions/{uid}` schema, Stripe Checkout + webhook + Customer Portal, `setPremium` admin callable with custom claims, and the full Admin Panel (Screen 12) with NavigationRail/BottomNavBar and 5 tabs.
@@ -51,19 +51,19 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. App Check is activated in `main.dart` with App Attest provider on iOS 14+ release builds and the Debug provider on dev/CI; debug tokens are documented in `BACKEND_SETUP.md` and the CI debug token is loaded from a GitHub Actions secret.
   4. GCP Billing budget alert is configured at $10/month wired to admin email, and Artifact Registry has a retention policy keeping only the last 3 versions of each function image.
   5. `cloud_functions ^5.x` Flutter SDK is in `pubspec.yaml`, wired through `lib/data/services/`, and a "call ping" smoke test passes against the emulator.
-**Plans**: 11 plans
+**Plans**: 11 plans (02-01 through 02-11)
 Plans:
-- [ ] 02-01-PLAN.md — functions/ TypeScript Node 20 monorepo scaffold (package.json, tsconfig.json, eslintrc, prettierrc, gitignore, lockfile)
-- [ ] 02-02-PLAN.md — functions/src/lib/ helpers (admin.ts + errors.ts fully; gemini/rate_limit/claims stubs)
-- [ ] 02-03-PLAN.md — ping callable in functions/src/index.ts (onCall, region asia-south1, enforceAppCheck: true)
-- [ ] 02-04-PLAN.md — firebase.json emulators.functions.port = 5001
-- [ ] 02-05-PLAN.md — BACKEND_SETUP.md Phase 2 section (billing-enable + $10/mo budget + Artifact Registry + region pin + kill-switch + debug token + CI secret)
-- [ ] 02-06-PLAN.md — App Check activation in lib/main.dart + App Attest entitlements + firebase_app_check ^0.3.2+9 dep
-- [ ] 02-07-PLAN.md — cloud_functions ^5.6.2 dep + firebase_functions_provider + PingResponse + PingRepository
-- [ ] 02-08-PLAN.md — useFunctionsEmulator wired in emulator_setup.dart + lib/main.dart USE_EMULATOR block
-- [ ] 02-09-PLAN.md — integration_test/ping_smoke_test.dart against Functions emulator
-- [ ] 02-10-PLAN.md — Lift .github/workflows/ci.yml functions: job (dorny/paths-filter@v4 + npm ci + lint + build)
-- [ ] 02-11-PLAN.md — Phase closeout (VALIDATION close + ROADMAP + REQUIREMENTS + STATE + Apple Developer Program checkpoint)
+- [x] 02-01-PLAN.md — functions/ TypeScript Node 20 monorepo scaffold (package.json, tsconfig.json, eslintrc, prettierrc, gitignore, lockfile)
+- [x] 02-02-PLAN.md — functions/src/lib/ helpers (admin.ts + errors.ts fully; gemini/rate_limit/claims stubs)
+- [x] 02-03-PLAN.md — ping callable in functions/src/index.ts (onCall, region asia-south1, enforceAppCheck: true)
+- [x] 02-04-PLAN.md — firebase.json emulators.functions.port = 5001
+- [x] 02-05-PLAN.md — BACKEND_SETUP.md Phase 2 section (billing-enable + $10/mo budget + Artifact Registry + region pin + kill-switch + debug token + CI secret)
+- [x] 02-06-PLAN.md — App Check activation in lib/main.dart + appAttestWithDeviceCheckFallback + firebase_app_check ^0.3.2+9 dep (D-02 amended: free Apple Developer account)
+- [x] 02-07-PLAN.md — cloud_functions ^5.6.2 dep + firebase_functions_provider + PingResponse + PingRepository
+- [x] 02-08-PLAN.md — useFunctionsEmulator wired in emulator_setup.dart + lib/main.dart USE_EMULATOR block
+- [x] 02-09-PLAN.md — integration_test/ping_smoke_test.dart against Functions emulator
+- [x] 02-10-PLAN.md — Lift .github/workflows/ci.yml functions: job (dorny/paths-filter@v4 + npm ci + lint + build)
+- [x] 02-11-PLAN.md — Phase closeout (VALIDATION close + ROADMAP + REQUIREMENTS + STATE + Apple Developer Program checkpoint resolved)
 **UI hint**: no
 
 > **Rationale & non-negotiables.** Per PITFALLS #1, App Check MUST be live before any callable enforces it — wire it on a no-op `ping` first so a dev outage doesn't cost a Gemini outage. Per PITFALLS #8, billing alert + region pin + Artifact Registry cleanup are day-zero, not a follow-up — `minInstances: 1` defaulted costs ~$25/mo at zero traffic. `asia-south1` is non-negotiable for Bangladesh users; changing region later requires redeploying clients. iOS 14+ (ARCH-05 from P1) is what makes App Attest viable.
@@ -151,7 +151,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation — Refactor, CI, Test Harness, iOS Identity | 11/11 | Complete   | 2026-05-18 |
-| 2. Cloud Functions Scaffolding + App Check | 3/11 | In Progress|  |
+| 2. Cloud Functions Scaffolding + App Check | 11/11 | Complete | 2026-05-19 |
 | 3. Gemini Proxy + Server-Side Rate Limiting | 0/TBD | Not started | - |
 | 4. Server-Authoritative Rewards + Rules Lockdown | 0/TBD | Not started | - |
 | 5. Stripe Subscriptions + Premium Claims + Admin Panel | 0/TBD | Not started | - |
