@@ -30,7 +30,7 @@ Requirements for the v1.0 hardening + 12-screen polish milestone. The 12 screens
 ### Cloud Functions & App Check
 
 - [ ] **FUNC-01**: A `functions/` monorepo exists at repo root (TypeScript, Node 20, `firebase-functions ^6.x` v2 API, region `asia-south1`).
-- [ ] **FUNC-02**: A `ping` callable function is deployed with `enforceAppCheck: true` to validate the App Check + auth wiring end-to-end.
+- [x] **FUNC-02**: A `ping` callable function is deployed with `enforceAppCheck: true` to validate the App Check + auth wiring end-to-end.
 - [ ] **FUNC-03**: Firebase App Check is activated in `main.dart` with App Attest provider (release) + Debug provider (dev/CI); debug tokens are registered for every dev simulator.
 - [ ] **FUNC-04**: A GCP Billing budget alert is configured at $10/month wired to admin email.
 - [ ] **FUNC-05**: Artifact Registry retention policy is set to keep only the last 3 versions of each function image.
@@ -280,7 +280,7 @@ Each v1 requirement maps to exactly one phase. Phases are defined in `.planning/
 | CI-06 | Phase 1 | Pending |
 | CI-07 | Phase 1 | Pending |
 | FUNC-01 | Phase 2 | Pending |
-| FUNC-02 | Phase 2 | Pending |
+| FUNC-02 | Phase 2 | Complete |
 | FUNC-03 | Phase 2 | Pending |
 | FUNC-04 | Phase 2 | Pending |
 | FUNC-05 | Phase 2 | Pending |
