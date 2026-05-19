@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
@@ -13,6 +14,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 //   auth:      localhost:9099
 //   firestore: localhost:8080
 //   storage:   localhost:9199
+//   functions: localhost:5001
 //
 // The USE_EMULATOR dart-define is also read by lib/main.dart to wire
 // the same redirects when running the full app under emulators.
@@ -29,4 +31,5 @@ Future<void> configureEmulators() async {
   FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
   await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
   await FirebaseStorage.instance.useStorageEmulator('localhost', 9199);
+  FirebaseFunctions.instance.useFunctionsEmulator('localhost', 5001);
 }
