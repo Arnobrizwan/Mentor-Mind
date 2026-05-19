@@ -29,12 +29,12 @@ Requirements for the v1.0 hardening + 12-screen polish milestone. The 12 screens
 
 ### Cloud Functions & App Check
 
-- [ ] **FUNC-01**: A `functions/` monorepo exists at repo root (TypeScript, Node 20, `firebase-functions ^6.x` v2 API, region `asia-south1`).
+- [x] **FUNC-01**: A `functions/` monorepo exists at repo root (TypeScript, Node 20, `firebase-functions ^6.x` v2 API, region `asia-south1`).
 - [x] **FUNC-02**: A `ping` callable function is deployed with `enforceAppCheck: true` to validate the App Check + auth wiring end-to-end.
-- [ ] **FUNC-03**: Firebase App Check is activated in `main.dart` with App Attest provider (release) + Debug provider (dev/CI); debug tokens are registered for every dev simulator.
-- [ ] **FUNC-04**: A GCP Billing budget alert is configured at $10/month wired to admin email.
-- [ ] **FUNC-05**: Artifact Registry retention policy is set to keep only the last 3 versions of each function image.
-- [ ] **FUNC-06**: `cloud_functions ^5.x` Flutter SDK is added to `pubspec.yaml` and wired through `lib/data/services/`.
+- [x] **FUNC-03**: Firebase App Check is activated in `main.dart` with App Attest provider (release) + Debug provider (dev/CI); debug tokens are registered for every dev simulator.
+- [x] **FUNC-04**: A GCP Billing budget alert is configured at $10/month wired to admin email.
+- [x] **FUNC-05**: Artifact Registry retention policy is set to keep only the last 3 versions of each function image.
+- [x] **FUNC-06**: `cloud_functions ^5.x` Flutter SDK is added to `pubspec.yaml` and wired through `lib/data/services/`.
 
 ### AI Tutor Backend (Gemini Proxy)
 
