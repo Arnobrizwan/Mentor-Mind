@@ -35,6 +35,17 @@ module.exports = [
     rules: {
       ...tseslint.configs["recommended"].rules,
       ...tseslint.configs["recommended-type-checked"].rules,
+      // Allow underscore-prefixed parameters in stubs (noUnusedLocals satisfied by tsconfig).
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+      // Stub functions throw immediately without await — suppress false positives.
+      "@typescript-eslint/require-await": "off",
     },
   },
 ];
