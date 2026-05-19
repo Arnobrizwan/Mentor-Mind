@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -29,6 +31,19 @@ void main() async {
   } catch (e) {
     debugPrint('Firebase init failed: $e');
   }
+
+  // App Check — emits a token per-call for any callable with enforceAppCheck.
+  // Release builds use App Attest where available (iOS 14+ Secure Enclave),
+  // silently falling back to DeviceCheck on devices/accounts where App Attest
+  // is not provisioned. Debug builds use the Debug provider — auto-generates
+  // a UUID token that must be registered in Firebase Console (BACKEND_SETUP §6).
+  // The Functions emulator bypasses App Check validation (RESEARCH Pitfall 6).
+  // Provider choice locked by free-Apple-Developer-account decision; see CONTEXT D-02.
+  await FirebaseAppCheck.instance.activate(
+    appleProvider: kReleaseMode
+        ? AppleProvider.appAttestWithDeviceCheckFallback
+        : AppleProvider.debug,
+  );
 
   // When launched with --dart-define=USE_EMULATOR=true, redirect all SDK
   // calls to the local Firebase Emulator Suite instead of the production
