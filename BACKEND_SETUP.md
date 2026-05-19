@@ -308,3 +308,149 @@ Each developer registers their own simulator's debug token once. The CI pipeline
 - **Phase 2 boundary:** The Phase 2 emulator smoke test (`ping_smoke_test.dart`) does **NOT** consume this secret — the Functions emulator bypasses App Check (RESEARCH Pitfall 6). The secret + env-var plumbing is shipped here so Phase 3 (when CI calls production-path enforcement) has zero CI setup overhead.
 - **CI usage (Phase 3+):** `--dart-define=APP_CHECK_DEBUG_TOKEN=${{ secrets.APP_CHECK_DEBUG_TOKEN }}` in workflow steps that run against real Firebase. Plan 02-10 does NOT add this dart-define; the functions job in Phase 2 only lints + builds TypeScript.
 - **Rotation:** Quarterly per D-09.
+
+---
+
+## Phase 3 — Vertex AI + Key Rotation
+
+> Run these once, in this order, BEFORE merging the corresponding Phase 3 PR.
+> Owner: solo dev (`arnobrizwan23@gmail.com`). Project: `mentor-mind-aa765`.
+
+### 1. Enable the Vertex AI API (BEFORE PR-1 merges)
+
+Phase 3's `mentorBotChat` callable calls Vertex AI via the `@google-cloud/vertexai`
+Node SDK using Application Default Credentials (no API key). The Vertex AI API
+must be enabled at the project level.
+
+```bash
+gcloud config set project mentor-mind-aa765
+gcloud services enable aiplatform.googleapis.com
+# Wait ~30-60s for the API enablement to propagate.
+gcloud services list --enabled --filter="name:aiplatform.googleapis.com" --format="value(name)"
+# Expected output: aiplatform.googleapis.com
+```
+
+### 2. Grant `roles/aiplatform.user` to the Cloud Functions service account (BEFORE PR-1 merges)
+
+The Functions v2 runtime auto-injects Application Default Credentials for the
+service account `<projectId>@appspot.gserviceaccount.com`. That SA must have
+permission to invoke Vertex AI.
+
+```bash
+# Find the SA (Functions v2 default).
+FUNCTIONS_SA="mentor-mind-aa765@appspot.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding mentor-mind-aa765 \
+  --member="serviceAccount:${FUNCTIONS_SA}" \
+  --role="roles/aiplatform.user"
+
+# Verify.
+gcloud projects get-iam-policy mentor-mind-aa765 \
+  --flatten="bindings[].members" \
+  --filter="bindings.members:serviceAccount:${FUNCTIONS_SA} AND bindings.role:roles/aiplatform.user" \
+  --format="value(bindings.role)"
+# Expected output: roles/aiplatform.user
+```
+
+> **Why this is the right granularity:** `roles/aiplatform.user` covers
+> `aiplatform.endpoints.predict` (Gemini generateContent) without granting
+> dataset / pipeline write permissions. Principle of least privilege.
+
+### 3. Raise the Phase 2 budget alert from $10/mo to $75/mo (BEFORE PR-1 merges)
+
+Phase 2 D-15 wired a `$10/mo` GCP budget alert. Phase 3's Pro-tier Gemini cost
+projection (10,000 calls/mo × ~$0.0055/call ≈ $55/mo at average prompt sizes)
+breaches that. Raise the alert pre-emptively (CONTEXT §Open Considerations path
+`a`) so the alert continues to function as a 50%/90%/100% warning instead of
+firing on day 1.
+
+```bash
+# Find the existing budget ID.
+gcloud billing budgets list \
+  --billing-account=$(gcloud beta billing projects describe mentor-mind-aa765 --format="value(billingAccountName)" | sed 's|billingAccounts/||')
+
+# Update to $75/mo (the budget name + ID came from Phase 2 BACKEND_SETUP.md §3).
+gcloud billing budgets update \
+  projects/mentor-mind-aa765/billingBudgets/<BUDGET_ID> \
+  --budget-amount=75USD
+```
+
+> **Why $75/mo (revised from initial $50):** Researcher pricing per RESEARCH.md
+> §Cost confirmed `$1.25/M input` + `$5/M output` for all Pro-tier models
+> (3.1, 2.5, 1.5). At 10,000 calls/mo, average 500 input + 1000 output tokens,
+> the projected spend lands at $52-$60/mo. $75/mo gives ~25% headroom for spikes.
+
+### 4. (Optional) Override the MONTHLY_CALL_CEILING env-var
+
+The monthly app-wide ceiling defaults to 10,000 calls (Plan 03-05 D-10). To
+raise / lower without redeploying logic, set the param via firebase-functions
+v2 params runtime config:
+
+```bash
+# Set (example: raise to 20000).
+firebase functions:config:set monthly_call_ceiling=20000 --project mentor-mind-aa765
+
+# Or via the v2 params API (preferred):
+echo "MONTHLY_CALL_CEILING=20000" > functions/.env.mentor-mind-aa765
+# Then `firebase deploy --only functions:mentorBotChat` to push the new value.
+```
+
+> Plan 03-05 reads the value via `defineString('MONTHLY_CALL_CEILING', { default: '10000' })`.
+> The default `10000` is what ships in source — overrides are purely operational.
+
+### 5. Revoke the leaked Google AI Studio API key (MANUAL — BEFORE PR-3 merges)
+
+The legacy `--dart-define=GEMINI_API_KEY=<key>` path was used pre-Phase-3 and
+the key landed in the compiled iOS binary (AI-02 — the binary-scrub plus
+rotation is Phase 3's resolution). The Vertex AI path doesn't use a key at
+all, so this step is purely about killing the dead key.
+
+1. Open https://aistudio.google.com/apikey
+2. Sign in as `arnobrizwan23@gmail.com`
+3. Find the API key currently in the iOS binary / your local env files.
+   - If you have the key file at hand: match the last 4 characters to the
+     entry in Studio.
+   - If not: revoke the most recent key created before 2026-05-01 (the
+     pre-Phase-3 baseline).
+4. Click **Revoke**. Confirm.
+
+> **Git history scrub is NOT performed (D-22).** The key was committed in
+> the iOS binary builds, not in plaintext to git. Revoked = dead. Force-pushing
+> to main would destroy unrelated history; not worth the destructive trade.
+
+PR-3 description includes the checkbox:
+```
+- [ ] Leaked Google AI Studio key revoked in https://aistudio.google.com/apikey BEFORE merging
+```
+
+### 6. Cloud Logging — verify per-call telemetry (post-PR-1 deploy)
+
+Plan 03-07 emits structured logs at `event="gemini_call"` (success) and
+`event="gemini_call_idempotent_hit"` (dedupe). The aggregate doc lives at
+`/system/usage_log_{YYYY-MM-DD}`.
+
+Cloud Logging filter (paste into https://console.cloud.google.com/logs/query):
+
+```
+resource.type="cloud_run_revision"
+resource.labels.service_name="mentorbotchat"
+jsonPayload.event="gemini_call"
+```
+
+For aggregate inspection (Cloud Firestore):
+```bash
+# After a few calls have run, read the day's aggregate doc.
+gcloud firestore documents read system/usage_log_$(TZ=Asia/Dhaka date +%Y-%m-%d) \
+  --project=mentor-mind-aa765 --format=json
+# Expect: { calls: <n>, promptTokens: <n>, completionTokens: <n>, estimatedCostUsd: <n>, dateLabel: "..." }
+```
+
+### 7. Model resolution record (filled by Plan 03-04 checkpoint)
+
+The exact Gemini model ID pinned in `functions/src/lib/gemini.ts MODEL_CONFIG.modelId`
+was resolved by Plan 03-04 against the live Vertex API in `asia-south1`. The
+fallback chain is `gemini-3.1-pro` → `gemini-2.5-pro` → `gemini-1.5-pro`.
+
+- **Resolved model:** `<gemini-X.Y-pro — fill from Plan 03-04 checkpoint resolution>`
+- **Resolution date:** `<YYYY-MM-DD>`
+- **Re-verify command:** `node functions/tool/verify-model-availability.js`
