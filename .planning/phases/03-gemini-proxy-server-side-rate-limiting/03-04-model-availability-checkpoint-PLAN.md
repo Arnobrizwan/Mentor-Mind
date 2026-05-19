@@ -8,9 +8,12 @@ files_modified:
   - functions/tool/verify-model-availability.js
   - functions/src/lib/gemini.ts
 autonomous: false
+status: pending
+status_reason: "Billing gate — all 10 gcloud billing accounts on arnobrizwan23@gmail.com show open=false as of 2026-05-19T09:50Z. Reopen 0121EC-5D572E-57FEE1 (or another) in the GCP Billing Console, then resume. Until then `MODEL_CONFIG.modelId` stays at plan 03-03's default `'gemini-2.5-pro'`."
+status_resume_command: "Reopen billing account, run `gcloud billing projects link mentor-mind-aa765 --billing-account=<ACCOUNT_ID>` + `gcloud services enable aiplatform.googleapis.com` + `gcloud auth application-default login`, then re-run this plan."
 requirements: [AI-01]
 pr_group: PR-1
-tags: [model_availability_checkpoint, vertex_live_call, fallback_chain, gemini_3_1_pro, gemini_2_5_pro, gemini_1_5_pro, blocking_human_verify, pr1_pre_merge_gate]
+tags: [model_availability_checkpoint, vertex_live_call, fallback_chain, gemini_3_1_pro, gemini_2_5_pro, gemini_1_5_pro, blocking_human_verify, pr1_pre_merge_gate, deferred_billing_gate]
 
 must_haves:
   truths:

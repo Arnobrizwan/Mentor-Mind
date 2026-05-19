@@ -32,9 +32,9 @@ Last activity: 2026-05-19 -- Plans 03-01, 03-02, 03-03, 03-05 committed to main 
 
 Progress: [███░░░░░░░] 27% (4/15 phase-3 plans)
 
-## Phase 03 Resume Gate (BLOCKING)
+## Phase 03 Resume Gate (BLOCKING — narrow scope)
 
-Plans 03-04, 03-06, 03-07, 03-08, 03-09, 03-10, 03-11, 03-12, 03-13, 03-14, 03-15 are paused pending the following human actions on `mentor-mind-aa765`:
+User elected to continue dispatching local-code/doc plans while billing is closed. **Only 03-04 and 03-15 remain pending the billing reopen**; plans 03-06..03-14 are dispatched serially without live cloud calls (fake clients, emulator tests). The following human actions on `mentor-mind-aa765` close 03-04 + 03-15:
 
 1. **Enable GCP billing** (`gcloud billing projects describe mentor-mind-aa765 --format='value(billingEnabled)'` returns `False` as of 2026-05-19T08:54Z):
    ```bash
