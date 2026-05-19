@@ -184,3 +184,127 @@ Then type "approved" in the chat to resume the executor (which will run `flutter
 **Android: `google-services.json missing`** — run `flutterfire configure` again, then delete the Android build cache: `cd android && ./gradlew clean`.
 
 **Image picker "no image" on iOS** — you revoked Photo Library permission. Reset via simulator menu: **Device → Erase All Content and Settings**.
+
+---
+
+## Phase 2 — Cloud Functions + App Check Setup
+
+> **IMPORTANT: Solo dev runs these commands ONCE manually post-merge.** This plan is documentation-only — no `gcloud` command is executed during plan execution. Commands are idempotent where noted; exceptions are called out explicitly.
+
+### 1. Enable billing (prerequisite)
+
+Project `mentor-mind-aa765` currently has billing **disabled** (RESEARCH Pitfall 7). Every subsequent step in this section — and Phase 3's first `firebase deploy --only functions` — requires billing to be active.
+
+```bash
+# PREREQUISITE: project billing is currently DISABLED.
+# Enable billing on mentor-mind-aa765 against billing account 0121EC-5D572E-57FEE1.
+gcloud billing projects link mentor-mind-aa765 \
+  --billing-account=0121EC-5D572E-57FEE1
+```
+
+- Billing must be enabled before Phase 3's `firebase deploy --only functions` will succeed.
+- Phase 2's emulator-only work is unblocked regardless — the emulator does not require billing.
+- Verify: `gcloud billing projects describe mentor-mind-aa765` should show `billingEnabled: true` after this command.
+
+### 2. Billing budget alert ($10/mo)
+
+Prevents runaway Cloud Functions cold-deploy costs (bare `minInstances: 1` with no traffic already costs ~$25/mo).
+
+```bash
+# NOTE: this command is NOT idempotent — re-running creates a duplicate budget.
+# Verify with `gcloud billing budgets list --billing-account=0121EC-5D572E-57FEE1` first.
+gcloud billing budgets create \
+  --billing-account=0121EC-5D572E-57FEE1 \
+  --display-name="MentorMinds Phase 2 Guardrail" \
+  --budget-amount=10USD \
+  --filter-projects="projects/mentor-mind-aa765" \
+  --threshold-rule=percent=0.5 \
+  --threshold-rule=percent=0.9 \
+  --threshold-rule=percent=1.0
+```
+
+**Recipient note:** Budget alerts are sent to **billing administrators** on account `0121EC-5D572E-57FEE1`. Ensure `arnobrizwan23@gmail.com` is a billing administrator: Cloud Console → Billing → Account management → IAM. If granular per-channel routing is needed, pre-create a Cloud Monitoring notification channel and add `--notifications-rule-monitoring-notification-channels=<channel-id>` — out of scope for v1.0.
+
+### 3. Artifact Registry cleanup (keep last 3 versions)
+
+Cloud Functions v2 pushes container images to Artifact Registry on every deploy. Without a cleanup policy, old images accumulate storage costs indefinitely.
+
+```bash
+# STEP 1 — discover the auto-created repository name after the first Phase 3 deploy:
+gcloud artifacts repositories list --project=mentor-mind-aa765 --location=asia-south1
+
+# Cloud Functions v2 creates the repo on first deploy.
+# The name is typically `gcf-artifacts` or similar.
+# This command ships as a template; Phase 3 SUMMARY fills in REPO_NAME.
+
+# STEP 2 — create policy file keep-last-3.json:
+cat > /tmp/keep-last-3.json << 'EOF'
+[{
+  "name": "keep-last-3-versions",
+  "action": {"type": "Keep"},
+  "mostRecentVersions": {
+    "keepCount": 3
+  }
+}]
+EOF
+
+# STEP 3 — apply the cleanup policy (replace REPO_NAME with the actual name from STEP 1):
+gcloud artifacts repositories set-cleanup-policies REPO_NAME \
+  --project=mentor-mind-aa765 \
+  --location=asia-south1 \
+  --policy=/tmp/keep-last-3.json \
+  --no-dry-run
+```
+
+> **Phase 3 follow-up:** After the first `firebase deploy --only functions`, run STEP 1 to discover the real `REPO_NAME` and re-run STEP 3 with it. Document the actual name in the Phase 3 SUMMARY.
+
+### 4. Region pin verification
+
+Confirm that every v2 callable deploys to `asia-south1` — non-negotiable for Bangladesh users.
+
+```bash
+# Confirm every v2 callable deploys to asia-south1.
+gcloud functions list --regions=asia-south1 --v2 --project=mentor-mind-aa765
+```
+
+> **DO NOT deploy to `us-central1`** (the firebase-tools default region). Cross-region latency between Asia and us-central1 is +200 ms, which violates the "useful answer in <10 s" core value promise. The `region: 'asia-south1'` pin in `functions/src/index.ts` (Plan 02-03) is the source of truth; this verification command confirms the live state matches.
+
+### 5. App Check kill-switch URL
+
+If `enforceAppCheck: true` begins rejecting legitimate users in production (Phase 3+), the kill switch is a single toggle in the Firebase Console — no function redeploy required.
+
+- Open the Firebase Console: [https://console.firebase.google.com/project/mentor-mind-aa765/appcheck](https://console.firebase.google.com/project/mentor-mind-aa765/appcheck)
+- Navigate to **Build → App Check → Apps → MentorMinds iOS**.
+- The **Enforcement mode** toggle per service (Cloud Functions, Cloud Firestore, etc.) is the kill switch.
+- Toggling **OFF** takes effect **immediately** without a function redeploy.
+- Use this if `enforceAppCheck: true` rejects legitimate users in production (Phase 3+).
+
+### 6. Debug token registration steps
+
+Each developer registers their own simulator's debug token once. The CI pipeline uses a single shared token.
+
+1. Build and run a DEV iOS build:
+   ```bash
+   flutter run -d <iOS simulator UDID>
+   # AppleProvider.debug auto-generates a token on first call (Plan 02-06 wires this).
+   ```
+2. Watch the **Xcode Debug console** (NOT the system log) for a line matching:
+   ```
+   [Firebase/AppCheck][I-FAA001001] Firebase App Check Debug Token: <UUID>
+   ```
+   *(Exact prefix may vary slightly across `firebase_app_check` versions; the substring `Debug App Check token` is stable.)*
+3. Copy the UUID.
+4. In Firebase Console, navigate to:
+   **Build → App Check → Apps → MentorMinds iOS → overflow menu (⋮) → Manage debug tokens → Add debug token**
+5. Paste the UUID. Give it a name like `arnob-laptop-simulator-2026-05`. Save. Token is immediately valid.
+6. Confirm: on the next run of the dev simulator, calls to the **emulator** continue to work unchanged (the emulator bypasses App Check per RESEARCH Pitfall 6); calls to the **production** callable (Phase 3+) succeed with the registered token.
+
+> **Rotation cadence (D-09):** Dev tokens never auto-expire — devs manage their own. CI token rotated **quarterly** (calendar reminder). Revocation: Firebase Console → App Check → Apps → MentorMinds iOS → Debug tokens → delete by name.
+
+### 7. CI secret `APP_CHECK_DEBUG_TOKEN` boundary note
+
+- **Stored at:** GitHub Actions → Settings → Secrets and Variables → Actions → `APP_CHECK_DEBUG_TOKEN`.
+- **Value:** A debug token registered in Firebase Console via the same flow as §6 — name it `ci-shared-2026-Q2` or similar.
+- **Phase 2 boundary:** The Phase 2 emulator smoke test (`ping_smoke_test.dart`) does **NOT** consume this secret — the Functions emulator bypasses App Check (RESEARCH Pitfall 6). The secret + env-var plumbing is shipped here so Phase 3 (when CI calls production-path enforcement) has zero CI setup overhead.
+- **CI usage (Phase 3+):** `--dart-define=APP_CHECK_DEBUG_TOKEN=${{ secrets.APP_CHECK_DEBUG_TOKEN }}` in workflow steps that run against real Firebase. Plan 02-10 does NOT add this dart-define; the functions job in Phase 2 only lints + builds TypeScript.
+- **Rotation:** Quarterly per D-09.
