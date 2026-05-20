@@ -94,11 +94,16 @@ None.
 
 Non-blocking; carry into Phase 4 discuss:
 
-- **Artifact Registry `REPO_NAME`** — the first functions deploy (2026-05-20) auto-created the container image repo. Fill the `REPO_NAME` placeholder in BACKEND_SETUP.md §3 `set-cleanup-policies` and run the keep-last-3 policy command.
-- **Functions runtime SA → `roles/aiplatform.user`** — the deployed `mentorBotChat` calls Vertex AI as its Cloud Run runtime service account; grant `roles/aiplatform.user` to that SA (BACKEND_SETUP.md §Phase 3 §2) or live calls return PERMISSION_DENIED.
-- **Local ADC stale** — `verify-model-availability.js` run via ADC fails (machine ADC points at `ocr-api-arnob-2024`). Refresh with `gcloud auth application-default login` + `set-quota-project mentor-mind-aa765`. Dev-env only; production unaffected.
+- **Artifact Registry cleanup** — the `gcf-artifacts` repo (asia-south1) has a time-based (1-day) cleanup policy auto-set by `firebase deploy --force`. BACKEND_SETUP.md §3 originally specified keep-last-3; retune to count-based if preferred.
 - **`mentor_bot_smoke_test.dart`** — emulator integration test exists + analyzes clean; the live run (emulator + iOS simulator, `GEMINI_CLIENT_MODE=fake`) is a local-dev step, not yet executed.
+- **Production chat smoke** — `mentorBotChat` is deployed + the runtime SA has `roles/aiplatform.user`; a real end-to-end chat (device → callable → Vertex) has not been exercised. Verify during Phase 4.
+- **Local ADC stale** — `verify-model-availability.js` run via ADC fails (machine ADC points at `ocr-api-arnob-2024`). Refresh with `gcloud auth application-default login` + `set-quota-project mentor-mind-aa765`. Dev-env only; production unaffected.
 - **Budget alert raise to $75/mo** — manual gcloud step per BACKEND_SETUP.md §Phase 3 §3.
+- **`firebase-functions` v6 → v7** — v7 is a major upgrade with documented breaking changes; schedule before Phase 6. (Node runtime itself already bumped 20 → 22 on 2026-05-20.)
+
+Resolved during Phase 3 closeout/follow-ups:
+- Functions runtime SA granted `roles/cloudbuild.builds.builder` + `roles/aiplatform.user` (compute SA `722452556351-compute@developer.gserviceaccount.com`).
+- Cloud Functions runtime bumped Node 20 → 22; both functions redeployed on `nodejs22`.
 
 ## Deferred Items
 
