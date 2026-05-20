@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 3 — 13/15 plans complete; 03-04 + 03-15 deferred on closed GCP billing account
-last_updated: "2026-05-20T00:45:00.000Z"
-last_activity: 2026-05-20 -- Phase 03 plans 03-06..03-14 executed (PR-2 + PR-3 local-code subset)
+stopped_at: Phase 3 complete; Phase 4 ready to discuss
+last_updated: "2026-05-20T07:00:00.000Z"
+last_activity: 2026-05-20 -- Phase 03 complete (15/15 plans); firestore rules + functions deployed to mentor-mind-aa765
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 52
-  completed_plans: 35
-  percent: 67
+  completed_plans: 37
+  percent: 43
 ---
 
 # Project State
@@ -21,46 +21,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** A student preparing for O/A Levels can ask MentorBot a subject question and get a useful, curriculum-aligned answer in under 10 seconds — every single day, on a free tier that still feels usable.
-**Current focus:** Phase 03 — Gemini proxy + server-side rate limiting (13/15 plans landed; 2 deferred on GCP billing)
+**Current focus:** Phase 04 — Server-Authoritative Rewards + Rules Lockdown
 
 ## Current Position
 
-Phase: 3
-Plan: 03-04 (blocking-human checkpoint — live Vertex AI model availability probe) + 03-15 (closeout)
-Status: 13/15 complete — both remaining plans deferred on a closed GCP billing account
-Last activity: 2026-05-20 -- Plans 03-06..03-14 committed to main. functions 45 tests green (38 unit + 7 rules); Flutter 47 tests green; build + lint clean.
+Phase: 4
+Plan: Not started
+Status: Ready to discuss
+Last activity: 2026-05-20 -- Phase 03 closed: 15/15 plans, AI-01..AI-10 all Complete, nyquist_compliant
 
-Progress: [█████████░] 87% (13/15 phase-3 plans)
+Progress: [████░░░░░░] 43% (3/7 phases)
 
-## Phase 03 Resume Gate (BLOCKING — 2 plans only)
-
-13 of 15 Phase 3 plans are complete and on `main`. **03-04 (live Vertex model probe) and 03-15 (closeout) remain.** Both are blocked because **all 10 gcloud billing accounts on `arnobrizwan23@gmail.com` are closed** (`open: false`) as of 2026-05-20. `gcloud billing projects link` rejects closed accounts.
-
-**Step 1 — reopen a billing account (human, GCP Console):**
-Open https://console.cloud.google.com/billing, click into a closed "Firebase Payment" account (e.g. `0121EC-5D572E-57FEE1`), hit Reactivate, and re-verify the payment method (likely an expired card). Status must flip to Active.
-
-**Step 2 — link + enable (run after Step 1):**
-```bash
-gcloud billing projects link mentor-mind-aa765 --billing-account=<REOPENED_ACCOUNT_ID>
-gcloud config set project mentor-mind-aa765
-gcloud services enable aiplatform.googleapis.com
-gcloud auth application-default login
-```
-
-**Step 3 — run the 03-04 model probe** (the script `functions/tool/verify-model-availability.js` is created BY plan 03-04, which has not run yet):
-Resume with `/gsd-execute-phase 03` — it picks up 03-04 (creates + runs the probe, records the resolved model in `functions/src/lib/gemini.ts` `MODEL_CONFIG.modelId`) then 03-15 (closeout: VALIDATION.md, requirements traceability, leaked-key rotation confirm, ROADMAP close).
-
-**Also outstanding before Phase 3 can truly ship (documented in BACKEND_SETUP.md §Phase 3):**
-- `firebase deploy --only firestore:rules,functions` — deploys the rules lockdown + mentorBotChat (needs billing).
-- Revoke the leaked Google AI Studio API key at https://aistudio.google.com/apikey (manual; BACKEND_SETUP.md §5).
-- Fill the Artifact Registry `REPO_NAME` placeholder after first functions deploy.
-- Run the `integration_test/mentor_bot_smoke_test.dart` smoke locally (emulator + iOS simulator, `GEMINI_CLIENT_MODE=fake`).
+Next entry point: `/gsd-discuss-phase 4`
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 22
+- Total plans completed: 37
 - Average duration: —
 - Total execution time: 0 hours
 
@@ -70,11 +48,12 @@ Resume with `/gsd-execute-phase 03` — it picks up 03-04 (creates + runs the pr
 |-------|-------|-------|----------|
 | 01 | 11 | - | - |
 | 02 | 11 | - | - |
+| 03 | 15 | - | - |
 
 **Recent Trend:**
 
 - Last 5 plans: —
-- Trend: — (pre-execution)
+- Trend: —
 
 *Updated after each plan completion*
 
@@ -94,18 +73,32 @@ Recent decisions affecting current work:
 - Bundle ID aligned to `com.mentorminds.mentorMinds` in Phase 1 (requires Xcode + Firebase iOS app re-registration + APNs re-association).
 - Free-tier cap locked at 30 text + 3 image messages per UTC+6 day.
 - Phase 2: TypeScript Node 20 functions/ monorepo in asia-south1; App Check (appAttestWithDeviceCheckFallback release / Debug dev — free Apple Developer account); ping callable canary with enforceAppCheck:true; $10/mo billing budget + Artifact Registry keep-last-3 documented in BACKEND_SETUP.md; cloud_functions ^5.6.2 + PingRepository wired in Flutter data layer; emulator + CI integration complete.
+- Phase 3: Gemini moved behind the `mentorBotChat` callable. AI-01 implemented via **Vertex AI + ADC (no API key, no Secret Manager)** — supersedes the original "key from Secret Manager" wording; the no-key approach is strictly stronger. Server-side rate limiting: 30 text + 3 image per Dhaka (UTC+6) day, burst 5/60s, monthly app-wide ceiling 10,000 (`MONTHLY_CALL_CEILING`). Idempotent retries via `clientRequestId` UUIDv4. `firestore.rules` locks `/users/{uid}/usage/{date}` (admin-write only) + `/system/**` (server-only). In-binary `GEMINI_API_KEY` removed; `google_generative_ai` dropped from pubspec; leaked AI Studio key revoked. **Vertex region = `us-central1`** (Gemini models 404 in `asia-south1`); the function still deploys in `asia-south1`.
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
 - **App Store 3.1.1 risk** (Phase 5): Stripe-only digital subscription may be rejected; mitigation is external Safari flow. Fallback path = Apple IAP in v1.1 before App Store submission. Re-surface during Phase 5 planning.
 - **PR sequencing** (Phase 1 → Phase 7): refactor MUST be pure `git mv` (PR A); lint/`withOpacity` burndown is PR B in Phase 7. Mixing destroys `git log --follow`.
-- **Phase 3 prerequisite: GCP billing enable** — `gcloud billing projects link mentor-mind-aa765 --billing-account=0121EC-5D572E-57FEE1` must be run by solo dev before Phase 3 first deploy. Commands documented in BACKEND_SETUP.md §1. billingEnabled was false at Phase 2 close.
-- **Phase 3 prerequisite: Artifact Registry REPO_NAME fill-in** — BACKEND_SETUP.md §3 `set-cleanup-policies` command has a `REPO_NAME` placeholder; fill in after first Phase 3 deploy creates the auto-named repo.
 - **Phase 6: App Attest (paid Apple Developer account)** — Phase 2 uses `appAttestWithDeviceCheckFallback` (DeviceCheck, works on free accounts). If/when paid Apple Developer Program enrollment occurs in Phase 6+, switch back to bare `AppleProvider.appAttest` + add Xcode App Attest capability + restore entitlement key. No action needed for Phases 3-5.
+
+### Resolved (Phase 3)
+
+- ~~GCP billing enable~~ — RESOLVED 2026-05-20: `mentor-mind-aa765` linked to billing account `011DD6-9629AC-AC67ED`; `billingEnabled: true`. Vertex AI API enabled.
+- ~~Phase 2 D-15 budget tension~~ — BACKEND_SETUP.md §Phase 3 §3 documents raising the alert from $10 to $75/mo (manual gcloud step for the solo dev).
+
+## Phase 3 — outstanding manual follow-ups
+
+Non-blocking; carry into Phase 4 discuss:
+
+- **Artifact Registry `REPO_NAME`** — the first functions deploy (2026-05-20) auto-created the container image repo. Fill the `REPO_NAME` placeholder in BACKEND_SETUP.md §3 `set-cleanup-policies` and run the keep-last-3 policy command.
+- **Functions runtime SA → `roles/aiplatform.user`** — the deployed `mentorBotChat` calls Vertex AI as its Cloud Run runtime service account; grant `roles/aiplatform.user` to that SA (BACKEND_SETUP.md §Phase 3 §2) or live calls return PERMISSION_DENIED.
+- **Local ADC stale** — `verify-model-availability.js` run via ADC fails (machine ADC points at `ocr-api-arnob-2024`). Refresh with `gcloud auth application-default login` + `set-quota-project mentor-mind-aa765`. Dev-env only; production unaffected.
+- **`mentor_bot_smoke_test.dart`** — emulator integration test exists + analyzes clean; the live run (emulator + iOS simulator, `GEMINI_CLIENT_MODE=fake`) is a local-dev step, not yet executed.
+- **Budget alert raise to $75/mo** — manual gcloud step per BACKEND_SETUP.md §Phase 3 §3.
 
 ## Deferred Items
 
@@ -117,16 +110,14 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-20T00:45:00Z
-Stopped at: Phase 3 — 13/15 plans complete; 03-04 + 03-15 deferred on closed GCP billing account
-Resume file: .planning/phases/03-gemini-proxy-server-side-rate-limiting/03-04-model-availability-checkpoint-PLAN.md
+Last session: 2026-05-20T07:00:00Z
+Stopped at: Phase 3 complete; Phase 4 ready to discuss
+Resume file: .planning/ROADMAP.md (Phase 4 — Server-Authoritative Rewards + Rules Lockdown)
 
-Phase 3 plans complete (13/15): 03-01, 03-02, 03-03, 03-05, 03-06, 03-07, 03-08, 03-09, 03-10, 03-11, 03-12, 03-13, 03-14.
-Deferred (2/15): 03-04 (live Vertex probe), 03-15 (closeout) — see Resume Gate above.
+Phase 3 complete — all 15 plans landed on `main`, AI-01..AI-10 traced Complete, 03-VALIDATION.md closed + nyquist_compliant.
 
 Test state on main:
 - functions: 45 jest tests green — quota 7, gemini 8, rate_limit 13, idempotency 6, usage_log 4 (38 unit) + rules 7 (emulator).
 - Flutter: 47 tests green. `flutter analyze`: 0 errors / 0 warnings, 150 pre-existing info-level (Phase 7 lint burndown owns those).
-- `npm run build` + `npm run lint` clean.
 
-Wiring delivered: mentorBotChat callable (functions/src/index.ts) → Vertex client seam (gemini.ts) → rate-limit txn (rate_limit.ts) → firestore.rules lockdown. Flutter: MentorBotRepository + chat_viewmodel swapped off the in-binary GEMINI_API_KEY path; google_generative_ai removed from pubspec.
+Deployed 2026-05-20 to `mentor-mind-aa765`: `firestore.rules` (usage + /system lockdown); Cloud Functions `ping` + `mentorBotChat` (asia-south1, v2).

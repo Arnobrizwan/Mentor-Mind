@@ -440,9 +440,16 @@ gcloud firestore documents read system/usage_log_$(TZ=Asia/Dhaka date +%Y-%m-%d)
 ### 7. Model resolution record (filled by Plan 03-04 checkpoint)
 
 The exact Gemini model ID pinned in `functions/src/lib/gemini.ts MODEL_CONFIG.modelId`
-was resolved by Plan 03-04 against the live Vertex API in `asia-south1`. The
-fallback chain is `gemini-3.1-pro` → `gemini-2.5-pro` → `gemini-1.5-pro`.
+was resolved by Plan 03-04 against the live Vertex API. The fallback chain is
+`gemini-3.1-pro` → `gemini-2.5-pro` → `gemini-1.5-pro`.
 
-- **Resolved model:** `<gemini-X.Y-pro — fill from Plan 03-04 checkpoint resolution>`
-- **Resolution date:** `<YYYY-MM-DD>`
+- **Resolved model:** `gemini-2.5-pro` (HTTP 200, `modelVersion: gemini-2.5-pro`).
+  `gemini-3.1-pro` is not a GA model (404); `gemini-1.5-pro` is retired.
+- **Vertex region:** `us-central1` — **NOT `asia-south1`**. Plan 03-04 found that
+  Gemini generative models are not served from `asia-south1` (Mumbai) — they
+  return `404 NOT_FOUND` there. `MODEL_CONFIG.location = 'us-central1'`. The
+  `mentorBotChat` function still *deploys* in `asia-south1`; only the outbound
+  Vertex call targets `us-central1`.
+- **Resolution date:** 2026-05-20
 - **Re-verify command:** `node functions/tool/verify-model-availability.js`
+  (requires fresh ADC: `gcloud auth application-default login`)

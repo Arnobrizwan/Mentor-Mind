@@ -38,16 +38,16 @@ Requirements for the v1.0 hardening + 12-screen polish milestone. The 12 screens
 
 ### AI Tutor Backend (Gemini Proxy)
 
-- [ ] **AI-01**: A `mentorBotChat` callable function proxies all Gemini calls; reads `GEMINI_API_KEY` from Google Secret Manager (no client-side key).
-- [ ] **AI-02**: `--dart-define=GEMINI_API_KEY` is removed from all build configs and the existing Google AI Studio key is rotated.
-- [ ] **AI-03**: `google_generative_ai` Dart package is removed from `pubspec.yaml` after the proxy ships.
-- [ ] **AI-04**: Free-tier daily cap is enforced server-side at **30 text messages + 3 image messages per UTC+6 day**, with a shared `QUOTA_TZ = 'Asia/Dhaka'` constant in both `lib/core/` and `functions/src/`.
-- [ ] **AI-05**: Burst limit is enforced server-side: maximum 5 messages per 60 seconds per user.
-- [ ] **AI-06**: An app-wide monthly Gemini call ceiling is enforced via `/system/quota/{YYYY-MM}` document; over-ceiling requests return `unavailable` with a generic "AI tutor temporarily unavailable" message.
-- [ ] **AI-07**: All Gemini callable writes (`/sessions/{sid}`, `/users/{uid}/usage/{today}`) happen in a single transaction; client includes a deterministic `clientRequestId` (UUID) for idempotent retries.
-- [ ] **AI-08**: `firestore.rules` lock `/users/{uid}/usage/{date}` to read-only for the owning client (Admin SDK writes via Function).
-- [ ] **AI-09**: System prompt (Cambridge/Edexcel marking-scheme tone, curriculum-aligned) lives server-side in `functions/src/lib/gemini.ts` so it can be updated without an app release.
-- [ ] **AI-10**: Tutor chat ships as **non-streaming** in v1.0 (typing indicator shown while awaiting Function response). Streaming deferred to v1.1.
+- [x] **AI-01**: A `mentorBotChat` callable function proxies all Gemini calls; reads `GEMINI_API_KEY` from Google Secret Manager (no client-side key).
+- [x] **AI-02**: `--dart-define=GEMINI_API_KEY` is removed from all build configs and the existing Google AI Studio key is rotated.
+- [x] **AI-03**: `google_generative_ai` Dart package is removed from `pubspec.yaml` after the proxy ships.
+- [x] **AI-04**: Free-tier daily cap is enforced server-side at **30 text messages + 3 image messages per UTC+6 day**, with a shared `QUOTA_TZ = 'Asia/Dhaka'` constant in both `lib/core/` and `functions/src/`.
+- [x] **AI-05**: Burst limit is enforced server-side: maximum 5 messages per 60 seconds per user.
+- [x] **AI-06**: An app-wide monthly Gemini call ceiling is enforced via `/system/quota/{YYYY-MM}` document; over-ceiling requests return `unavailable` with a generic "AI tutor temporarily unavailable" message.
+- [x] **AI-07**: All Gemini callable writes (`/sessions/{sid}`, `/users/{uid}/usage/{today}`) happen in a single transaction; client includes a deterministic `clientRequestId` (UUID) for idempotent retries.
+- [x] **AI-08**: `firestore.rules` lock `/users/{uid}/usage/{date}` to read-only for the owning client (Admin SDK writes via Function).
+- [x] **AI-09**: System prompt (Cambridge/Edexcel marking-scheme tone, curriculum-aligned) lives server-side in `functions/src/lib/gemini.ts` so it can be updated without an app release.
+- [x] **AI-10**: Tutor chat ships as **non-streaming** in v1.0 (typing indicator shown while awaiting Function response). Streaming deferred to v1.1.
 
 ### Server-Authoritative Rewards
 
@@ -285,16 +285,16 @@ Each v1 requirement maps to exactly one phase. Phases are defined in `.planning/
 | FUNC-04 | Phase 2 | Complete |
 | FUNC-05 | Phase 2 | Complete |
 | FUNC-06 | Phase 2 | Complete |
-| AI-01 | Phase 3 | Pending |
-| AI-02 | Phase 3 | Pending |
-| AI-03 | Phase 3 | Pending |
-| AI-04 | Phase 3 | Pending |
-| AI-05 | Phase 3 | Pending |
-| AI-06 | Phase 3 | Pending |
-| AI-07 | Phase 3 | Pending |
-| AI-08 | Phase 3 | Pending |
-| AI-09 | Phase 3 | Pending |
-| AI-10 | Phase 3 | Pending |
+| AI-01 | Phase 3 | Complete |
+| AI-02 | Phase 3 | Complete |
+| AI-03 | Phase 3 | Complete |
+| AI-04 | Phase 3 | Complete |
+| AI-05 | Phase 3 | Complete |
+| AI-06 | Phase 3 | Complete |
+| AI-07 | Phase 3 | Complete |
+| AI-08 | Phase 3 | Complete |
+| AI-09 | Phase 3 | Complete |
+| AI-10 | Phase 3 | Complete |
 | REWD-01 | Phase 4 | Pending |
 | REWD-02 | Phase 4 | Pending |
 | REWD-03 | Phase 4 | Pending |

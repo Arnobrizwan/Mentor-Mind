@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation — Refactor, CI, Test Harness, iOS Identity** - Layer the codebase into `presentation/application/data`, scaffold GitHub Actions + Firebase Emulator Suite, fix avatar upload + iOS Google Sign-In, align bundle ID to `com.mentorminds.mentorMinds`, bump iOS deployment target 13→14. (completed 2026-05-18)
 - [x] **Phase 2: Cloud Functions Scaffolding + App Check** - Stand up TypeScript `functions/` monorepo in `asia-south1`, deploy no-op `ping` callable, activate App Check (App Attest release + Debug dev), wire billing alert + Artifact Registry cleanup before any real callable lands. (completed 2026-05-19)
-- [ ] **Phase 3: Gemini Proxy + Server-Side Rate Limiting** - Move Gemini behind `mentorBotChat` callable reading the key from Secret Manager, enforce 30 text + 3 image per UTC+6 day in a single transaction, remove `--dart-define=GEMINI_API_KEY` and rotate the leaked key.
+- [x] **Phase 3: Gemini Proxy + Server-Side Rate Limiting** - Move Gemini behind `mentorBotChat` callable (Vertex AI + ADC, no API key), enforce 30 text + 3 image per UTC+6 day in a single transaction, remove `--dart-define=GEMINI_API_KEY` and rotate the leaked key. (completed 2026-05-20)
 - [ ] **Phase 4: Server-Authoritative Rewards + Rules Lockdown** - Replace client `FieldValue.increment('points')` with idempotent `onSessionWrite` trigger writing to `/rewards/{uid}/ledger/{autoId}`; deploy `firestore.rules` lockdown in the same deploy with a rules-unit-testing suite that proves the lockdown.
 - [ ] **Phase 5: Stripe Subscriptions + Premium Claims + Admin Panel** - Ship v2-ready `/subscriptions/{uid}` schema, Stripe Checkout + webhook + Customer Portal, `setPremium` admin callable with custom claims, and the full Admin Panel (Screen 12) with NavigationRail/BottomNavBar and 5 tabs.
 - [ ] **Phase 6: FCM iOS Wiring + Notifications + Daily Challenge** - Wire `firebase_messaging` end-to-end with the strict permission → FCM token → APNs token → topic-subscribe sequence, ship Notifications screen (Screen 11) on real FCM payloads, ship Daily Challenge card (Cloud Scheduler → `/daily_challenges/{YYYY-MM-DD}`).
@@ -78,7 +78,7 @@ Plans:
   3. A double-tap or network retry submitting the same `(sessionId, clientRequestId)` is server-side idempotent — only one Gemini call is made, only one `/sessions/{sid}` message is written, only one `/users/{uid}/usage/{today}` increment lands (verified by integration test).
   4. `firestore.rules` lock `/users/{uid}/usage/{date}` to read-only for the owning client (Admin SDK writes via Function); a rules-unit test proves a direct client write attempt is rejected.
   5. When the monthly Gemini call ceiling at `/system/quota/{YYYY-MM}` is crossed, every subsequent call returns `unavailable` with the generic "AI tutor temporarily unavailable" message — verified by a test that pre-seeds the quota doc at the ceiling.
-**Plans**: TBD
+**Plans**: 15 plans (03-01 through 03-15)
 **UI hint**: no
 
 > **Rationale & non-negotiables.** Per PITFALLS #3, `QUOTA_TZ = 'Asia/Dhaka'` is a shared constant in both `lib/core/` AND `functions/src/` — no raw `toISOString().slice(0,10)` anywhere. Per PITFALLS #4, the read-check-write on `/users/{uid}/usage/{today}.messageCount` MUST be a `runTransaction` in the FIRST version of the function, not a retrofit — per-doc write limit is ~1/sec and a non-transactional check lets a user get 11 free messages under burst. Per PITFALLS #2 + ARCHITECTURE Anti-pattern #3, idempotency via `clientRequestId` is mandatory before P4 (where the trigger awards points off the session write — duplicate session messages = double points). Free-tier cap is locked at 30 text + 3 image per UTC+6 day per user spec.
@@ -152,7 +152,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Foundation — Refactor, CI, Test Harness, iOS Identity | 11/11 | Complete   | 2026-05-18 |
 | 2. Cloud Functions Scaffolding + App Check | 11/11 | Complete   | 2026-05-19 |
-| 3. Gemini Proxy + Server-Side Rate Limiting | 13/15 | In Progress|  |
+| 3. Gemini Proxy + Server-Side Rate Limiting | 15/15 | Complete   | 2026-05-20 |
 | 4. Server-Authoritative Rewards + Rules Lockdown | 0/TBD | Not started | - |
 | 5. Stripe Subscriptions + Premium Claims + Admin Panel | 0/TBD | Not started | - |
 | 6. FCM iOS Wiring + Notifications + Daily Challenge | 0/TBD | Not started | - |
