@@ -38,7 +38,9 @@ async function main() {
     process.env.GCLOUD_PROJECT ||
     process.env.GOOGLE_CLOUD_PROJECT ||
     'mentor-mind-aa765';
-  const location = 'asia-south1';
+  // 03-04 finding: Gemini models are NOT served from asia-south1 (404 NOT_FOUND).
+  // us-central1 hosts the full Gemini catalog. Overridable via VERTEX_LOCATION.
+  const location = process.env.VERTEX_LOCATION || 'us-central1';
 
   // If a model ID is passed as argv[2], try only that one. Otherwise walk the chain.
   const explicit = process.argv[2];

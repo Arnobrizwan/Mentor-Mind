@@ -1,10 +1,14 @@
 // Phase 3 — Vertex AI Gemini client (replaces the Phase 2 stub).
 //
-// D-01: Model ID pinned in MODEL_CONFIG.modelId. Plan 03-04 verifies it resolves
-//       against live Vertex API in asia-south1 BEFORE PR-1 merges. Fallback
-//       chain documented in 03-RESEARCH Open Question Q-1.
-// D-02: Vertex AI via @google-cloud/vertexai + ADC. No API key. Location is
-//       'asia-south1' matching the Functions region — no cross-region hop.
+// D-01: Model ID pinned in MODEL_CONFIG.modelId. Plan 03-04 verified it resolves
+//       against the live Vertex API BEFORE PR-1 merges. Fallback chain
+//       documented in 03-RESEARCH Open Question Q-1.
+// D-02: Vertex AI via @google-cloud/vertexai + ADC. No API key.
+//       NOTE (03-04 finding): Gemini generative models are NOT served from
+//       asia-south1 (Mumbai) — `gemini-2.5-pro` there returns 404 NOT_FOUND.
+//       MODEL_CONFIG.location is therefore 'us-central1'. This is independent
+//       of the Cloud Functions deploy region (asia-south1): the function still
+//       deploys in asia-south1, only the Vertex API call targets us-central1.
 // D-03: SYSTEM_PROMPT lives as a hardcoded TS const (AI-09 — updatable via
 //       `firebase deploy --only functions:mentorBotChat`, no app release).
 // D-04: SYSTEM_PROMPT_VERSION stamped onto each message doc by the handler.
@@ -48,7 +52,8 @@ You will receive messages prefixed with \`[Subject: X, Level: Y]\` as context. U
 // ---------------------------------------------------------------------------
 
 export const MODEL_CONFIG = {
-  modelId: 'gemini-2.5-pro', // ← Plan 03-04 may update to gemini-3.1-pro after live verification.
+  modelId: 'gemini-2.5-pro', // 03-04 verified: resolves in us-central1 (404 in asia-south1).
+  location: 'us-central1', // Vertex region for the model call — NOT the Functions deploy region.
   timeoutSeconds: 60,
   memory: '512MiB' as const,
   maxOutputTokens: 1024,
@@ -86,7 +91,7 @@ export class VertexGeminiClient implements GeminiClient {
       throw new Error('GCLOUD_PROJECT env var not set (expected from Cloud Functions v2 runtime)');
     }
 
-    const vertexAI = new VertexAI({ project, location: 'asia-south1' });
+    const vertexAI = new VertexAI({ project, location: opts.modelConfig.location });
     const model = vertexAI.getGenerativeModel({
       model: opts.modelConfig.modelId,
       generationConfig: {
