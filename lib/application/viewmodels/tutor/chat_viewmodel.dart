@@ -248,7 +248,7 @@ class ChatViewModel extends StateNotifier<ChatState> {
       role: MessageRole.user,
       content: trimmed,
       timestamp: now,
-      imageUrl: imageFile != null ? imageFile.path : null,
+      imageUrl: imageFile?.path,
     );
     final aiPlaceholder = ChatMessage(
       id: const Uuid().v4(),
