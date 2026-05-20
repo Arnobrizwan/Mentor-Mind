@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 3 PR-1 pre-billing subset complete (4/15) — paused at 03-04 live Vertex checkpoint pending GCP billing enable
-last_updated: "2026-05-19T09:30:00.000Z"
-last_activity: 2026-05-19 -- Phase 03 plans 03-01, 03-02, 03-03, 03-05 executed (PR-1 pre-billing safe subset)
+stopped_at: Phase 3 — 13/15 plans complete; 03-04 + 03-15 deferred on closed GCP billing account
+last_updated: "2026-05-20T00:45:00.000Z"
+last_activity: 2026-05-20 -- Phase 03 plans 03-06..03-14 executed (PR-2 + PR-3 local-code subset)
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 52
-  completed_plans: 26
-  percent: 50
+  completed_plans: 35
+  percent: 67
 ---
 
 # Project State
@@ -21,41 +21,40 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** A student preparing for O/A Levels can ask MentorBot a subject question and get a useful, curriculum-aligned answer in under 10 seconds — every single day, on a free tier that still feels usable.
-**Current focus:** Phase 03 — Gemini proxy + server-side rate limiting (4/15 plans landed; blocked on GCP billing)
+**Current focus:** Phase 03 — Gemini proxy + server-side rate limiting (13/15 plans landed; 2 deferred on GCP billing)
 
 ## Current Position
 
 Phase: 3
-Plan: 03-04 (blocking-human checkpoint — live Vertex AI model availability probe)
-Status: Paused — billing prerequisite outstanding
-Last activity: 2026-05-19 -- Plans 03-01, 03-02, 03-03, 03-05 committed to main (28/28 jest tests green; build + lint clean)
+Plan: 03-04 (blocking-human checkpoint — live Vertex AI model availability probe) + 03-15 (closeout)
+Status: 13/15 complete — both remaining plans deferred on a closed GCP billing account
+Last activity: 2026-05-20 -- Plans 03-06..03-14 committed to main. functions 45 tests green (38 unit + 7 rules); Flutter 47 tests green; build + lint clean.
 
-Progress: [███░░░░░░░] 27% (4/15 phase-3 plans)
+Progress: [█████████░] 87% (13/15 phase-3 plans)
 
-## Phase 03 Resume Gate (BLOCKING — narrow scope)
+## Phase 03 Resume Gate (BLOCKING — 2 plans only)
 
-User elected to continue dispatching local-code/doc plans while billing is closed. **Only 03-04 and 03-15 remain pending the billing reopen**; plans 03-06..03-14 are dispatched serially without live cloud calls (fake clients, emulator tests). The following human actions on `mentor-mind-aa765` close 03-04 + 03-15:
+13 of 15 Phase 3 plans are complete and on `main`. **03-04 (live Vertex model probe) and 03-15 (closeout) remain.** Both are blocked because **all 10 gcloud billing accounts on `arnobrizwan23@gmail.com` are closed** (`open: false`) as of 2026-05-20. `gcloud billing projects link` rejects closed accounts.
 
-1. **Enable GCP billing** (`gcloud billing projects describe mentor-mind-aa765 --format='value(billingEnabled)'` returns `False` as of 2026-05-19T08:54Z):
-   ```bash
-   gcloud billing projects link mentor-mind-aa765 --billing-account=0121EC-5D572E-57FEE1
-   ```
-2. **Enable Vertex AI API**:
-   ```bash
-   gcloud config set project mentor-mind-aa765
-   gcloud services enable aiplatform.googleapis.com
-   ```
-3. **Set up Application Default Credentials** for the 03-04 probe:
-   ```bash
-   gcloud auth application-default login
-   ```
-4. **Run the model availability probe** (created in 03-04 Task 1, not yet executed):
-   ```bash
-   node functions/tool/verify-model-availability.js
-   ```
-   Report back `a` / `b` / `c` / `d` per 03-04-model-availability-checkpoint-PLAN.md §Task 2.
+**Step 1 — reopen a billing account (human, GCP Console):**
+Open https://console.cloud.google.com/billing, click into a closed "Firebase Payment" account (e.g. `0121EC-5D572E-57FEE1`), hit Reactivate, and re-verify the payment method (likely an expired card). Status must flip to Active.
 
-Resume command (once billing is on): `/gsd-execute-phase 03 --wave 2` — picks up at 03-04, then proceeds through 03-06, 03-07 (Wave 3), Wave 4 (PR-2: backend setup + firestore rules), Wave 5-6 (PR-3: Dart-side swap), Wave 7 (closeout).
+**Step 2 — link + enable (run after Step 1):**
+```bash
+gcloud billing projects link mentor-mind-aa765 --billing-account=<REOPENED_ACCOUNT_ID>
+gcloud config set project mentor-mind-aa765
+gcloud services enable aiplatform.googleapis.com
+gcloud auth application-default login
+```
+
+**Step 3 — run the 03-04 model probe** (the script `functions/tool/verify-model-availability.js` is created BY plan 03-04, which has not run yet):
+Resume with `/gsd-execute-phase 03` — it picks up 03-04 (creates + runs the probe, records the resolved model in `functions/src/lib/gemini.ts` `MODEL_CONFIG.modelId`) then 03-15 (closeout: VALIDATION.md, requirements traceability, leaked-key rotation confirm, ROADMAP close).
+
+**Also outstanding before Phase 3 can truly ship (documented in BACKEND_SETUP.md §Phase 3):**
+- `firebase deploy --only firestore:rules,functions` — deploys the rules lockdown + mentorBotChat (needs billing).
+- Revoke the leaked Google AI Studio API key at https://aistudio.google.com/apikey (manual; BACKEND_SETUP.md §5).
+- Fill the Artifact Registry `REPO_NAME` placeholder after first functions deploy.
+- Run the `integration_test/mentor_bot_smoke_test.dart` smoke locally (emulator + iOS simulator, `GEMINI_CLIENT_MODE=fake`).
 
 ## Performance Metrics
 
@@ -118,12 +117,16 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-19T09:30:00Z
-Stopped at: Phase 3 PR-1 pre-billing subset complete (4/15) — paused at 03-04 live-Vertex checkpoint
+Last session: 2026-05-20T00:45:00Z
+Stopped at: Phase 3 — 13/15 plans complete; 03-04 + 03-15 deferred on closed GCP billing account
 Resume file: .planning/phases/03-gemini-proxy-server-side-rate-limiting/03-04-model-availability-checkpoint-PLAN.md
-Last 4 commits on main:
-- 3e0182f docs(03-05): complete rate-limit-transaction plan summary
-- fa8229a feat(functions): fill rate_limit.ts — transactional daily + burst + monthly + premium bypass
-- a8bd02e docs(03-03): complete vertex-gemini-client plan summary
-- 5d6d5c9 feat(functions): replace gemini.ts stub with Vertex AI client + GeminiClient seam + fake
-Test suite: 28/28 green (quota 7 + gemini 8 + rate_limit 13). Build + lint clean.
+
+Phase 3 plans complete (13/15): 03-01, 03-02, 03-03, 03-05, 03-06, 03-07, 03-08, 03-09, 03-10, 03-11, 03-12, 03-13, 03-14.
+Deferred (2/15): 03-04 (live Vertex probe), 03-15 (closeout) — see Resume Gate above.
+
+Test state on main:
+- functions: 45 jest tests green — quota 7, gemini 8, rate_limit 13, idempotency 6, usage_log 4 (38 unit) + rules 7 (emulator).
+- Flutter: 47 tests green. `flutter analyze`: 0 errors / 0 warnings, 150 pre-existing info-level (Phase 7 lint burndown owns those).
+- `npm run build` + `npm run lint` clean.
+
+Wiring delivered: mentorBotChat callable (functions/src/index.ts) → Vertex client seam (gemini.ts) → rate-limit txn (rate_limit.ts) → firestore.rules lockdown. Flutter: MentorBotRepository + chat_viewmodel swapped off the in-binary GEMINI_API_KEY path; google_generative_ai removed from pubspec.
