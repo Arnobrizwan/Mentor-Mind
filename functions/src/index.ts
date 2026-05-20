@@ -9,6 +9,26 @@ import {
 } from "./lib/gemini";
 import { checkAndIncrement } from "./lib/rate_limit";
 import { unauthenticated, internal, mapKnownError } from "./lib/errors";
+import { getDhakaDateKey } from "./lib/quota";
+
+// ---------------------------------------------------------------------------
+// Cost estimation helper (D-15 — pinned per-million-token rates as of 2026-05)
+// Rates apply to gemini-2.5-pro / gemini-1.5-pro / gemini-3.1-pro (same tier).
+// Update here when Vertex changes pricing — one-line edits only.
+// ---------------------------------------------------------------------------
+
+const GEMINI_INPUT_RATE_PER_MTOK = 1.25;
+const GEMINI_OUTPUT_RATE_PER_MTOK = 5.0;
+
+function estimateCostUsd(
+  promptTokens: number,
+  completionTokens: number
+): number {
+  return (
+    (promptTokens / 1_000_000) * GEMINI_INPUT_RATE_PER_MTOK +
+    (completionTokens / 1_000_000) * GEMINI_OUTPUT_RATE_PER_MTOK
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Phase 2 — ping (boot-canary; DO NOT REMOVE)
@@ -109,20 +129,55 @@ export const mentorBotChat = onCall(
       const idempotencySnap = await idempotencyRef.get();
       if (idempotencySnap.exists) {
         const cached = idempotencySnap.data() ?? {};
-        functions.logger.info("mentorBotChat: idempotent hit", {
-          uid,
-          sessionId,
-          clientRequestId,
-        });
         const cachedCreatedAt: unknown = cached["createdAt"];
         const createdAtMs =
           cachedCreatedAt instanceof admin.firestore.Timestamp
             ? cachedCreatedAt.toMillis()
             : Date.now();
+        const idempCachedPrompt = (cached["promptTokens"] as number) ?? 0;
+        const idempCachedCompletion =
+          (cached["completionTokens"] as number) ?? 0;
+
+        // --------- USAGE LOG (IDEMPOTENCY HIT — NON-TRANSACTIONAL — D-15) ---------
+        // Gemini was NOT re-invoked. Count the call but do NOT increment tokens/cost
+        // (dedupe is free — model was not invoked again).
+        const idempDateKey = getDhakaDateKey();
+        const idempLogRef = db
+          .collection("system")
+          .doc(`usage_log_${idempDateKey}`);
+        try {
+          await idempLogRef.set(
+            {
+              calls: admin.firestore.FieldValue.increment(1),
+              dateLabel: idempDateKey,
+            },
+            { merge: true }
+          );
+        } catch (logErr) {
+          functions.logger.warn(
+            "mentorBotChat: idempotency-hit usage_log write failed",
+            {
+              uid,
+              sessionId,
+              clientRequestId,
+              err:
+                logErr instanceof Error ? logErr.message : String(logErr),
+            }
+          );
+        }
+        functions.logger.info("mentorBotChat: idempotent hit", {
+          event: "gemini_call_idempotent_hit",
+          uid,
+          sessionId,
+          clientRequestId,
+          cachedPromptTokens: idempCachedPrompt,
+          cachedCompletionTokens: idempCachedCompletion,
+        });
+
         return {
           text: (cached["text"] as string) ?? "",
-          promptTokens: (cached["promptTokens"] as number) ?? 0,
-          completionTokens: (cached["completionTokens"] as number) ?? 0,
+          promptTokens: idempCachedPrompt,
+          completionTokens: idempCachedCompletion,
           messageId: clientRequestId,
           createdAt: createdAtMs,
         };
@@ -212,14 +267,51 @@ export const mentorBotChat = onCall(
       );
       await batch.commit();
 
+      // ---------------------- USAGE LOG (NON-TRANSACTIONAL — D-15) ----------------------
+      // Aggregate write happens AFTER the user-quota transaction + batch commit. Failure
+      // here logs warn but does NOT fail the callable — user already got their answer.
+      const usageLogDateKey = getDhakaDateKey();
+      const usageLogRef = db
+        .collection("system")
+        .doc(`usage_log_${usageLogDateKey}`);
+      const estimatedCostUsd = estimateCostUsd(promptTokens, completionTokens);
       const durationMs = Date.now() - startMs;
+
+      try {
+        await usageLogRef.set(
+          {
+            calls: admin.firestore.FieldValue.increment(1),
+            promptTokens: admin.firestore.FieldValue.increment(promptTokens),
+            completionTokens:
+              admin.firestore.FieldValue.increment(completionTokens),
+            estimatedCostUsd:
+              admin.firestore.FieldValue.increment(estimatedCostUsd),
+            dateLabel: usageLogDateKey,
+          },
+          { merge: true }
+        );
+      } catch (logErr) {
+        functions.logger.warn(
+          "mentorBotChat: usage_log write failed (non-fatal)",
+          {
+            uid,
+            sessionId,
+            clientRequestId,
+            err: logErr instanceof Error ? logErr.message : String(logErr),
+          }
+        );
+      }
+
       functions.logger.info("mentorBotChat: success", {
+        event: "gemini_call",
         uid,
         sessionId,
         clientRequestId,
         promptTokens,
         completionTokens,
+        estimatedCostUsd,
         durationMs,
+        modelId: MODEL_CONFIG.modelId,
         mode,
       });
 
