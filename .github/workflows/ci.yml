@@ -81,13 +81,15 @@ jobs:
           retention-days: 30
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # Job 2 — Cloud Functions: lint + build (CI-03)
+  # Job 2 — Cloud Functions: lint + build + test (CI-03)
   # Gated on changes under functions/** via dorny/paths-filter@v4. PRs that don't
-  # touch functions/ skip the install/build steps via per-step `if:` guards;
+  # touch functions/ skip the install/build/test steps via per-step `if:` guards;
   # the job itself still runs (the filter step is cheap).
+  # rules.test.ts (plan 03-09) requires the Firestore emulator and is excluded
+  # via --testPathIgnorePatterns=rules. Phase 7 polish wires the emulator into CI.
   # ─────────────────────────────────────────────────────────────────────────────
   functions:
-    name: Cloud Functions lint + build (CI-03)
+    name: Cloud Functions lint + build + test (CI-03)
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -116,3 +118,7 @@ jobs:
       - name: Lint + build TypeScript
         if: steps.filter.outputs.functions == 'true'
         run: cd functions && npm run lint && npm run build
+
+      - name: Run Jest tests
+        if: steps.filter.outputs.functions == 'true'
+        run: cd functions && npm test -- --testPathIgnorePatterns=rules
