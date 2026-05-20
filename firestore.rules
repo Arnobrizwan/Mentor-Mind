@@ -75,7 +75,11 @@ service cloud.firestore {
       // /users/{uid}/usage/{dateKey}  — daily usage, streak, login reward flag
       // -----------------------------------------------------------------------
       match /usage/{dateKey} {
-        allow read, write: if isOwner(uid) || isAdmin();
+        // Phase 3 D-17 / AI-08: client can READ own usage (to display remaining quota
+        // on the chat screen); writes happen ONLY via the Admin SDK in
+        // functions/src/lib/rate_limit.ts (which ignores rules).
+        allow read: if isOwner(uid);
+        allow write: if false;
       }
     }
 
@@ -145,6 +149,16 @@ service cloud.firestore {
       // Any authed user can delete — matches the spec's deleteNotification.
       // Known trade-off: one user's delete removes the doc for everyone.
       allow delete: if isSignedIn();
+    }
+
+    // -------------------------------------------------------------------------
+    // Phase 3 D-17 / AI-08: /system/** — server-only quota + usage aggregates.
+    // Covers /system/quota_{YYYY-MM} (plan 03-05) AND /system/usage_log_{YYYY-MM-DD}
+    // (plan 03-07). Only Admin SDK reads/writes; clients never touch these docs.
+    // Session subcollection lockdown is DEFERRED to Phase 4 (D-17).
+    // -------------------------------------------------------------------------
+    match /system/{document=**} {
+      allow read, write: if false;
     }
   }
 }
