@@ -86,23 +86,14 @@ Admin role grants elevated access in the rules. Create your first admin manually
 
 Subsequent admin/teacher approvals should happen through an admin UI — out of scope for now.
 
-## 7. Run with the Gemini API key
+## 7. Run the app
 
-The AI tutor calls Google's Gemini API. Without a key it shows a clear
-"not configured" message instead of real answers.
+Gemini calls are proxied via Cloud Functions (Phase 3) — no API key is required
+in the Dart build. See BACKEND_SETUP.md §Phase 3 for Cloud Functions setup.
 
 ```bash
-# Get a key: https://aistudio.google.com/apikey
-
-flutter run --dart-define=GEMINI_API_KEY=<your-key>
+flutter run  # No API key needed — Gemini calls proxied via Cloud Functions. See §Phase 3 above.
 ```
-
-For everyday dev, drop this into a launch config:
-
-- **VS Code** — `.vscode/launch.json` → `"toolArgs": ["--dart-define=GEMINI_API_KEY=..."]`
-- **Android Studio** — Run → Edit Configurations → Additional run args
-
-> Don't commit the key. Use `--dart-define` or a CI secret.
 
 ---
 
@@ -400,10 +391,11 @@ echo "MONTHLY_CALL_CEILING=20000" > functions/.env.mentor-mind-aa765
 
 ### 5. Revoke the leaked Google AI Studio API key (MANUAL — BEFORE PR-3 merges)
 
-The legacy `--dart-define=GEMINI_API_KEY=<key>` path was used pre-Phase-3 and
-the key landed in the compiled iOS binary (AI-02 — the binary-scrub plus
-rotation is Phase 3's resolution). The Vertex AI path doesn't use a key at
-all, so this step is purely about killing the dead key.
+The legacy direct-Gemini path used a Google AI Studio API key passed via
+`--dart-define` at build time, which caused the key to land in the compiled iOS
+binary (AI-02 — the binary-scrub plus rotation is Phase 3's resolution). The
+Vertex AI proxy path doesn't use a client-side key at all, so this step is
+purely about killing the dead key.
 
 1. Open https://aistudio.google.com/apikey
 2. Sign in as `arnobrizwan23@gmail.com`

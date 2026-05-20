@@ -4,12 +4,15 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:mentor_minds/core/services/gemini_service.dart';
+import 'package:mentor_minds/core/constants/quota.dart';
 import 'package:mentor_minds/data/models/chat_message.dart';
+import 'package:mentor_minds/data/models/mentor_bot_response.dart';
 import 'package:mentor_minds/data/repositories/auth_repository.dart';
+import 'package:mentor_minds/data/repositories/mentor_bot_repository.dart';
 import 'package:mentor_minds/data/repositories/sessions_repository.dart';
 import 'package:mentor_minds/data/repositories/storage_repository.dart';
 import 'package:mentor_minds/data/repositories/users_repository.dart';
+import 'package:uuid/uuid.dart';
 
 // ---------------------------------------------------------------------------
 // State
@@ -108,7 +111,7 @@ class ChatState {
 
 class ChatViewModel extends StateNotifier<ChatState> {
   ChatViewModel(
-    this._gemini,
+    this._mentorBotRepository,
     this._authRepo,
     this._usersRepo,
     this._sessionsRepo,
@@ -117,7 +120,7 @@ class ChatViewModel extends StateNotifier<ChatState> {
     _loadContext();
   }
 
-  final GeminiService _gemini;
+  final MentorBotRepository _mentorBotRepository;
   final AuthRepository _authRepo;
   final UsersRepository _usersRepo;
   final SessionsRepository _sessionsRepo;
@@ -137,7 +140,7 @@ class ChatViewModel extends StateNotifier<ChatState> {
 
     try {
       final uid = user.uid;
-      final todayKey = _todayKey();
+      final todayKey = dhakaDateKey(DateTime.now());
 
       final results = await Future.wait([
         _usersRepo.getUserDocRaw(uid),
@@ -191,7 +194,6 @@ class ChatViewModel extends StateNotifier<ChatState> {
   }
 
   void newChat() {
-    _gemini.resetSession();
     state = state.copyWith(
       messages: const [],
       clearSession: true,
@@ -235,17 +237,21 @@ class ChatViewModel extends StateNotifier<ChatState> {
       return;
     }
 
+    // Phase 3 AI-10: clientRequestId generated ONCE per user-initiated send.
+    // Persist the same id across retries for server-side idempotency (plan 03-06).
+    final clientRequestId = const Uuid().v4();
+
     final isFirstMessage = state.sessionId == null;
     final now = DateTime.now();
     final userMsg = ChatMessage(
-      id: _genId('u'),
+      id: const Uuid().v4(),
       role: MessageRole.user,
       content: trimmed,
       timestamp: now,
       imageUrl: imageFile != null ? imageFile.path : null,
     );
     final aiPlaceholder = ChatMessage(
-      id: _genId('a'),
+      id: const Uuid().v4(),
       role: MessageRole.assistant,
       content: '',
       timestamp: DateTime.now(),
@@ -271,29 +277,38 @@ class ChatViewModel extends StateNotifier<ChatState> {
         );
         _updateMessage(userMsg.id, imageUrl: uploadedUrl);
 
-        final bytes = await imageFile.readAsBytes();
-        finalText = await _gemini.analyzeImage(
-          imageBytes: bytes,
-          question: trimmed,
+        // Phase 3 AI-10: non-streaming Future call for image branch.
+        // isStreaming flag stays in ChatState — drives the typing indicator —
+        // but now means "awaiting the Future" instead of "consuming a Stream".
+        final MentorBotResponse imageResponse =
+            await _mentorBotRepository.sendMessage(
+          sessionId: state.sessionId ?? const Uuid().v4(),
+          clientRequestId: clientRequestId,
+          message: trimmed,
+          imageUrl: uploadedUrl,
           subject: state.selectedSubject,
+          level: state.selectedLevel,
         );
+        finalText = imageResponse.text;
         _updateMessage(
           aiPlaceholder.id,
           content: finalText,
           isStreaming: false,
         );
       } else {
-        final buffer = StringBuffer();
-        await for (final chunk in _gemini.sendMessage(
-          text: trimmed,
+        // Phase 3 AI-10: non-streaming Future call. isStreaming flag stays in
+        // ChatState — drives the typing indicator — but now means "awaiting the
+        // Future" instead of "consuming a Stream". Same UX.
+        final MentorBotResponse response =
+            await _mentorBotRepository.sendMessage(
+          sessionId: state.sessionId ?? const Uuid().v4(),
+          clientRequestId: clientRequestId,
+          message: trimmed,
           subject: state.selectedSubject,
           level: state.selectedLevel,
-        )) {
-          buffer.write(chunk);
-          _updateMessage(aiPlaceholder.id, content: buffer.toString());
-        }
-        finalText = buffer.toString();
-        _updateMessage(aiPlaceholder.id, isStreaming: false);
+        );
+        finalText = response.text;
+        _updateMessage(aiPlaceholder.id, content: finalText, isStreaming: false);
       }
 
       final newCount = state.dailyMessageCount + 1;
@@ -389,7 +404,6 @@ class ChatViewModel extends StateNotifier<ChatState> {
           .map(ChatMessage.fromMap)
           .toList(growable: false);
 
-      _gemini.resetSession();
       state = state.copyWith(
         isLoading: false,
         sessionId: sessionId,
@@ -414,7 +428,7 @@ class ChatViewModel extends StateNotifier<ChatState> {
     final uid = _authRepo.currentUser?.uid;
     if (uid == null) return;
     try {
-      await _usersRepo.incrementUsageMessageCount(uid, _todayKey());
+      await _usersRepo.incrementUsageMessageCount(uid, dhakaDateKey(DateTime.now()));
     } catch (_) {
       // Silent.
     }
@@ -457,34 +471,16 @@ class ChatViewModel extends StateNotifier<ChatState> {
     }).toList(growable: false);
     state = state.copyWith(messages: updated);
   }
-
-  static String _todayKey() {
-    final d = DateTime.now();
-    String pad(int n) => n.toString().padLeft(2, '0');
-    return '${d.year}-${pad(d.month)}-${pad(d.day)}';
-  }
-
-  String _genId(String prefix) {
-    final ts = DateTime.now().microsecondsSinceEpoch;
-    return '${prefix}_${ts}_${_random.nextInt(9999)}';
-  }
 }
 
 // ---------------------------------------------------------------------------
 // Providers
 // ---------------------------------------------------------------------------
 
-final geminiServiceProvider = Provider<GeminiService>((ref) {
-  final svc = GeminiService();
-  ref.onDispose(svc.resetSession);
-  return svc;
-});
-
 final chatViewModelProvider =
     StateNotifierProvider.autoDispose<ChatViewModel, ChatState>((ref) {
-  final gemini = ref.watch(geminiServiceProvider);
   return ChatViewModel(
-    gemini,
+    ref.read(mentorBotRepositoryProvider),
     ref.read(authRepositoryProvider),
     ref.read(usersRepositoryProvider),
     ref.read(sessionsRepositoryProvider),
