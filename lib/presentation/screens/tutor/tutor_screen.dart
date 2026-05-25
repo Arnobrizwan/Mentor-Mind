@@ -14,6 +14,7 @@ import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
 import 'package:mentor_minds/application/viewmodels/tutor/chat_viewmodel.dart';
 import 'package:mentor_minds/data/models/chat_message.dart';
+import 'package:mentor_minds/shared/widgets/premium_upgrade_modal.dart';
 
 class TutorScreen extends ConsumerStatefulWidget {
   const TutorScreen({super.key});
@@ -102,7 +103,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: Text('Start a new chat?', style: AppTextStyles.headingMedium),
+        title: const Text('Start a new chat?', style: AppTextStyles.headingMedium),
         content: Text(
           'Your current conversation is saved and will appear in your '
           'recent sessions.',
@@ -168,14 +169,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
   }
 
   Future<void> _showUpgradeModal() {
-    return showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.kSurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => const _UpgradeSheet(),
-    );
+    return PremiumUpgradeModal.show(context);
   }
 
   void _toast(String msg, {required Color background}) {
@@ -326,7 +320,7 @@ class _SubjectPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.kPrimary.withOpacity(0.08),
+      color: AppColors.kPrimary.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         onTap: onTap,
@@ -391,7 +385,7 @@ class _SubjectSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Text('Choose a subject', style: AppTextStyles.headingMedium),
+            const Text('Choose a subject', style: AppTextStyles.headingMedium),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -480,7 +474,7 @@ class _LevelRow extends StatelessWidget {
       child: Row(
         children: [
           Material(
-            color: AppColors.kAccent.withOpacity(0.10),
+            color: AppColors.kAccent.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(999),
             child: InkWell(
               onTap: onTap,
@@ -496,7 +490,7 @@ class _LevelRow extends StatelessWidget {
                     Icon(
                       Icons.school_outlined,
                       size: 13,
-                      color: AppColors.kAccent.withOpacity(0.85),
+                      color: AppColors.kAccent.withValues(alpha: 0.85),
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -510,7 +504,7 @@ class _LevelRow extends StatelessWidget {
                     Icon(
                       Icons.unfold_more_rounded,
                       size: 12,
-                      color: AppColors.kAccent.withOpacity(0.85),
+                      color: AppColors.kAccent.withValues(alpha: 0.85),
                     ),
                   ],
                 ),
@@ -536,7 +530,7 @@ class _LimitWarningBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      color: AppColors.kGold.withOpacity(0.12),
+      color: AppColors.kGold.withValues(alpha: 0.12),
       child: Row(
         children: [
           const Icon(Icons.info_rounded, size: 16, color: AppColors.kGold),
@@ -588,12 +582,12 @@ class _EmptyState extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: [
                   AppColors.kAccent,
-                  AppColors.kAccent.withOpacity(0.65),
+                  AppColors.kAccent.withValues(alpha: 0.65),
                 ],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.kAccent.withOpacity(0.35),
+                  color: AppColors.kAccent.withValues(alpha: 0.35),
                   blurRadius: 28,
                   offset: const Offset(0, 10),
                 ),
@@ -829,7 +823,7 @@ class _AiBubble extends StatelessWidget {
             DecoratedBox(
               decoration: BoxDecoration(
                 color: message.isError
-                    ? AppColors.kError.withOpacity(0.05)
+                    ? AppColors.kError.withValues(alpha: 0.05)
                     : AppColors.kSurface,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(4),
@@ -846,7 +840,7 @@ class _AiBubble extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -876,7 +870,7 @@ class _AiBubble extends StatelessWidget {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.kError,
                             side: BorderSide(
-                              color: AppColors.kError.withOpacity(0.5),
+                              color: AppColors.kError.withValues(alpha: 0.5),
                             ),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1005,7 +999,7 @@ MarkdownStyleSheet _markdownStyle(BuildContext context) {
       fontStyle: FontStyle.italic,
     ),
     blockquoteDecoration: BoxDecoration(
-      color: AppColors.kAccent.withOpacity(0.06),
+      color: AppColors.kAccent.withValues(alpha: 0.06),
       borderRadius: BorderRadius.circular(6),
       border: const Border(
         left: BorderSide(color: AppColors.kAccent, width: 3),
@@ -1170,7 +1164,7 @@ class _InputBar extends StatelessWidget {
     return Material(
       color: AppColors.kSurface,
       elevation: 8,
-      shadowColor: Colors.black.withOpacity(0.08),
+      shadowColor: Colors.black.withValues(alpha: 0.08),
       child: SafeArea(
         top: false,
         child: Padding(
@@ -1293,7 +1287,7 @@ class _LimitReachedCard extends StatelessWidget {
     return Material(
       color: AppColors.kSurface,
       elevation: 8,
-      shadowColor: Colors.black.withOpacity(0.08),
+      shadowColor: Colors.black.withValues(alpha: 0.08),
       child: SafeArea(
         top: false,
         child: Padding(
@@ -1308,7 +1302,7 @@ class _LimitReachedCard extends StatelessWidget {
                     height: 36,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: AppColors.kGold.withOpacity(0.15),
+                      color: AppColors.kGold.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -1390,87 +1384,6 @@ class _LimitReachedCard extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Upgrade modal
-// ---------------------------------------------------------------------------
-
-class _UpgradeSheet extends StatelessWidget {
-  const _UpgradeSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              width: 56,
-              height: 56,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [AppColors.kGold, Color(0xFFE28A00)],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.kGold.withOpacity(0.35),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.workspace_premium_rounded,
-                color: Colors.white,
-                size: 30,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text('Upgrade to Premium', style: AppTextStyles.headingLarge),
-            const SizedBox(height: 6),
-            Text(
-              'Unlimited AI tutoring, diagram uploads, priority answers, '
-              'and more.',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.kTextMuted,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('See Premium plans'),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.kTextMuted,
-              ),
-              child: const Text('Maybe later'),
-            ),
-          ],
         ),
       ),
     );

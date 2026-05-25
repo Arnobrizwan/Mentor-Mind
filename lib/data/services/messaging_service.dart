@@ -4,14 +4,12 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
 import 'package:mentor_minds/data/services/notification_persistence.dart';
 import 'package:mentor_minds/data/services/firebase_providers.dart';

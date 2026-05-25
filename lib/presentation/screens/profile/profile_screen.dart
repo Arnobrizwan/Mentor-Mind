@@ -85,9 +85,9 @@ class _ProfileBody extends ConsumerWidget {
           SliverToBoxAdapter(
             child: _SettingsList(user: user, allSubjects: allSubjects),
           ),
-          SliverToBoxAdapter(
+          const SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
+              padding: EdgeInsets.fromLTRB(16, 24, 16, 32),
               child: Center(
                 child: Text(
                   'MentorMinds · v1.0',
@@ -164,7 +164,7 @@ class _Header extends ConsumerWidget {
                 Text(
                   user.email,
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: Colors.white.withOpacity(0.80),
+                    color: Colors.white.withValues(alpha: 0.80),
                     fontSize: 13,
                   ),
                 ),
@@ -198,7 +198,7 @@ class _Avatar extends StatelessWidget {
               shape: BoxShape.circle,
               color: AppColors.kAccent,
               border:
-                  Border.all(color: Colors.white.withOpacity(0.7), width: 2),
+                  Border.all(color: Colors.white.withValues(alpha: 0.7), width: 2),
               image: user.avatarUrl != null
                   ? DecorationImage(
                       image: NetworkImage(user.avatarUrl!),
@@ -296,7 +296,7 @@ class _RoleChip extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.kGold.withOpacity(0.45),
+              color: AppColors.kGold.withValues(alpha: 0.45),
               blurRadius: 10,
               spreadRadius: 0,
             ),
@@ -312,8 +312,8 @@ class _RoleChip extends StatelessWidget {
           'Teacher',
           BoxDecoration(
             borderRadius: BorderRadius.circular(999),
-            color: Colors.white.withOpacity(0.18),
-            border: Border.all(color: Colors.white.withOpacity(0.4)),
+            color: Colors.white.withValues(alpha: 0.18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
           ),
           Colors.white,
           Icons.school_rounded,
@@ -323,8 +323,8 @@ class _RoleChip extends StatelessWidget {
           'Admin',
           BoxDecoration(
             borderRadius: BorderRadius.circular(999),
-            color: Colors.white.withOpacity(0.18),
-            border: Border.all(color: Colors.white.withOpacity(0.4)),
+            color: Colors.white.withValues(alpha: 0.18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
           ),
           Colors.white,
           Icons.shield_rounded,
@@ -334,8 +334,8 @@ class _RoleChip extends StatelessWidget {
           'Student',
           BoxDecoration(
             borderRadius: BorderRadius.circular(999),
-            color: Colors.white.withOpacity(0.18),
-            border: Border.all(color: Colors.white.withOpacity(0.4)),
+            color: Colors.white.withValues(alpha: 0.18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
           ),
           Colors.white,
           null,
@@ -403,7 +403,7 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -457,7 +457,7 @@ class _UpgradeCard extends ConsumerWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.kAccent.withOpacity(0.30),
+            color: AppColors.kAccent.withValues(alpha: 0.30),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -538,7 +538,7 @@ class _PremiumCard extends ConsumerWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.kGold.withOpacity(0.35),
+            color: AppColors.kGold.withValues(alpha: 0.35),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -751,7 +751,7 @@ class _Group extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -843,7 +843,7 @@ class _SwitchTile extends StatelessWidget {
       ),
       value: value,
       onChanged: onChanged,
-      activeColor: AppColors.kAccent,
+      activeThumbColor: AppColors.kAccent,
     );
   }
 }
@@ -936,13 +936,13 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
               width: 44,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.kTextMuted.withOpacity(0.3),
+                color: AppColors.kTextMuted.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           const SizedBox(height: 18),
-          Text('Edit Profile', style: AppTextStyles.headingMedium),
+          const Text('Edit Profile', style: AppTextStyles.headingMedium),
           const SizedBox(height: 18),
 
           // Avatar preview
@@ -1136,15 +1136,15 @@ class _SubjectsSheetState extends ConsumerState<_SubjectsSheet> {
               width: 44,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.kTextMuted.withOpacity(0.3),
+                color: AppColors.kTextMuted.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          Text('My Subjects', style: AppTextStyles.headingMedium),
+          const Text('My Subjects', style: AppTextStyles.headingMedium),
           const SizedBox(height: 4),
-          Text(
+          const Text(
             'Pick what you study. We tailor materials and tutor answers to this.',
             style: AppTextStyles.bodySmall,
           ),
@@ -1164,7 +1164,7 @@ class _SubjectsSheetState extends ConsumerState<_SubjectsSheet> {
                       _selected.remove(s);
                     }
                   }),
-                  selectedColor: AppColors.kAccent.withOpacity(0.18),
+                  selectedColor: AppColors.kAccent.withValues(alpha: 0.18),
                   checkmarkColor: AppColors.kAccent,
                 ),
             ],
@@ -1176,13 +1176,17 @@ class _SubjectsSheetState extends ConsumerState<_SubjectsSheet> {
               onPressed: busy
                   ? null
                   : () async {
+                      final navigator = Navigator.of(context);
+                      final messenger = ScaffoldMessenger.of(context);
                       final ok = await ref
                           .read(profileViewModelProvider.notifier)
                           .updateSubjects(_selected.toList()..sort());
                       if (!mounted) return;
                       if (ok) {
-                        Navigator.of(context).pop();
-                        _showSnack(context, 'Subjects updated');
+                        navigator.pop();
+                        messenger.showSnackBar(
+                          const SnackBar(content: Text('Subjects updated')),
+                        );
                       }
                     },
               style: ElevatedButton.styleFrom(
@@ -1257,13 +1261,13 @@ class _LevelSheet extends ConsumerWidget {
               width: 44,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.kTextMuted.withOpacity(0.3),
+                color: AppColors.kTextMuted.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          Text('My Level', style: AppTextStyles.headingMedium),
+          const Text('My Level', style: AppTextStyles.headingMedium),
           const SizedBox(height: 12),
           for (final l in const ['O Level', 'A Level'])
             ListTile(
@@ -1487,7 +1491,7 @@ class _DeleteAccountDialogState
             'This cannot be undone.',
           ),
           const SizedBox(height: 12),
-          Text(
+          const Text(
             'Type $_phrase to confirm:',
             style: AppTextStyles.bodySmall,
           ),

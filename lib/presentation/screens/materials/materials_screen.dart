@@ -268,7 +268,7 @@ class _SearchField extends StatelessWidget {
               onPressed: null,
               icon: Icon(
                 Icons.mic_none_rounded,
-                color: AppColors.kTextMuted.withOpacity(0.5),
+                color: AppColors.kTextMuted.withValues(alpha: 0.5),
                 size: 20,
               ),
             ),
@@ -643,7 +643,7 @@ class _ThumbnailArea extends StatelessWidget {
           Center(
             child: Icon(
               _iconForType(material.type),
-              color: Colors.white.withOpacity(0.55),
+              color: Colors.white.withValues(alpha: 0.55),
               size: 42,
             ),
           ),
@@ -655,7 +655,7 @@ class _ThumbnailArea extends StatelessWidget {
             height: 24,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.92),
+              color: Colors.white.withValues(alpha: 0.92),
               shape: BoxShape.circle,
             ),
             child: Text(
@@ -732,7 +732,7 @@ class _SmallSubjectChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -908,7 +908,7 @@ class _MetaChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -965,7 +965,7 @@ class _PaginationFooter extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.kPrimary,
                       side: BorderSide(
-                        color: AppColors.kPrimary.withOpacity(0.4),
+                        color: AppColors.kPrimary.withValues(alpha: 0.4),
                       ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(999),
@@ -1101,7 +1101,7 @@ class _EmptyState extends StatelessWidget {
             height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.kPrimary.withOpacity(0.08),
+              color: AppColors.kPrimary.withValues(alpha: 0.08),
             ),
             child: const Icon(
               Icons.menu_book_outlined,
@@ -1110,7 +1110,7 @@ class _EmptyState extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Text(
+          const Text(
             'No materials found',
             textAlign: TextAlign.center,
             style: AppTextStyles.headingMedium,
@@ -1134,7 +1134,7 @@ class _EmptyState extends StatelessWidget {
               label: const Text('Clear filters'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.kPrimary,
-                side: BorderSide(color: AppColors.kPrimary.withOpacity(0.5)),
+                side: BorderSide(color: AppColors.kPrimary.withValues(alpha: 0.5)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(999),
                 ),

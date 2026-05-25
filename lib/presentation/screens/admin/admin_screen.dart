@@ -190,7 +190,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
           padding: EdgeInsets.fromLTRB(wide ? 24 : 16, 16, 16, 8),
           child: Row(
             children: [
-              Text('Admin Panel', style: AppTextStyles.headingLarge),
+              const Text('Admin Panel', style: AppTextStyles.headingLarge),
               const Spacer(),
               if (admin.error != null)
                 Flexible(
@@ -232,7 +232,7 @@ class _DashboardTab extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        Text('Recent activity', style: AppTextStyles.headingSmall),
+        const Text('Recent activity', style: AppTextStyles.headingSmall),
         const SizedBox(height: 8),
         Text(
           'Full activity feed ships with Analytics in a later pass.',
@@ -345,7 +345,7 @@ class _ContentTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Upload material', style: AppTextStyles.headingSmall),
+          const Text('Upload material', style: AppTextStyles.headingSmall),
           const SizedBox(height: 8),
           Text(
             'Teacher content upload + Storage write will connect in Phase 7 polish. '
@@ -380,7 +380,7 @@ class _NotificationsTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('Broadcast', style: AppTextStyles.headingSmall),
+        const Text('Broadcast', style: AppTextStyles.headingSmall),
         const SizedBox(height: 12),
         TextField(
           controller: titleController,
@@ -394,7 +394,7 @@ class _NotificationsTab extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
-          value: role,
+          initialValue: role,
           decoration: const InputDecoration(labelText: 'Recipient role'),
           items: const [
             DropdownMenuItem(value: 'student', child: Text('Students')),

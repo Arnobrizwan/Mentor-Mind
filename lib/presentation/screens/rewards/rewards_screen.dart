@@ -188,7 +188,7 @@ class _MilestoneCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -204,7 +204,7 @@ class _MilestoneCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 10,
-              backgroundColor: AppColors.kGold.withOpacity(0.15),
+              backgroundColor: AppColors.kGold.withValues(alpha: 0.15),
               valueColor:
                   const AlwaysStoppedAnimation<Color>(AppColors.kGold),
             ),
@@ -237,17 +237,17 @@ class _TabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.kBackground,
-      child: TabBar(
+      child: const TabBar(
         indicatorColor: AppColors.kAccent,
         indicatorWeight: 3,
         labelColor: AppColors.kPrimary,
         unselectedLabelColor: AppColors.kTextMuted,
-        labelStyle: const TextStyle(
+        labelStyle: TextStyle(
           fontFamily: 'Poppins',
           fontWeight: FontWeight.w600,
           fontSize: 14,
         ),
-        tabs: const [
+        tabs: [
           Tab(text: 'Badges'),
           Tab(text: 'History'),
         ],
@@ -277,7 +277,7 @@ class _BadgesTab extends ConsumerWidget {
           _SectionHeader(label: 'Earned (${state.earned.length})'),
           const SizedBox(height: 10),
           if (state.earned.isEmpty)
-            _EmptyPanel(
+            const _EmptyPanel(
               icon: '🎖️',
               text: 'No badges yet — keep studying to earn your first one.',
             )
@@ -291,7 +291,7 @@ class _BadgesTab extends ConsumerWidget {
           _SectionHeader(label: 'Locked (${state.locked.length})'),
           const SizedBox(height: 10),
           if (state.locked.isEmpty)
-            _EmptyPanel(
+            const _EmptyPanel(
               icon: '🏅',
               text: 'All badges unlocked — you legend.',
             )
@@ -361,8 +361,8 @@ class _EarnedBadgeCard extends StatelessWidget {
     if (!badge.recentlyEarned) return card;
 
     return Shimmer.fromColors(
-      baseColor: AppColors.kGold.withOpacity(0.0),
-      highlightColor: AppColors.kGold.withOpacity(0.75),
+      baseColor: AppColors.kGold.withValues(alpha: 0.0),
+      highlightColor: AppColors.kGold.withValues(alpha: 0.75),
       period: const Duration(milliseconds: 1800),
       child: Container(
         decoration: BoxDecoration(
@@ -422,7 +422,7 @@ class _BadgeCardContent extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -527,7 +527,7 @@ void _openBadgeSheet(
               width: 44,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.kTextMuted.withOpacity(0.3),
+                color: AppColors.kTextMuted.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -557,7 +557,7 @@ void _openBadgeSheet(
                     horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(999),
-                  color: AppColors.kAccent.withOpacity(0.15),
+                  color: AppColors.kAccent.withValues(alpha: 0.15),
                 ),
                 child: Text(
                   badge.earnedAt == null
@@ -581,7 +581,7 @@ void _openBadgeSheet(
                 child: LinearProgressIndicator(
                   value: progressFraction,
                   minHeight: 8,
-                  backgroundColor: AppColors.kAccent.withOpacity(0.15),
+                  backgroundColor: AppColors.kAccent.withValues(alpha: 0.15),
                   valueColor: const AlwaysStoppedAnimation<Color>(
                       AppColors.kAccent),
                 ),
@@ -613,7 +613,7 @@ class _HistoryTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state.history.isEmpty) {
-      return _EmptyPanel(
+      return const _EmptyPanel(
         icon: '🌱',
         text: 'Start learning to earn your first points!',
         fill: true,
@@ -642,7 +642,7 @@ class _HistoryTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),

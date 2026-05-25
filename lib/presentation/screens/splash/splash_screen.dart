@@ -111,14 +111,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               colors: [AppColors.kSplashTop, AppColors.kSplashBottom],
             ),
           ),
-          child: SafeArea(
+          child: const SafeArea(
             child: Column(
               children: [
-                const Spacer(flex: 3),
-                const _LogoSection(),
-                const Spacer(flex: 3),
-                const _DotsIndicator(),
-                const SizedBox(height: 52),
+                Spacer(flex: 3),
+                _LogoSection(),
+                Spacer(flex: 3),
+                _DotsIndicator(),
+                SizedBox(height: 52),
               ],
             ),
           ),
@@ -177,7 +177,7 @@ class _LogoSection extends StatelessWidget {
         Text(
           'Learn Smarter. Score Higher.',
           style: AppTextStyles.bodyMedium.copyWith(
-            color: Colors.white.withOpacity(0.70),
+            color: Colors.white.withValues(alpha: 0.70),
             fontSize: 14,
             letterSpacing: 0.1,
           ),
@@ -208,22 +208,22 @@ class _Lettermark extends StatelessWidget {
       width: 84,
       height: 84,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.10),
+        color: Colors.white.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: AppColors.kAccent.withOpacity(0.45),
+          color: AppColors.kAccent.withValues(alpha: 0.45),
           width: 1.5,
         ),
         boxShadow: [
           // Inner glow — tight, vibrant
           BoxShadow(
-            color: AppColors.kAccent.withOpacity(0.50),
+            color: AppColors.kAccent.withValues(alpha: 0.50),
             blurRadius: 28,
             spreadRadius: 0,
           ),
           // Outer bloom — wide, soft
           BoxShadow(
-            color: AppColors.kAccent.withOpacity(0.18),
+            color: AppColors.kAccent.withValues(alpha: 0.18),
             blurRadius: 72,
             spreadRadius: 12,
           ),

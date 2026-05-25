@@ -10,7 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:mentor_minds/core/observability/crashlytics_setup.dart';
 import 'package:mentor_minds/data/services/messaging_service.dart';
+import 'package:mentor_minds/presentation/app/app_shell.dart';
 
 import 'core/routes/app_router.dart';
 import 'core/theme/app_theme.dart';
@@ -32,6 +34,7 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    await configureCrashlytics();
   } catch (e) {
     debugPrint('Firebase init failed: $e');
   }
@@ -69,10 +72,12 @@ void main() async {
   final container = ProviderContainer();
   await container.read(messagingServiceProvider).initialize();
 
-  runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: const MentorMindsApp(),
+  runAppGuarded(
+    () => runApp(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MentorMindsApp(),
+      ),
     ),
   );
 }
@@ -88,6 +93,7 @@ class MentorMindsApp extends ConsumerWidget {
       theme: AppTheme.light,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) => AppShell(child: child),
     );
   }
 }

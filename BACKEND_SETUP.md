@@ -587,3 +587,45 @@ cd functions && node tool/seed-daily-challenge.js
 2. Open Dashboard → accept notification rationale → verify `/users/{uid}` has `fcmToken` + `fcmTopics`.
 3. Firebase Console → Cloud Messaging → Send test message → topic `role_all`.
 4. Admin → Notifications → Send broadcast → device receives push + in-app list updates.
+
+---
+
+## Phase 7 — Observability + Polish
+
+### 1. Crashlytics dSYM upload (iOS release)
+
+After `pod install` in `ios/`:
+
+1. Xcode → **Runner** target → **Build Phases** → **+** → **New Run Script Phase** (after `[CP] Embed Pods Frameworks`).
+2. Name: `Upload Crashlytics dSYMs`.
+3. Script:
+
+```bash
+if [ -f "${PODS_ROOT}/FirebaseCrashlytics/upload-symbols" ]; then
+  "${PODS_ROOT}/FirebaseCrashlytics/upload-symbols" \
+    -gsp "${PROJECT_DIR}/Runner/GoogleService-Info.plist" \
+    -p ios "${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}"
+fi
+```
+
+4. Archive a release build once; confirm symbols appear in Firebase Console → Crashlytics.
+
+Debug builds skip collection (`configureCrashlytics` uses `!kDebugMode`).
+
+### 2. Analytics events
+
+Custom events (Firebase Analytics → DebugView):
+
+| Event | When |
+|-------|------|
+| `send_message` | MentorBot reply succeeded |
+| `upload_image` | Diagram attach + reply succeeded |
+| `upgrade_started` | Premium modal CTA |
+| `upgrade_completed` | Checkout URL opened without error |
+| `earn_badge` | Badge celebration overlay shown |
+
+Screen views are logged automatically via `FirebaseAnalyticsObserver` on GoRouter.
+
+### 3. Email verification gate
+
+Email/password users must verify before MentorBot send or session save. Google Sign-In users are unaffected. Resend link is in the global banner (AppShell).

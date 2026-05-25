@@ -40,8 +40,6 @@ const List<String> _kKnownSubjects = [
 const int kRecentSearchesMax = 5;
 const String _kRecentSearchesKey = 'recent_searches';
 const Duration _kDebounce = Duration(milliseconds: 350);
-const Duration _kFreeSessionWindow = Duration(days: 7);
-
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------

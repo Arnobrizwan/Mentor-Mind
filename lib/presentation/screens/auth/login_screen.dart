@@ -103,7 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          title: Text('Reset password', style: AppTextStyles.headingMedium),
+          title: const Text('Reset password', style: AppTextStyles.headingMedium),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -300,12 +300,12 @@ class _LogoBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppColors.kPrimary.withOpacity(0.28),
+            color: AppColors.kPrimary.withValues(alpha: 0.28),
             blurRadius: 22,
             offset: const Offset(0, 10),
           ),
           BoxShadow(
-            color: AppColors.kAccent.withOpacity(0.22),
+            color: AppColors.kAccent.withValues(alpha: 0.22),
             blurRadius: 36,
             spreadRadius: 2,
           ),
@@ -337,7 +337,7 @@ class _TitleBlock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Welcome back', style: AppTextStyles.displayMedium),
+        const Text('Welcome back', style: AppTextStyles.displayMedium),
         const SizedBox(height: 6),
         Text(
           'Sign in to continue your learning journey.',
@@ -390,7 +390,7 @@ class _FormFields extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _FieldLabel('Email'),
+        const _FieldLabel('Email'),
         const SizedBox(height: 8),
         TextFormField(
           controller: emailCtrl,
@@ -399,21 +399,21 @@ class _FormFields extends StatelessWidget {
           autofillHints: const [AutofillHints.email],
           style: AppTextStyles.bodyMedium,
           validator: _validateEmail,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             hintText: 'you@example.com',
-            prefixIcon: const Icon(
+            prefixIcon: Icon(
               Icons.mail_outline_rounded,
               color: AppColors.kTextMuted,
               size: 20,
             ),
-            prefixIconConstraints: const BoxConstraints(
+            prefixIconConstraints: BoxConstraints(
               minWidth: 44,
               minHeight: 44,
             ),
           ),
         ),
         const SizedBox(height: 16),
-        _FieldLabel('Password'),
+        const _FieldLabel('Password'),
         const SizedBox(height: 8),
         TextFormField(
           controller: passCtrl,
@@ -499,7 +499,7 @@ class _PrimaryButton extends StatelessWidget {
     return ElevatedButton(
       onPressed: isLoading ? null : onPressed,
       style: ElevatedButton.styleFrom(
-        disabledBackgroundColor: AppColors.kPrimary.withOpacity(0.6),
+        disabledBackgroundColor: AppColors.kPrimary.withValues(alpha: 0.6),
         disabledForegroundColor: Colors.white,
       ),
       child: isLoading

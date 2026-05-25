@@ -216,7 +216,7 @@ class _IdleArea extends StatelessWidget {
         if (recent.isNotEmpty) ...[
           Row(
             children: [
-              Text('Recent Searches', style: AppTextStyles.headingSmall),
+              const Text('Recent Searches', style: AppTextStyles.headingSmall),
               const Spacer(),
               TextButton(
                 onPressed: onClearRecent,
@@ -245,7 +245,7 @@ class _IdleArea extends StatelessWidget {
             ),
           const SizedBox(height: 24),
         ],
-        Text('Trending Topics', style: AppTextStyles.headingSmall),
+        const Text('Trending Topics', style: AppTextStyles.headingSmall),
         const SizedBox(height: 12),
         Wrap(
           spacing: 8,
@@ -650,7 +650,7 @@ class _ChipSmall extends StatelessWidget {
         vertical: 3,
       ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.14),
+        color: color.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -704,7 +704,7 @@ class _SessionResultTile extends StatelessWidget {
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.kAccent.withOpacity(0.12),
+                      color: AppColors.kAccent.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
@@ -802,7 +802,7 @@ class _SectionHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
-            color: AppColors.kPrimary.withOpacity(0.10),
+            color: AppColors.kPrimary.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
@@ -839,7 +839,7 @@ class _NoResults extends StatelessWidget {
             height: 96,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.kPrimary.withOpacity(0.08),
+              color: AppColors.kPrimary.withValues(alpha: 0.08),
             ),
             child: const Icon(
               Icons.search_off_rounded,
@@ -869,7 +869,7 @@ class _NoResults extends StatelessWidget {
             label: const Text('Browse Materials'),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.kPrimary,
-              side: BorderSide(color: AppColors.kPrimary.withOpacity(0.5)),
+              side: BorderSide(color: AppColors.kPrimary.withValues(alpha: 0.5)),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(999),
               ),
@@ -911,7 +911,7 @@ class _SessionsPremiumLock extends StatelessWidget {
             ),
           ),
           Positioned.fill(
-            child: Container(color: AppColors.kBackground.withOpacity(0.4)),
+            child: Container(color: AppColors.kBackground.withValues(alpha: 0.4)),
           ),
           Padding(
             padding: EdgeInsets.symmetric(
@@ -952,7 +952,7 @@ class _FakeSessionTile extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.kAccent.withOpacity(0.12),
+                    color: AppColors.kAccent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
@@ -971,7 +971,7 @@ class _FakeSessionTile extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.14),
+                    color: color.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
@@ -1028,7 +1028,7 @@ class _UpgradeCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.10),
+            color: Colors.black.withValues(alpha: 0.10),
             blurRadius: 24,
             offset: const Offset(0, 10),
           ),
@@ -1048,7 +1048,7 @@ class _UpgradeCard extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.kGold.withOpacity(0.35),
+                  color: AppColors.kGold.withValues(alpha: 0.35),
                   blurRadius: 18,
                   offset: const Offset(0, 8),
                 ),

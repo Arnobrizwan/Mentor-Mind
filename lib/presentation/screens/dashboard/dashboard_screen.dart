@@ -186,7 +186,7 @@ class _AwardToast extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         boxShadow: [
           BoxShadow(
-            color: AppColors.kGold.withOpacity(0.45),
+            color: AppColors.kGold.withValues(alpha: 0.45),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
@@ -339,7 +339,7 @@ class _DashboardAppBar extends StatelessWidget {
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 13,
-                            color: Colors.white.withOpacity(0.80),
+                            color: Colors.white.withValues(alpha: 0.80),
                             height: 1.3,
                           ),
                         ),
@@ -381,7 +381,7 @@ class _PointsChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         boxShadow: [
           BoxShadow(
-            color: AppColors.kGold.withOpacity(0.35),
+            color: AppColors.kGold.withValues(alpha: 0.35),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -596,7 +596,7 @@ class _DailyChallengeCardState extends State<_DailyChallengeCard> {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.kAccent.withOpacity(0.25),
+            color: AppColors.kAccent.withValues(alpha: 0.25),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -624,7 +624,7 @@ class _DailyChallengeCardState extends State<_DailyChallengeCard> {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
+                  color: Colors.white.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Row(
@@ -657,7 +657,7 @@ class _DailyChallengeCardState extends State<_DailyChallengeCard> {
                 ? "${widget.challenge!.subject}: ${widget.challenge!.question}"
                 : "Loading today's challenge…",
             style: AppTextStyles.bodyMedium.copyWith(
-              color: Colors.white.withOpacity(0.92),
+              color: Colors.white.withValues(alpha: 0.92),
               height: 1.4,
             ),
             maxLines: 3,
@@ -763,7 +763,7 @@ class _SubjectProgressRing extends StatelessWidget {
                     value: subject.progress.clamp(0.0, 1.0),
                     strokeWidth: 6,
                     strokeCap: StrokeCap.round,
-                    backgroundColor: subject.color.withOpacity(0.15),
+                    backgroundColor: subject.color.withValues(alpha: 0.15),
                     valueColor: AlwaysStoppedAnimation(subject.color),
                   ),
                 ),
@@ -910,7 +910,7 @@ class _SubjectChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -1005,7 +1005,7 @@ class _MaterialCard extends StatelessWidget {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.22),
+                          color: Colors.white.withValues(alpha: 0.22),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
@@ -1025,7 +1025,7 @@ class _MaterialCard extends StatelessWidget {
                       top: 8,
                       child: Icon(
                         Icons.auto_stories_rounded,
-                        color: Colors.white.withOpacity(0.85),
+                        color: Colors.white.withValues(alpha: 0.85),
                         size: 18,
                       ),
                     ),
@@ -1121,9 +1121,9 @@ class _BadgeCard extends StatelessWidget {
             height: 60,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: badge.color.withOpacity(0.14),
+              color: badge.color.withValues(alpha: 0.14),
               border: Border.all(
-                color: badge.color.withOpacity(0.35),
+                color: badge.color.withValues(alpha: 0.35),
                 width: 1.5,
               ),
             ),
@@ -1166,9 +1166,9 @@ class _BadgeMoreCard extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.kPrimary.withOpacity(0.08),
+                color: AppColors.kPrimary.withValues(alpha: 0.08),
                 border: Border.all(
-                  color: AppColors.kPrimary.withOpacity(0.25),
+                  color: AppColors.kPrimary.withValues(alpha: 0.25),
                   width: 1.5,
                 ),
               ),
@@ -1305,7 +1305,7 @@ class _BottomNav extends StatelessWidget {
     return NavigationBarTheme(
       data: NavigationBarThemeData(
         backgroundColor: AppColors.kSurface,
-        indicatorColor: AppColors.kPrimary.withOpacity(0.12),
+        indicatorColor: AppColors.kPrimary.withValues(alpha: 0.12),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return AppTextStyles.labelSmall.copyWith(

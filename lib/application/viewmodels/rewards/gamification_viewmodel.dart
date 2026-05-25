@@ -15,17 +15,6 @@ import 'package:mentor_minds/data/repositories/rewards_repository.dart';
 // never let callers pick their own point values.
 // ---------------------------------------------------------------------------
 
-const _pointsMap = <String, int>{
-  'daily_login': 5,
-  'complete_session': 10,
-  'five_questions_session': 15,
-  'upload_diagram': 20,
-  'daily_challenge': 25,
-  'streak_7': 50,
-  'streak_30': 200,
-  'earn_badge': 30,
-};
-
 // ---------------------------------------------------------------------------
 // Badge catalog — canonical list for gamification. Eligibility is computed
 // from scalar counters on /users/{uid}. If a counter is missing, the check

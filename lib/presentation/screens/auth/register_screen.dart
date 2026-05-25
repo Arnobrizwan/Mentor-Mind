@@ -257,7 +257,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _FieldLabel('Full Name'),
+                    const _FieldLabel('Full Name'),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _nameCtrl,
@@ -273,7 +273,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _FieldLabel('Email Address'),
+                    const _FieldLabel('Email Address'),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _emailCtrl,
@@ -288,7 +288,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _FieldLabel('Password'),
+                    const _FieldLabel('Password'),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _passCtrl,
@@ -325,7 +325,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _FieldLabel('Confirm Password'),
+                    const _FieldLabel('Confirm Password'),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _confirmCtrl,
@@ -449,7 +449,7 @@ class _CurvedHeader extends StatelessWidget {
                     Text(
                       'Join MentorMinds and start learning smarter.',
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: Colors.white.withOpacity(0.78),
+                        color: Colors.white.withValues(alpha: 0.78),
                       ),
                     ).animate(delay: 120.ms).fade(duration: 450.ms),
                   ],
@@ -693,9 +693,9 @@ class _TeacherNotice extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.kGold.withOpacity(0.10),
+        color: AppColors.kGold.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.kGold.withOpacity(0.35)),
+        border: Border.all(color: AppColors.kGold.withValues(alpha: 0.35)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -820,7 +820,7 @@ class _CreateAccountButton extends StatelessWidget {
     return ElevatedButton(
       onPressed: active ? onPressed : null,
       style: ElevatedButton.styleFrom(
-        disabledBackgroundColor: AppColors.kPrimary.withOpacity(0.35),
+        disabledBackgroundColor: AppColors.kPrimary.withValues(alpha: 0.35),
         disabledForegroundColor: Colors.white,
       ),
       child: isLoading

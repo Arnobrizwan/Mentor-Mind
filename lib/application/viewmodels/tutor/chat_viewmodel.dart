@@ -5,6 +5,8 @@ import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:mentor_minds/core/constants/quota.dart';
+import 'package:mentor_minds/core/observability/analytics_service.dart';
+import 'package:mentor_minds/core/utils/email_verification.dart';
 import 'package:mentor_minds/data/models/chat_message.dart';
 import 'package:mentor_minds/data/models/mentor_bot_response.dart';
 import 'package:mentor_minds/data/repositories/auth_repository.dart';
@@ -119,6 +121,7 @@ class ChatViewModel extends StateNotifier<ChatState> {
     this._subscriptionsRepo,
     this._sessionsRepo,
     this._storageRepo,
+    this._analytics,
   ) : super(const ChatState()) {
     _loadContext();
   }
@@ -129,6 +132,7 @@ class ChatViewModel extends StateNotifier<ChatState> {
   final SubscriptionsRepository _subscriptionsRepo;
   final SessionsRepository _sessionsRepo;
   final StorageRepository _storageRepo;
+  final AnalyticsService _analytics;
   final Random _random = Random();
 
   StreamSubscription<SubscriptionDoc>? _subSub;
@@ -254,6 +258,14 @@ class ChatViewModel extends StateNotifier<ChatState> {
     if (trimmed.isEmpty && imageFile == null) return;
     if (state.isStreaming) return;
 
+    if (requiresEmailVerification(_authRepo.currentUser)) {
+      state = state.copyWith(
+        error:
+            'Please verify your email before using MentorBot. Check your inbox.',
+      );
+      return;
+    }
+
     // Rate limit check
     if (!state.canSendMessage) {
       state = state.copyWith(limitModalRequested: true);
@@ -342,6 +354,10 @@ class ChatViewModel extends StateNotifier<ChatState> {
       );
 
       unawaited(_saveSession());
+      unawaited(_analytics.logSendMessage());
+      if (imageFile != null) {
+        unawaited(_analytics.logUploadImage());
+      }
     } catch (_) {
       _updateMessage(
         aiPlaceholder.id,
@@ -373,6 +389,8 @@ class ChatViewModel extends StateNotifier<ChatState> {
   // -------------------------------------------------------------------------
 
   Future<void> _saveSession() async {
+    if (requiresEmailVerification(_authRepo.currentUser)) return;
+
     final uid = _authRepo.currentUser?.uid;
     if (uid == null) return;
 
@@ -488,5 +506,6 @@ final chatViewModelProvider =
     ref.read(subscriptionsRepositoryProvider),
     ref.read(sessionsRepositoryProvider),
     ref.read(storageRepositoryProvider),
+    ref.read(analyticsServiceProvider),
   );
 });

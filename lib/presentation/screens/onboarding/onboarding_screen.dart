@@ -73,9 +73,9 @@ class _WelcomePage extends ConsumerWidget {
       body: Column(
         children: [
           // Illustration — top 55%
-          Expanded(
+          const Expanded(
             flex: 55,
-            child: const _IllustrationPlaceholder(),
+            child: _IllustrationPlaceholder(),
           ),
 
           // Bottom card — top corners 28dp
@@ -381,24 +381,24 @@ class _IllustrationPlaceholder extends StatelessWidget {
         clipBehavior: Clip.hardEdge,
         children: [
           // Decorative background circles
-          Positioned(
+          const Positioned(
             top: -60,
             right: -60,
             child: _GlowCircle(size: 220, color: Colors.white, opacity: 0.04),
           ),
-          Positioned(
+          const Positioned(
             bottom: -20,
             left: -50,
             child: _GlowCircle(
                 size: 180, color: AppColors.kAccent, opacity: 0.10),
           ),
-          Positioned(
+          const Positioned(
             top: 48,
             left: 28,
             child:
                 _GlowCircle(size: 56, color: AppColors.kAccent, opacity: 0.14),
           ),
-          Positioned(
+          const Positioned(
             bottom: 60,
             right: 24,
             child: _GlowCircle(size: 40, color: Colors.white, opacity: 0.08),
@@ -452,7 +452,7 @@ class _IllustrationPlaceholder extends StatelessWidget {
                             style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 11,
-                              color: Colors.white.withOpacity(0.6),
+                              color: Colors.white.withValues(alpha: 0.6),
                             ),
                           ),
                         ],
@@ -469,9 +469,9 @@ class _IllustrationPlaceholder extends StatelessWidget {
                   height: 88,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.10),
+                    color: Colors.white.withValues(alpha: 0.10),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.20),
+                      color: Colors.white.withValues(alpha: 0.20),
                       width: 2,
                     ),
                   ),
@@ -494,10 +494,10 @@ class _IllustrationPlaceholder extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.10),
+                            color: Colors.white.withValues(alpha: 0.10),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.18),
+                              color: Colors.white.withValues(alpha: 0.18),
                               width: 1,
                             ),
                           ),
@@ -544,7 +544,7 @@ class _GlowCircle extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: color.withOpacity(opacity),
+        color: color.withValues(alpha: opacity),
       ),
     );
   }
@@ -559,13 +559,13 @@ class _FloatingCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.10),
+        color: Colors.white.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(16),
         border:
-            Border.all(color: AppColors.kAccent.withOpacity(0.35), width: 1),
+            Border.all(color: AppColors.kAccent.withValues(alpha: 0.35), width: 1),
         boxShadow: [
           BoxShadow(
-            color: AppColors.kAccent.withOpacity(0.18),
+            color: AppColors.kAccent.withValues(alpha: 0.18),
             blurRadius: 24,
           ),
         ],
@@ -606,7 +606,7 @@ class _LevelCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.kPrimary.withOpacity(0.08)
+              ? AppColors.kPrimary.withValues(alpha: 0.08)
               : AppColors.kSurface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
@@ -641,7 +641,7 @@ class _LevelCard extends StatelessWidget {
                   const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.kPrimary.withOpacity(0.10)
+                    ? AppColors.kPrimary.withValues(alpha: 0.10)
                     : AppColors.kBackground,
                 borderRadius: BorderRadius.circular(6),
               ),

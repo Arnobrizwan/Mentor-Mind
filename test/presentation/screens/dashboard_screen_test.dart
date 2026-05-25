@@ -17,7 +17,6 @@ import 'package:mentor_minds/data/repositories/auth_repository.dart';
 import 'package:mentor_minds/data/repositories/materials_repository.dart';
 import 'package:mentor_minds/data/repositories/notifications_repository.dart';
 import 'package:mentor_minds/data/repositories/sessions_repository.dart';
-import 'package:mentor_minds/data/models/points_history.dart';
 import 'package:mentor_minds/data/repositories/rewards_repository.dart';
 import 'package:mentor_minds/data/repositories/users_repository.dart';
 import 'package:mentor_minds/data/repositories/daily_challenges_repository.dart';

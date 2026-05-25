@@ -326,7 +326,7 @@ class _NotificationTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.035),
+              color: Colors.black.withValues(alpha: 0.035),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -460,7 +460,7 @@ class _EmptyState extends StatelessWidget {
               width: 92,
               height: 92,
               decoration: BoxDecoration(
-                color: AppColors.kPrimary.withOpacity(0.10),
+                color: AppColors.kPrimary.withValues(alpha: 0.10),
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
@@ -471,12 +471,12 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               "You're all caught up!",
               style: AppTextStyles.headingMedium,
             ),
             const SizedBox(height: 6),
-            Text(
+            const Text(
               "We'll let you know when there's something new.",
               style: AppTextStyles.bodySmall,
               textAlign: TextAlign.center,
@@ -512,7 +512,7 @@ void _openLongPressMenu(
             width: 44,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.kTextMuted.withOpacity(0.3),
+              color: AppColors.kTextMuted.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -571,7 +571,7 @@ void _openDetail(BuildContext context, AppNotification notif) {
                 width: 44,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.kTextMuted.withOpacity(0.3),
+                  color: AppColors.kTextMuted.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
