@@ -100,10 +100,6 @@ jest.mock('../lib/gemini', () => ({
   }),
 }));
 
-jest.mock('firebase-functions/params', () => ({
-  defineString: () => ({ value: () => '10000' }),
-}));
-
 import { mentorBotChat } from '../index';
 
 const UID = 'u-1';

@@ -9,8 +9,10 @@ import 'package:mentor_minds/data/models/chat_message.dart';
 import 'package:mentor_minds/data/models/mentor_bot_response.dart';
 import 'package:mentor_minds/data/repositories/auth_repository.dart';
 import 'package:mentor_minds/data/repositories/mentor_bot_repository.dart';
+import 'package:mentor_minds/data/models/subscription_doc.dart';
 import 'package:mentor_minds/data/repositories/sessions_repository.dart';
 import 'package:mentor_minds/data/repositories/storage_repository.dart';
+import 'package:mentor_minds/data/repositories/subscriptions_repository.dart';
 import 'package:mentor_minds/data/repositories/users_repository.dart';
 import 'package:uuid/uuid.dart';
 
@@ -114,6 +116,7 @@ class ChatViewModel extends StateNotifier<ChatState> {
     this._mentorBotRepository,
     this._authRepo,
     this._usersRepo,
+    this._subscriptionsRepo,
     this._sessionsRepo,
     this._storageRepo,
   ) : super(const ChatState()) {
@@ -123,9 +126,12 @@ class ChatViewModel extends StateNotifier<ChatState> {
   final MentorBotRepository _mentorBotRepository;
   final AuthRepository _authRepo;
   final UsersRepository _usersRepo;
+  final SubscriptionsRepository _subscriptionsRepo;
   final SessionsRepository _sessionsRepo;
   final StorageRepository _storageRepo;
   final Random _random = Random();
+
+  StreamSubscription<SubscriptionDoc>? _subSub;
 
   // -------------------------------------------------------------------------
   // Load — subjects, level, premium flag, today's usage
@@ -156,8 +162,10 @@ class ChatViewModel extends StateNotifier<ChatState> {
           (data['level'] as String?)?.trim().isNotEmpty == true
               ? (data['level'] as String).trim()
               : 'O Level';
-      final isPremium =
-          (data['subscriptionType'] as String?)?.toLowerCase() == 'premium';
+      final subType =
+          await _subscriptionsRepo.getSubscriptionType(uid);
+      final claimPremium = await _resolvePremiumFromToken();
+      final isPremium = subType == 'premium' || claimPremium;
       final count = (usage['messageCount'] as num?)?.toInt() ?? 0;
 
       state = state.copyWith(
@@ -169,6 +177,21 @@ class ChatViewModel extends StateNotifier<ChatState> {
         dailyMessageCount: count,
         canSendMessage: isPremium || count < ChatState.defaultDailyLimit,
       );
+
+      _subSub?.cancel();
+      _subSub = _subscriptionsRepo.watchSubscription(uid).listen((sub) {
+        final premium = sub.isPremiumActive;
+        if (premium != state.isPremium) {
+          state = state.copyWith(
+            isPremium: premium,
+            canSendMessage:
+                premium || state.dailyMessageCount < state.dailyLimit,
+          );
+          if (premium) {
+            unawaited(_authRepo.currentUser?.getIdToken(true));
+          }
+        }
+      });
     } catch (_) {
       state = state.copyWith(
         isLoading: false,
@@ -267,7 +290,7 @@ class ChatViewModel extends StateNotifier<ChatState> {
       String? uploadedUrl;
       String finalText = '';
 
-      if (imageFile != null && state.isPremium) {
+      if (imageFile != null) {
         final uid = _authRepo.currentUser!.uid;
         uploadedUrl = await _storageRepo.uploadImage(
           uid: uid,
@@ -438,6 +461,18 @@ class ChatViewModel extends StateNotifier<ChatState> {
     }).toList(growable: false);
     state = state.copyWith(messages: updated);
   }
+
+  Future<bool> _resolvePremiumFromToken() async {
+    final token = await _authRepo.currentUser?.getIdTokenResult();
+    final claims = token?.claims;
+    return claims != null && claims['premium'] == true;
+  }
+
+  @override
+  void dispose() {
+    _subSub?.cancel();
+    super.dispose();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -450,6 +485,7 @@ final chatViewModelProvider =
     ref.read(mentorBotRepositoryProvider),
     ref.read(authRepositoryProvider),
     ref.read(usersRepositoryProvider),
+    ref.read(subscriptionsRepositoryProvider),
     ref.read(sessionsRepositoryProvider),
     ref.read(storageRepositoryProvider),
   );

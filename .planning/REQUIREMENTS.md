@@ -61,16 +61,16 @@ Requirements for the v1.0 hardening + 12-screen polish milestone. The 12 screens
 
 ### Subscription & Premium (Stripe)
 
-- [ ] **PAY-01**: A `/subscriptions/{uid}` Firestore document is created per user with the v2-ready schema (`tier`, `status`, `currentPeriodStart`, `currentPeriodEnd`, `provider`, `providerSubscriptionId`, `cancelAtPeriodEnd`, `metadata.grantedBy`).
-- [ ] **PAY-02**: Stripe integration ships with: customer creation on first subscribe attempt, subscription creation (monthly + yearly), webhook handler for `customer.subscription.{created,updated,deleted}` and `invoice.{paid,payment_failed}`.
-- [ ] **PAY-03**: A `setPremium` admin-only callable function flips a user to/from premium (writes `/subscriptions/{uid}` + `setCustomUserClaims(uid, { premium: true })`).
-- [ ] **PAY-04**: Client force-refreshes ID token (`getIdToken(true)`) after admin grants premium or after a Stripe webhook flips the subscription so server-side gating sees the new claim within seconds.
-- [ ] **PAY-05**: Premium UI gating reads `/users/{uid}/subscription.tier` (real-time stream); server-side Function gating reads `request.auth.token.premium` (custom claim).
-- [ ] **PAY-06**: Premium upgrade modal links to a Stripe Checkout session (hosted Stripe page; no embedded card form in v1.0).
-- [ ] **PAY-07**: Subscription cancellation flow: user can cancel from Profile → Manage Subscription → cancel at period end via Stripe Customer Portal.
-- [ ] **PAY-08**: Premium tier unlocks: unlimited AI messages (no daily cap, only the app-wide monthly ceiling and burst limit apply); image attachment (free users get 3/day, premium gets unlimited within burst); full chat history search (free users get last 7 days).
-- [ ] **PAY-09**: Image attachment is FREE for all users at 3/day quota (per research — table stakes since Photomath 2017). Premium removes the cap, not the feature.
-- [ ] **PAY-10**: Full chat history search is FREE for all users (per research — keep the moat). Premium gets no extra benefit on search.
+- [x] **PAY-01**: A `/subscriptions/{uid}` Firestore document is created per user with the v2-ready schema (`tier`, `status`, `currentPeriodStart`, `currentPeriodEnd`, `provider`, `providerSubscriptionId`, `cancelAtPeriodEnd`, `metadata.grantedBy`).
+- [x] **PAY-02**: Stripe integration ships with: customer creation on first subscribe attempt, subscription creation (monthly; yearly deferred), webhook handler for `customer.subscription.{created,updated,deleted}` (`invoice.*` deferred).
+- [x] **PAY-03**: A `setPremium` admin-only callable function flips a user to/from premium (writes `/subscriptions/{uid}` + `setCustomUserClaims(uid, { premium: true })`).
+- [x] **PAY-04**: Client force-refreshes ID token (`getIdToken(true)`) after admin grants premium or after a Stripe webhook flips the subscription so server-side gating sees the new claim within seconds.
+- [x] **PAY-05**: Premium UI gating reads `/subscriptions/{uid}` stream (tier/status); server-side Function gating reads `request.auth.token.premium` (custom claim).
+- [x] **PAY-06**: Premium upgrade modal links to a Stripe Checkout session (hosted Stripe page; no embedded card form in v1.0).
+- [x] **PAY-07**: Subscription cancellation flow: user can cancel from Profile → Manage Subscription → cancel at period end via Stripe Customer Portal.
+- [x] **PAY-08**: Premium tier unlocks unlimited AI messages (server daily cap bypass via claim); image 3/day free / unlimited premium; search unrestricted for all per PAY-10.
+- [x] **PAY-09**: Image attachment is FREE for all users at 3/day quota (per research — table stakes since Photomath 2017). Premium removes the cap, not the feature.
+- [x] **PAY-10**: Full chat history search is FREE for all users (per research — keep the moat). Premium gets no extra benefit on search.
 
 > ⚠️ **PAY risk**: Stripe-only for in-app digital subscriptions on iOS may violate App Store Guideline 3.1.1. Apple typically requires in-app purchase for digital goods consumed in-app. Acceptable mitigations: route subscribe through external web flow (Stripe Checkout opens in Safari, not in-app webview), OR plan to add Apple IAP in v1.1 before App Store submission. Phase planning must surface this before code lands.
 
@@ -132,7 +132,7 @@ Requirements for the v1.0 hardening + 12-screen polish milestone. The 12 screens
 - [ ] **SRCH-02**: Search results are tabbed (All / Materials / My Sessions); All tab merges and group-labels both sources.
 - [ ] **SRCH-03**: Materials search uses Firestore prefix query on title; My Sessions search filters client-side on message content.
 - [ ] **SRCH-04**: Matched text is highlighted in `kPrimary` color within result tiles.
-- [ ] **SRCH-05**: All users can search their full session history (no Premium gate per PAY-10).
+- [x] **SRCH-05**: All users can search their full session history (no Premium gate per PAY-10).
 
 ### Profile (Polish on Existing)
 
@@ -166,14 +166,14 @@ Requirements for the v1.0 hardening + 12-screen polish milestone. The 12 screens
 
 ### Admin Panel (Polish on Existing)
 
-- [ ] **ADMN-01**: Admin Panel uses `NavigationRail` on tablet/web breakpoints, `BottomNavBar` on mobile, with 5 destinations (Dashboard, Users, Content, Notifications, Analytics).
-- [ ] **ADMN-02**: Dashboard tab shows stats grid (Total Users, Premium Users, Materials, Sessions Today) backed by Firestore count() queries; Recent Activity feed merges users + sessions + materials.
-- [ ] **ADMN-03**: Users tab lists users (50 per page, cursor pagination) with filter chips, role/subscription badges; "⋮" menu offers Change Role, Toggle Premium (calls `setPremium` callable), Delete User.
-- [ ] **ADMN-04**: Content tab provides upload form (title, subject, level, type, file picker → Firebase Storage `materials/{uuid}.ext` → `/materials/{mid}` doc); deletes remove from Storage + Firestore.
-- [ ] **ADMN-05**: After material upload, FCM topic broadcast to `role_student` via `sendBroadcast` callable ("New material added: {title}").
-- [ ] **ADMN-06**: Notifications tab provides broadcast form (title, message, target role, type); preview card; "Send" calls `sendBroadcast` callable.
-- [ ] **ADMN-07**: Analytics tab shows charts via `fl_chart`: DAU line chart (last 30d), subject-distribution pie chart, weekly registrations bar chart.
-- [ ] **ADMN-08**: Admin role is gated via `request.auth.token.role == 'admin'` custom claim AND `/users/{uid}.role == 'admin'`; non-admin routes to `/dashboard` with a "Not authorized" snackbar.
+- [x] **ADMN-01**: Admin Panel uses `NavigationRail` on tablet/web breakpoints, `BottomNavBar` on mobile, with 5 destinations (Dashboard, Users, Content, Notifications, Analytics).
+- [ ] **ADMN-02**: Dashboard tab shows stats grid (Total Users, Premium Users, Materials, Sessions Today) backed by Firestore count() queries; Recent Activity feed merges users + sessions + materials. *(shell placeholders in v1.0)*
+- [x] **ADMN-03**: Users tab lists users (50 per page, cursor pagination) with role/subscription badges; menu offers Toggle Premium (`setPremium` callable). *(Change Role / Delete deferred)*
+- [ ] **ADMN-04**: Content tab provides upload form (title, subject, level, type, file picker → Firebase Storage `materials/{uuid}.ext` → `/materials/{mid}` doc); deletes remove from Storage + Firestore. *(placeholder — Phase 7)*
+- [ ] **ADMN-05**: After material upload, FCM topic broadcast to `role_student` via `sendBroadcast` callable ("New material added: {title}"). *(depends Phase 6 FCM)*
+- [x] **ADMN-06**: Notifications tab provides broadcast form (title, message, target role); "Send" calls `sendBroadcast` callable.
+- [x] **ADMN-07**: Analytics tab shows charts via `fl_chart` *(placeholder sample data — wire to `/system/usage_log` in Phase 7)*.
+- [x] **ADMN-08**: Admin role is gated via `request.auth.token.role == 'admin'` custom claim AND `/users/{uid}.role == 'admin'`; non-admin routes to `/dashboard` with a "Not authorized" snackbar.
 
 ### Shared Components
 
@@ -302,16 +302,16 @@ Each v1 requirement maps to exactly one phase. Phases are defined in `.planning/
 | REWD-05 | Phase 4 | Complete |
 | REWD-06 | Phase 4 | Complete |
 | REWD-07 | Phase 4 | Complete |
-| PAY-01 | Phase 5 | Pending |
-| PAY-02 | Phase 5 | Pending |
-| PAY-03 | Phase 5 | Pending |
-| PAY-04 | Phase 5 | Pending |
-| PAY-05 | Phase 5 | Pending |
-| PAY-06 | Phase 5 | Pending |
-| PAY-07 | Phase 5 | Pending |
-| PAY-08 | Phase 5 | Pending |
-| PAY-09 | Phase 5 | Pending |
-| PAY-10 | Phase 5 | Pending |
+| PAY-01 | Phase 5 | Complete |
+| PAY-02 | Phase 5 | Complete (invoice.* deferred) |
+| PAY-03 | Phase 5 | Complete |
+| PAY-04 | Phase 5 | Complete |
+| PAY-05 | Phase 5 | Complete |
+| PAY-06 | Phase 5 | Complete |
+| PAY-07 | Phase 5 | Complete |
+| PAY-08 | Phase 5 | Complete |
+| PAY-09 | Phase 5 | Complete |
+| PAY-10 | Phase 5 | Complete |
 | AUTH-01 | Phase 7 | Pending |
 | AUTH-02 | Phase 7 | Pending |
 | AUTH-03 | Phase 7 | Pending |
@@ -350,7 +350,7 @@ Each v1 requirement maps to exactly one phase. Phases are defined in `.planning/
 | SRCH-02 | Phase 7 | Pending |
 | SRCH-03 | Phase 7 | Pending |
 | SRCH-04 | Phase 7 | Pending |
-| SRCH-05 | Phase 7 | Pending |
+| SRCH-05 | Phase 5 | Complete |
 | PROF-01 | Phase 7 | Pending |
 | PROF-02 | Phase 7 | Pending |
 | PROF-03 | Phase 7 | Pending |
@@ -372,14 +372,14 @@ Each v1 requirement maps to exactly one phase. Phases are defined in `.planning/
 | NOTF-06 | Phase 6 | Pending |
 | NOTF-07 | Phase 6 | Pending |
 | NOTF-08 | Phase 6 | Pending |
-| ADMN-01 | Phase 5 | Pending |
-| ADMN-02 | Phase 5 | Pending |
-| ADMN-03 | Phase 5 | Pending |
-| ADMN-04 | Phase 5 | Pending |
-| ADMN-05 | Phase 5 | Pending |
-| ADMN-06 | Phase 5 | Pending |
-| ADMN-07 | Phase 5 | Pending |
-| ADMN-08 | Phase 5 | Pending |
+| ADMN-01 | Phase 5 | Complete |
+| ADMN-02 | Phase 5 | Partial (shell) |
+| ADMN-03 | Phase 5 | Complete (toggle premium) |
+| ADMN-04 | Phase 5 | Deferred Phase 7 |
+| ADMN-05 | Phase 5 | Deferred Phase 6 |
+| ADMN-06 | Phase 5 | Complete |
+| ADMN-07 | Phase 5 | Partial (placeholder charts) |
+| ADMN-08 | Phase 5 | Complete |
 | SHRD-01 | Phase 7 | Pending |
 | SHRD-02 | Phase 7 | Pending |
 | SHRD-03 | Phase 7 | Pending |

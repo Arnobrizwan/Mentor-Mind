@@ -149,12 +149,8 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
     }
   }
 
-  Future<void> _onAttachImage(bool isPremium) async {
+  Future<void> _onAttachImage() async {
     _inputFocus.unfocus();
-    if (!isPremium) {
-      await _showUpgradeModal();
-      return;
-    }
 
     try {
       final picker = ImagePicker();
@@ -277,7 +273,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
               canSend: canSend,
               isSending: state.isStreaming,
               onSend: _onSend,
-              onAttach: () => _onAttachImage(state.isPremium),
+              onAttach: _onAttachImage,
             ),
         ],
       ),

@@ -1,31 +1,49 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:mentor_minds/data/models/subscription_doc.dart';
+import 'package:mentor_minds/data/services/firebase_providers.dart';
+
 // ---------------------------------------------------------------------------
-// SubscriptionsRepository — /subscriptions/{uid} (D-01 stub)
-// STUB — Phase 5 populates /subscriptions/{uid} and replaces these literal
-// returns with real Firestore reads. In Phase 1 the repo is scaffolded so the
-// import graph is stable and viewmodels can consume it without a breaking
-// change when Phase 5 wires the real data.
+// SubscriptionsRepository — /subscriptions/{uid} (PAY-01 / PAY-05)
 // ---------------------------------------------------------------------------
 
 class SubscriptionsRepository {
-  const SubscriptionsRepository();
+  SubscriptionsRepository({required FirebaseFirestore firestore})
+      : _firestore = firestore;
 
-  /// STUB — returns 'free' until Phase 5 populates /subscriptions/{uid}.
-  Future<String?> getSubscriptionType(String uid) async {
-    return 'free';
+  final FirebaseFirestore _firestore;
+
+  DocumentReference<Map<String, dynamic>> _ref(String uid) =>
+      _firestore.collection('subscriptions').doc(uid);
+
+  Stream<SubscriptionDoc> watchSubscription(String uid) {
+    return _ref(uid).snapshots().map((snap) {
+      if (!snap.exists) {
+        return SubscriptionDoc(
+          userId: uid,
+          tier: 'free',
+          status: 'inactive',
+        );
+      }
+      return SubscriptionDoc.fromMap(uid, snap.data() ?? {});
+    });
   }
 
-  /// STUB — returns false until Phase 5 populates /subscriptions/{uid}.
+  Future<String?> getSubscriptionType(String uid) async {
+    final snap = await _ref(uid).get();
+    if (!snap.exists) return 'free';
+    final doc = SubscriptionDoc.fromMap(uid, snap.data() ?? {});
+    return doc.isPremiumActive ? 'premium' : 'free';
+  }
+
   Future<bool> isSubscriptionActive(String uid) async {
-    return false;
+    final snap = await _ref(uid).get();
+    if (!snap.exists) return false;
+    return SubscriptionDoc.fromMap(uid, snap.data() ?? {}).isPremiumActive;
   }
 }
 
-// ---------------------------------------------------------------------------
-// Provider
-// ---------------------------------------------------------------------------
-
 final subscriptionsRepositoryProvider = Provider<SubscriptionsRepository>((ref) {
-  return const SubscriptionsRepository();
+  return SubscriptionsRepository(firestore: ref.read(firestoreProvider));
 });

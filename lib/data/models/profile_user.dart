@@ -33,6 +33,22 @@ class ProfileUser {
 
   bool get isPremium => subscriptionType == 'premium';
 
+  ProfileUser copyWith({
+    String? subscriptionType,
+  }) =>
+      ProfileUser(
+        uid: uid,
+        name: name,
+        email: email,
+        role: role,
+        subscriptionType: subscriptionType ?? this.subscriptionType,
+        subjects: subjects,
+        level: level,
+        points: points,
+        avatarUrl: avatarUrl,
+        notificationsEnabled: notificationsEnabled,
+      );
+
   String get initials {
     final parts = name.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty || parts.first.isEmpty) {

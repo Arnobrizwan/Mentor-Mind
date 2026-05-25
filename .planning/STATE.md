@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 complete; Phase 5 ready to plan
-last_updated: "2026-05-25T18:00:00.000Z"
-last_activity: 2026-05-25 -- Phase 04 complete (server rewards + rules lockdown + client cleanup)
+stopped_at: Phase 5 complete; Phase 6 ready to plan
+last_updated: "2026-05-25T22:00:00.000Z"
+last_activity: 2026-05-25 -- Phase 05 complete (Stripe + premium claims + admin panel shell)
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 55
-  completed_plans: 40
-  percent: 57
+  completed_plans: 41
+  percent: 71
 ---
 
 # Project State
@@ -21,18 +21,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** A student preparing for O/A Levels can ask MentorBot a subject question and get a useful, curriculum-aligned answer in under 10 seconds — every single day, on a free tier that still feels usable.
-**Current focus:** Phase 05 — Stripe Subscriptions + Premium Claims + Admin Panel
+**Current focus:** Phase 06 — FCM iOS Wiring + Notifications + Daily Challenge
 
 ## Current Position
 
-Phase: 5
+Phase: 6
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-05-25 -- Phase 04 closed: onSessionMessageWrite + onUserCreate + rules lockdown + client cleanup
+Last activity: 2026-05-25 -- Phase 05 closed: Stripe callables + webhook + admin panel + profile billing
 
-Progress: [█████░░░░░] 57% (4/7 phases)
+Progress: [███████░░░] 71% (5/7 phases)
 
-Next entry point: `/gsd-plan-phase 5`
+Next entry point: `/gsd-plan-phase 6`
 
 ## Performance Metrics
 

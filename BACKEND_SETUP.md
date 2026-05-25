@@ -487,3 +487,45 @@ cd functions && FIRESTORE_EMULATOR_HOST=localhost:8080 npm test -- --testPathPat
 ### 4. Optional: migrate legacy `history[]` arrays
 
 If prod `/rewards/{uid}` docs still have a `history` array, run a one-off admin script to copy entries into `/ledger` and delete the array field. Skip if greenfield.
+
+---
+
+## Phase 5 — Stripe + Premium Claims + Admin
+
+### 1. Stripe secrets (Firebase Functions v2)
+
+```bash
+firebase functions:secrets:set STRIPE_SECRET_KEY --project mentor-mind-aa765
+# Paste sk_live_... or sk_test_... when prompted
+```
+
+Set params in Firebase Console → Functions → Environment variables (or `firebase functions:params:set`):
+
+| Param | Example |
+|-------|---------|
+| `STRIPE_PRICE_MONTHLY` | `price_...` from Stripe Dashboard |
+| `STRIPE_CHECKOUT_SUCCESS_URL` | `mentorminds://subscription/success` |
+| `STRIPE_CHECKOUT_CANCEL_URL` | `mentorminds://subscription/cancel` |
+| `STRIPE_PORTAL_RETURN_URL` | `mentorminds://subscription/portal` |
+
+### 2. Stripe webhook
+
+1. Stripe Dashboard → Developers → Webhooks → Add endpoint.
+2. URL: `https://asia-south1-mentor-mind-aa765.cloudfunctions.net/stripeWebhook` (verify in deploy output).
+3. Events: `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`.
+4. Copy signing secret → `firebase functions:secrets:set STRIPE_WEBHOOK_SECRET` (if wired in `stripe_webhook.ts`).
+
+### 3. Deploy
+
+```bash
+firebase deploy --only firestore:rules,functions --project mentor-mind-aa765
+```
+
+New exports: `createCheckoutSession`, `createPortalSession`, `setPremium`, `sendBroadcast`, `stripeWebhook`.
+
+### 4. Admin smoke test
+
+1. Set a test user `role: admin` in Firestore **and** custom claim `role: admin` (via Firebase Console or `setPremium` script).
+2. Sign in → should route to `/admin`.
+3. Users tab → Grant premium → confirm `/subscriptions/{uid}` + token `premium: true` after `getIdToken(true)`.
+4. Notifications tab → Send broadcast → doc appears in `/notifications`.

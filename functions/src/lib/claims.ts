@@ -1,7 +1,5 @@
 import { auth } from "./admin";
 
-// Phase 5 interface — setPremium stays stub until Stripe lands.
-
 export type UserRole = "student" | "teacher" | "admin";
 
 export type DefaultClaims = {
@@ -19,11 +17,32 @@ export async function setDefaultUserClaims(uid: string): Promise<void> {
   await auth.setCustomUserClaims(uid, { ...DEFAULT_CLAIMS });
 }
 
-export async function setPremium(
-  _uid: string,
-  _isPremium: boolean
+/** Merges premium flag into existing custom claims (PAY-04). */
+export async function setPremiumClaim(
+  uid: string,
+  premium: boolean
 ): Promise<void> {
-  throw new Error("not implemented — see Phase 5");
+  const user = await auth.getUser(uid);
+  const existing = (user.customClaims ?? {}) as Record<string, unknown>;
+  const role = (existing["role"] as UserRole | undefined) ?? "student";
+  await auth.setCustomUserClaims(uid, {
+    ...existing,
+    role,
+    premium,
+  });
+}
+
+export async function setUserRoleClaim(
+  uid: string,
+  role: UserRole
+): Promise<void> {
+  const user = await auth.getUser(uid);
+  const existing = (user.customClaims ?? {}) as Record<string, unknown>;
+  await auth.setCustomUserClaims(uid, {
+    ...existing,
+    role,
+    premium: Boolean(existing["premium"]),
+  });
 }
 
 export async function getRole(uid: string): Promise<UserRole> {

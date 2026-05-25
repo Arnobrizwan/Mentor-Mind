@@ -9,10 +9,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mentor_minds/data/models/profile_stats.dart';
 import 'package:mentor_minds/data/models/profile_user.dart';
+import 'package:mentor_minds/data/models/subscription_doc.dart';
 import 'package:mentor_minds/data/repositories/auth_repository.dart';
+import 'package:mentor_minds/data/repositories/billing_repository.dart';
 import 'package:mentor_minds/data/repositories/sessions_repository.dart';
 import 'package:mentor_minds/data/repositories/storage_repository.dart';
+import 'package:mentor_minds/data/repositories/subscriptions_repository.dart';
 import 'package:mentor_minds/data/repositories/users_repository.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // ---------------------------------------------------------------------------
 // State
@@ -67,6 +71,8 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
     this._usersRepo,
     this._sessionsRepo,
     this._storageRepo,
+    this._billingRepo,
+    this._subscriptionsRepo,
   ) : super(const ProfileState()) {
     final uid = _authRepo.currentUser?.uid;
     if (uid != null) loadProfile(uid);
@@ -76,8 +82,11 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
   final UsersRepository _usersRepo;
   final SessionsRepository _sessionsRepo;
   final StorageRepository _storageRepo;
+  final BillingRepository _billingRepo;
+  final SubscriptionsRepository _subscriptionsRepo;
 
   StreamSubscription<ProfileUser>? _userSub;
+  StreamSubscription<SubscriptionDoc>? _subSub;
   String? _boundUid;
 
   // -------------------------------------------------------------------------
@@ -109,8 +118,62 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
       },
     );
 
-    // Kick off stats fetch in parallel with the user stream.
     fetchStats(uid);
+
+    _subSub?.cancel();
+    _subSub = _subscriptionsRepo.watchSubscription(uid).listen((sub) {
+      final user = state.user;
+      if (user == null) return;
+      final type = sub.isPremiumActive ? 'premium' : 'free';
+      if (user.subscriptionType != type) {
+        state = state.copyWith(user: user.copyWith(subscriptionType: type));
+      }
+    });
+  }
+
+  /// PAY-06 — open Stripe Checkout in external browser (Safari).
+  Future<String?> startPremiumCheckout() async {
+    try {
+      final url = await _billingRepo.createCheckoutSession();
+      if (url.isEmpty) {
+        state = state.copyWith(error: 'Could not start checkout.');
+        return null;
+      }
+      final uri = Uri.parse(url);
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        state = state.copyWith(error: 'Could not open browser.');
+        return null;
+      }
+      return url;
+    } catch (e) {
+      state = state.copyWith(error: 'Checkout failed: $e');
+      return null;
+    }
+  }
+
+  /// PAY-07 — Stripe Customer Portal in external browser.
+  Future<String?> openSubscriptionPortal() async {
+    try {
+      final url = await _billingRepo.createPortalSession();
+      if (url.isEmpty) {
+        state = state.copyWith(error: 'No subscription to manage.');
+        return null;
+      }
+      final uri = Uri.parse(url);
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        state = state.copyWith(error: 'Could not open browser.');
+        return null;
+      }
+      return url;
+    } catch (e) {
+      state = state.copyWith(error: 'Portal failed: $e');
+      return null;
+    }
+  }
+
+  /// PAY-04 — refresh ID token after premium flip (call when app resumes).
+  Future<void> refreshAuthToken() async {
+    await _authRepo.currentUser?.getIdToken(true);
   }
 
   // -------------------------------------------------------------------------
@@ -416,6 +479,7 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
   @override
   void dispose() {
     _userSub?.cancel();
+    _subSub?.cancel();
     super.dispose();
   }
 }
@@ -431,5 +495,7 @@ final profileViewModelProvider =
     ref.read(usersRepositoryProvider),
     ref.read(sessionsRepositoryProvider),
     ref.read(storageRepositoryProvider),
+    ref.read(billingRepositoryProvider),
+    ref.read(subscriptionsRepositoryProvider),
   ),
 );

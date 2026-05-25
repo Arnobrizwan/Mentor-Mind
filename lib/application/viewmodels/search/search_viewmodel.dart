@@ -169,7 +169,7 @@ class SearchViewModel extends StateNotifier<SearchState> {
     try {
       final parts = await Future.wait([
         _searchMaterials(q),
-        _searchSessions(_authRepo.currentUser?.uid, q, state.isPremium),
+        _searchSessions(_authRepo.currentUser?.uid, q),
       ]);
       if (!mounted) return;
       state = state.copyWith(
@@ -278,20 +278,17 @@ class SearchViewModel extends StateNotifier<SearchState> {
   }
 
   // -------------------------------------------------------------------------
-  // _searchSessions — client-side content filter, scoped by premium tier.
-  // Delegates to SessionsRepository which owns the Firestore query.
+  // _searchSessions — full history for all users (PAY-08).
   // -------------------------------------------------------------------------
 
   Future<List<SessionSearchHit>> _searchSessions(
     String? uid,
     String query,
-    bool isPremium,
   ) async {
     final q = query.trim().toLowerCase();
     if (uid == null || q.isEmpty) return const [];
 
-    final since =
-        isPremium ? null : DateTime.now().subtract(_kFreeSessionWindow);
+    const DateTime? since = null;
 
     final docs = await _sessionsRepo.searchSessionDocs(
       uid,

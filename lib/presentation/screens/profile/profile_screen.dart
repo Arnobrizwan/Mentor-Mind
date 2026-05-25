@@ -435,11 +435,11 @@ class _StatCard extends StatelessWidget {
 // Subscription cards
 // ---------------------------------------------------------------------------
 
-class _UpgradeCard extends StatelessWidget {
+class _UpgradeCard extends ConsumerWidget {
   const _UpgradeCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     const features = [
       'Unlimited AI tutoring',
       'Diagram upload & analysis',
@@ -491,10 +491,14 @@ class _UpgradeCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () => _showSnack(
-                context,
-                'Premium billing is coming soon.',
-              ),
+              onPressed: () async {
+                await ref
+                    .read(profileViewModelProvider.notifier)
+                    .startPremiumCheckout();
+                await ref
+                    .read(profileViewModelProvider.notifier)
+                    .refreshAuthToken();
+              },
               icon: const Icon(Icons.bolt_rounded, color: AppColors.kGold),
               label: const Text('Upgrade Now — ৳299/month'),
               style: ElevatedButton.styleFrom(
@@ -518,11 +522,11 @@ class _UpgradeCard extends StatelessWidget {
   }
 }
 
-class _PremiumCard extends StatelessWidget {
+class _PremiumCard extends ConsumerWidget {
   const _PremiumCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -563,10 +567,14 @@ class _PremiumCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: () => _showSnack(
-                context,
-                'Subscription management is coming soon.',
-              ),
+              onPressed: () async {
+                await ref
+                    .read(profileViewModelProvider.notifier)
+                    .openSubscriptionPortal();
+                await ref
+                    .read(profileViewModelProvider.notifier)
+                    .refreshAuthToken();
+              },
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.white,
                 side: const BorderSide(color: Colors.white, width: 1.4),

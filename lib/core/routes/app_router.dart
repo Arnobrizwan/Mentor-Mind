@@ -12,6 +12,7 @@ import 'package:mentor_minds/presentation/screens/profile/profile_screen.dart';
 import 'package:mentor_minds/presentation/screens/rewards/rewards_screen.dart';
 import 'package:mentor_minds/presentation/screens/search/search_screen.dart';
 import 'package:mentor_minds/presentation/screens/splash/splash_screen.dart';
+import 'package:mentor_minds/presentation/screens/admin/admin_screen.dart';
 import 'package:mentor_minds/presentation/screens/tutor/tutor_screen.dart';
 
 // Route name constants — always navigate by name, never by path string.
@@ -99,7 +100,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin',
         name: AppRoutes.admin,
-        builder: (_, __) => const _PlaceholderScreen(label: 'Admin Panel'),
+        builder: (_, __) => const AdminScreen(),
       ),
     ],
   );

@@ -12,6 +12,11 @@ import { unauthenticated, internal, mapKnownError } from "./lib/errors";
 import { getDhakaDateKey } from "./lib/quota";
 export { onSessionMessageWrite } from "./triggers/on_message_write";
 export { onUserCreate } from "./triggers/on_user_create";
+export { setPremium } from "./callables/set_premium";
+export { createCheckoutSession } from "./callables/create_checkout_session";
+export { createPortalSession } from "./callables/create_portal_session";
+export { sendBroadcast } from "./callables/send_broadcast";
+export { stripeWebhook } from "./http/stripe_webhook";
 
 // ---------------------------------------------------------------------------
 // Cost estimation helper (D-15 — pinned per-million-token rates as of 2026-05)
