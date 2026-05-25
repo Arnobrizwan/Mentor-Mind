@@ -241,7 +241,6 @@ class ChatViewModel extends StateNotifier<ChatState> {
     // Persist the same id across retries for server-side idempotency (plan 03-06).
     final clientRequestId = const Uuid().v4();
 
-    final isFirstMessage = state.sessionId == null;
     final now = DateTime.now();
     final userMsg = ChatMessage(
       id: const Uuid().v4(),
@@ -320,10 +319,6 @@ class ChatViewModel extends StateNotifier<ChatState> {
       );
 
       unawaited(_saveSession());
-      unawaited(_incrementUsage());
-      if (isFirstMessage) {
-        unawaited(_awardPoints('complete_session'));
-      }
     } catch (_) {
       _updateMessage(
         aiPlaceholder.id,
@@ -417,34 +412,6 @@ class ChatViewModel extends StateNotifier<ChatState> {
         isLoading: false,
         error: 'Could not load session.',
       );
-    }
-  }
-
-  // -------------------------------------------------------------------------
-  // Usage + rewards side-effects
-  // -------------------------------------------------------------------------
-
-  Future<void> _incrementUsage() async {
-    final uid = _authRepo.currentUser?.uid;
-    if (uid == null) return;
-    try {
-      await _usersRepo.incrementUsageMessageCount(uid, dhakaDateKey(DateTime.now()));
-    } catch (_) {
-      // Silent.
-    }
-  }
-
-  Future<void> _awardPoints(String type) async {
-    final uid = _authRepo.currentUser?.uid;
-    if (uid == null) return;
-    final amount = switch (type) {
-      'complete_session' => 2,
-      _ => 1,
-    };
-    try {
-      await _usersRepo.awardSessionPoints(uid, type, amount);
-    } catch (_) {
-      // Silent.
     }
   }
 

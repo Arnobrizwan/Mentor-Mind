@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation — Refactor, CI, Test Harness, iOS Identity** - Layer the codebase into `presentation/application/data`, scaffold GitHub Actions + Firebase Emulator Suite, fix avatar upload + iOS Google Sign-In, align bundle ID to `com.mentorminds.mentorMinds`, bump iOS deployment target 13→14. (completed 2026-05-18)
 - [x] **Phase 2: Cloud Functions Scaffolding + App Check** - Stand up TypeScript `functions/` monorepo in `asia-south1`, deploy no-op `ping` callable, activate App Check (App Attest release + Debug dev), wire billing alert + Artifact Registry cleanup before any real callable lands. (completed 2026-05-19)
 - [x] **Phase 3: Gemini Proxy + Server-Side Rate Limiting** - Move Gemini behind `mentorBotChat` callable (Vertex AI + ADC, no API key), enforce 30 text + 3 image per UTC+6 day in a single transaction, remove `--dart-define=GEMINI_API_KEY` and rotate the leaked key. (completed 2026-05-20)
-- [ ] **Phase 4: Server-Authoritative Rewards + Rules Lockdown** - Replace client `FieldValue.increment('points')` with idempotent `onSessionWrite` trigger writing to `/rewards/{uid}/ledger/{autoId}`; deploy `firestore.rules` lockdown in the same deploy with a rules-unit-testing suite that proves the lockdown.
+- [x] **Phase 4: Server-Authoritative Rewards + Rules Lockdown** - Replace client `FieldValue.increment('points')` with idempotent `onSessionMessageWrite` trigger writing to `/rewards/{uid}/ledger/{autoId}`; deploy `firestore.rules` lockdown in the same deploy with a rules-unit-testing suite that proves the lockdown. (completed 2026-05-25)
 - [ ] **Phase 5: Stripe Subscriptions + Premium Claims + Admin Panel** - Ship v2-ready `/subscriptions/{uid}` schema, Stripe Checkout + webhook + Customer Portal, `setPremium` admin callable with custom claims, and the full Admin Panel (Screen 12) with NavigationRail/BottomNavBar and 5 tabs.
 - [ ] **Phase 6: FCM iOS Wiring + Notifications + Daily Challenge** - Wire `firebase_messaging` end-to-end with the strict permission → FCM token → APNs token → topic-subscribe sequence, ship Notifications screen (Screen 11) on real FCM payloads, ship Daily Challenge card (Cloud Scheduler → `/daily_challenges/{YYYY-MM-DD}`).
 - [ ] **Phase 7: 12-Screen UI Polish + Shared Components + Observability + Lint Burndown** - Polish Splash, Onboarding, Auth, Dashboard, Tutor, Materials, Search, Profile, Rewards per spec; ship `PremiumUpgradeModal`/`BadgeCelebrationOverlay`/`OfflineBanner`; wire Crashlytics + Analytics + GoRouter observer + dSYM Run Script; resolve all 167 analyzer warnings with per-file goldens; drive `flutter analyze` to zero.
@@ -93,7 +93,7 @@ Plans:
   3. Verified that a malicious user using the Firebase REST API with their own valid ID token CANNOT write `points`, `badges`, or `streak` on `/users/{uid}` and CANNOT write any document under `/rewards/{uid}/**` — a `@firebase/rules-unit-testing` suite asserts both (FAIL before lockdown, PASS after).
   4. Rewards history is queryable as paginated `/rewards/{uid}/ledger/{autoId}` entries (append-only, sortable, one entry per award event); the unbounded `history: []` array pattern on `/rewards/{uid}` is fully retired and (if present in prod) migrated.
   5. Leaderboard is removed from the Rewards screen TabBar — user sees only personal stats (points, streak, badges, history) on Badges + History tabs; no global all-users leaderboard exists in v1.0.
-**Plans**: TBD
+**Plans**: 3 PR waves (server triggers → rules lockdown → client cleanup) — executed 2026-05-25
 **UI hint**: no
 
 > **Rationale & non-negotiables.** Per ARCHITECTURE §8 + PITFALLS #2, the trigger AND the rules lockdown MUST deploy in the SAME `firebase deploy --only firestore:rules,functions` — leaving both client + trigger active produces double-writes and inflated point totals. Per ARCHITECTURE Anti-pattern #1, the chat callable in P3 writes ONLY `/sessions/{sid}` + `/users/{uid}/usage`; the trigger in P4 writes ONLY `/rewards/{uid}/ledger`. Failure isolation: a rewards write failure must not break chat. Eventarc delivers at-least-once, so the trigger MUST dedupe via `clientRequestId` (from P3) + document state delta. Global leaderboard is CUT per user decision (cohort + global both deferred to v2).
@@ -153,7 +153,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Foundation — Refactor, CI, Test Harness, iOS Identity | 11/11 | Complete   | 2026-05-18 |
 | 2. Cloud Functions Scaffolding + App Check | 11/11 | Complete   | 2026-05-19 |
 | 3. Gemini Proxy + Server-Side Rate Limiting | 15/15 | Complete   | 2026-05-20 |
-| 4. Server-Authoritative Rewards + Rules Lockdown | 0/TBD | Not started | - |
+| 4. Server-Authoritative Rewards + Rules Lockdown | 3/3 | Complete   | 2026-05-25 |
 | 5. Stripe Subscriptions + Premium Claims + Admin Panel | 0/TBD | Not started | - |
 | 6. FCM iOS Wiring + Notifications + Daily Challenge | 0/TBD | Not started | - |
 | 7. 12-Screen UI Polish + Shared Components + Observability + Lint Burndown | 0/TBD | Not started | - |

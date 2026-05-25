@@ -1,14 +1,7 @@
 rules_version = '2';
 
 // Security rules for MentorMinds.
-// Matches the schema the Flutter client writes in:
-//   - lib/features/auth/auth_viewmodel.dart          (user creation, Google sign-in)
-//   - lib/features/dashboard/dashboard_viewmodel.dart (streams, streak, daily reward)
-//   - lib/features/tutor/chat_viewmodel.dart          (sessions, messages, usage, rewards)
-//
-// Known MVP trade-off: clients currently increment their own points + daily
-// rewards directly. When Cloud Functions land, move point mutations server-side
-// and tighten /users and /rewards writes accordingly.
+// Phase 4: points, badges, streak, rewards ledger are server-authoritative only.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -42,6 +35,25 @@ service cloud.firestore {
         && userDoc().get('isApproved', false) == true;
     }
 
+    // Phase 4 REWD-05: client cannot mutate gamification fields on self-update.
+    function ownerPreservesGamificationFields() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['points', 'badges', 'streakDays', 'sessionsCompleted',
+                 'totalQuestions', 'diagramUploads', 'questionsPerSubject']);
+    }
+
+    function sessionOwnerUidFrom(data) {
+      return data.get('userId', data.get('uid', ''));
+    }
+
+    function sessionOwnerUid() {
+      return sessionOwnerUidFrom(resource.data);
+    }
+
+    function sessionRequestOwnerUid() {
+      return sessionOwnerUidFrom(request.resource.data);
+    }
+
     // -------------------------------------------------------------------------
     // /users/{uid}
     // -------------------------------------------------------------------------
@@ -49,7 +61,6 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isOwner(uid) || isAdmin();
 
-      // Initial creation — only self, role is student or teacher, points start at 0.
       allow create: if isOwner(uid)
         && request.resource.data.uid == uid
         && request.resource.data.role in ['student', 'teacher']
@@ -60,67 +71,65 @@ service cloud.firestore {
           request.resource.data.get('isApproved', true) == false
         );
 
-      // Self-update — can change profile fields, but NOT role or isApproved.
-      // Admin can change anything.
       allow update: if isAdmin() || (
         isOwner(uid)
         && request.resource.data.role == resource.data.role
         && request.resource.data.get('isApproved', false)
            == resource.data.get('isApproved', false)
+        && ownerPreservesGamificationFields()
       );
 
       allow delete: if isAdmin();
 
-      // -----------------------------------------------------------------------
-      // /users/{uid}/usage/{dateKey}  — daily usage, streak, login reward flag
-      // -----------------------------------------------------------------------
       match /usage/{dateKey} {
-        // Phase 3 D-17 / AI-08: client can READ own usage (to display remaining quota
-        // on the chat screen); writes happen ONLY via the Admin SDK in
-        // functions/src/lib/rate_limit.ts (which ignores rules).
         allow read: if isOwner(uid);
         allow write: if false;
       }
     }
 
     // -------------------------------------------------------------------------
-    // /rewards/{uid}  — points ledger mirrored from /users.points
+    // /rewards/{uid} — read-only for clients (REWD-05)
     // -------------------------------------------------------------------------
 
     match /rewards/{uid} {
       allow read: if isOwner(uid) || isAdmin();
-      allow create, update: if isOwner(uid) || isAdmin();
-      allow delete: if isAdmin();
-    }
+      allow create, update, delete: if false;
 
-    // -------------------------------------------------------------------------
-    // /sessions/{sid}  — AI tutor chat sessions
-    // -------------------------------------------------------------------------
-
-    match /sessions/{sid} {
-      allow read: if isSignedIn()
-        && resource.data.userId == request.auth.uid;
-
-      allow create: if isSignedIn()
-        && request.resource.data.userId == request.auth.uid;
-
-      allow update: if isSignedIn()
-        && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == request.auth.uid;
-
-      allow delete: if isSignedIn()
-        && resource.data.userId == request.auth.uid;
-
-      // Messages subcollection — owner of parent session only.
-      match /messages/{mid} {
-        allow read, write: if isSignedIn()
-          && get(/databases/$(database)/documents/sessions/$(sid)).data.userId
-             == request.auth.uid;
+      match /ledger/{ledgerId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow write: if false;
       }
     }
 
     // -------------------------------------------------------------------------
-    // /materials/{id}  — learning materials published by teachers
+    // /sessions/{sid} — messages written by mentorBotChat (Admin SDK)
+    // -------------------------------------------------------------------------
+
+    match /sessions/{sid} {
+      allow read: if isSignedIn()
+        && sessionOwnerUid() == request.auth.uid;
+
+      allow create: if isSignedIn()
+        && sessionRequestOwnerUid() == request.auth.uid;
+
+      allow update: if isSignedIn()
+        && sessionOwnerUid() == request.auth.uid
+        && sessionRequestOwnerUid() == request.auth.uid;
+
+      allow delete: if isSignedIn()
+        && sessionOwnerUid() == request.auth.uid;
+
+      match /messages/{mid} {
+        allow read: if isSignedIn()
+          && sessionOwnerUidFrom(
+               get(/databases/$(database)/documents/sessions/$(sid)).data
+             ) == request.auth.uid;
+        allow write: if false;
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // /materials/{id}
     // -------------------------------------------------------------------------
 
     match /materials/{id} {
@@ -130,33 +139,23 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------------------
-    // /notifications/{id}  — broadcast + per-role notifications
+    // /notifications/{id}
     // -------------------------------------------------------------------------
 
     match /notifications/{id} {
-      // Clients filter by recipientRole in query; rules just gate on auth.
       allow read: if isSignedIn();
-      // Admins can create notifications; Cloud Functions should take over
-      // when they land and the service-account path becomes authoritative.
       allow create: if isAdmin();
-      // Authed users may mark a notification as read (spec-defined global
-      // read state). Rule ensures ONLY the `read` field changes so users
-      // can't rewrite title/body/etc.
       allow update: if isSignedIn()
         && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['read'])
         && request.resource.data.read == true;
-      // Any authed user can delete — matches the spec's deleteNotification.
-      // Known trade-off: one user's delete removes the doc for everyone.
       allow delete: if isSignedIn();
     }
 
     // -------------------------------------------------------------------------
-    // Phase 3 D-17 / AI-08: /system/** — server-only quota + usage aggregates.
-    // Covers /system/quota_{YYYY-MM} (plan 03-05) AND /system/usage_log_{YYYY-MM-DD}
-    // (plan 03-07). Only Admin SDK reads/writes; clients never touch these docs.
-    // Session subcollection lockdown is DEFERRED to Phase 4 (D-17).
+    // /system/** — server-only
     // -------------------------------------------------------------------------
+
     match /system/{document=**} {
       allow read, write: if false;
     }

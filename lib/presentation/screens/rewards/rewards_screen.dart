@@ -10,7 +10,6 @@ import 'package:mentor_minds/core/routes/app_router.dart';
 import 'package:mentor_minds/application/viewmodels/rewards/rewards_viewmodel.dart';
 import 'package:mentor_minds/data/models/earned_badge.dart';
 import 'package:mentor_minds/data/models/history_entry.dart';
-import 'package:mentor_minds/data/models/leaderboard_entry.dart';
 import 'package:mentor_minds/data/models/locked_badge.dart';
 import 'package:mentor_minds/data/models/milestone.dart';
 
@@ -21,7 +20,7 @@ class RewardsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(rewardsViewModelProvider);
     return DefaultTabController(
-      length: 3,
+      length: 2,
       child: Scaffold(
         backgroundColor: AppColors.kBackground,
         body: SafeArea(
@@ -35,7 +34,6 @@ class RewardsScreen extends ConsumerWidget {
                       child: TabBarView(
                         children: [
                           _BadgesTab(state: state),
-                          _LeaderboardTab(state: state),
                           _HistoryTab(state: state),
                         ],
                       ),
@@ -251,7 +249,6 @@ class _TabBar extends StatelessWidget {
         ),
         tabs: const [
           Tab(text: 'Badges'),
-          Tab(text: 'Leaderboard'),
           Tab(text: 'History'),
         ],
       ),
@@ -604,349 +601,10 @@ void _openBadgeSheet(
 }
 
 // ---------------------------------------------------------------------------
-// Leaderboard tab
+// History tab (leaderboard removed — REWD-07)
 // ---------------------------------------------------------------------------
 
-class _LeaderboardTab extends ConsumerWidget {
-  final RewardsState state;
-  const _LeaderboardTab({required this.state});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final top = state.leaderboardTop;
-    if (top.isEmpty) {
-      return _EmptyPanel(
-        icon: '🏁',
-        text: 'Leaderboard is waking up. Pull to refresh.',
-        fill: true,
-      );
-    }
-    final podium = top.take(3).toList();
-    final rest = top.length > 3 ? top.sublist(3) : <LeaderboardEntry>[];
-    final currentUserRow = state.currentUserRow;
-
-    return RefreshIndicator(
-      color: AppColors.kAccent,
-      onRefresh: () =>
-          ref.read(rewardsViewModelProvider.notifier).refresh(),
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        children: [
-          if (podium.length == 3) _Podium(entries: podium),
-          if (podium.length < 3) ...[
-            for (final e in podium) _LeaderboardRow(entry: e),
-          ],
-          const SizedBox(height: 14),
-          for (final e in rest) _LeaderboardRow(entry: e),
-          if (currentUserRow != null) ...[
-            const SizedBox(height: 14),
-            const Divider(height: 1),
-            const SizedBox(height: 14),
-            _LeaderboardRow(
-              entry: currentUserRow,
-              subtitle: 'You’re in ${currentUserRow.rank}th place',
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _Podium extends StatelessWidget {
-  final List<LeaderboardEntry> entries; // length 3
-  const _Podium({required this.entries});
-
-  @override
-  Widget build(BuildContext context) {
-    // Visual order: 2nd | 1st | 3rd
-    final first = entries[0];
-    final second = entries.length > 1 ? entries[1] : null;
-    final third = entries.length > 2 ? entries[2] : null;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(4, 20, 4, 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            child: _PodiumSlot(
-              entry: second,
-              height: 100,
-              color: const Color(0xFFBFC7D6),
-              rank: 2,
-              avatarSize: 46,
-            ),
-          ),
-          Expanded(
-            child: _PodiumSlot(
-              entry: first,
-              height: 130,
-              color: AppColors.kGold,
-              rank: 1,
-              avatarSize: 56,
-              showCrown: true,
-            ),
-          ),
-          Expanded(
-            child: _PodiumSlot(
-              entry: third,
-              height: 80,
-              color: const Color(0xFFCE8A58),
-              rank: 3,
-              avatarSize: 46,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PodiumSlot extends StatelessWidget {
-  final LeaderboardEntry? entry;
-  final double height;
-  final Color color;
-  final int rank;
-  final double avatarSize;
-  final bool showCrown;
-  const _PodiumSlot({
-    required this.entry,
-    required this.height,
-    required this.color,
-    required this.rank,
-    required this.avatarSize,
-    this.showCrown = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (entry == null) {
-      return const SizedBox.shrink();
-    }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (showCrown)
-          const Text('👑', style: TextStyle(fontSize: 22))
-        else
-          const SizedBox(height: 22),
-        const SizedBox(height: 2),
-        _Avatar(
-          url: entry!.avatarUrl,
-          name: entry!.name,
-          size: avatarSize,
-          highlighted: entry!.isCurrentUser,
-        ),
-        const SizedBox(height: 6),
-        Text(
-          entry!.isCurrentUser ? 'You' : entry!.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: AppTextStyles.labelMedium.copyWith(fontSize: 13),
-        ),
-        Text(
-          '${entry!.points} pts',
-          style: AppTextStyles.labelSmall
-              .copyWith(color: AppColors.kPrimary, fontSize: 11),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          width: double.infinity,
-          height: height,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(10),
-            ),
-          ),
-          alignment: Alignment.topCenter,
-          padding: const EdgeInsets.only(top: 6),
-          child: Text(
-            '$rank',
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              fontSize: 20,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LeaderboardRow extends StatelessWidget {
-  final LeaderboardEntry entry;
-  final String? subtitle;
-  const _LeaderboardRow({required this.entry, this.subtitle});
-
-  @override
-  Widget build(BuildContext context) {
-    final isMe = entry.isCurrentUser;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: isMe
-            ? AppColors.kPrimary.withOpacity(0.10)
-            : AppColors.kSurface,
-        border: isMe
-            ? Border.all(color: AppColors.kPrimary.withOpacity(0.25))
-            : null,
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 28,
-            child: Text(
-              '${entry.rank}',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.labelMedium.copyWith(
-                color: AppColors.kTextMuted,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          _Avatar(
-            url: entry.avatarUrl,
-            name: entry.name,
-            size: 36,
-            highlighted: isMe,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        entry.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.labelLarge
-                            .copyWith(fontSize: 14),
-                      ),
-                    ),
-                    if (isMe) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.kPrimary,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: const Text(
-                          'You',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                if (subtitle != null)
-                  Text(subtitle!, style: AppTextStyles.bodySmall)
-                else if (entry.subject != null)
-                  Container(
-                    margin: const EdgeInsets.only(top: 2),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 1),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(999),
-                      color: AppColors.kAccent.withOpacity(0.14),
-                    ),
-                    child: Text(
-                      entry.subject!,
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: AppColors.kAccent,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Text(
-            '${entry.points} pts',
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w700,
-              color: AppColors.kPrimary,
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  final String? url;
-  final String name;
-  final double size;
-  final bool highlighted;
-  const _Avatar({
-    required this.url,
-    required this.name,
-    required this.size,
-    required this.highlighted,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final initials = _initials(name);
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.kAccent,
-        border: highlighted
-            ? Border.all(color: AppColors.kGold, width: 2)
-            : null,
-        image: url != null
-            ? DecorationImage(image: NetworkImage(url!), fit: BoxFit.cover)
-            : null,
-      ),
-      alignment: Alignment.center,
-      child: url == null
-          ? Text(
-              initials,
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                fontSize: size * 0.38,
-              ),
-            )
-          : null,
-    );
-  }
-
-  String _initials(String n) {
-    final parts = n.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty || parts.first.isEmpty) return '?';
-    if (parts.length == 1) return parts.first[0].toUpperCase();
-    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
-  }
-}
-
-// ---------------------------------------------------------------------------
-// History tab
-// ---------------------------------------------------------------------------
+// Leaderboard UI deleted — see git history if restoring v2 cohort leaderboard.
 
 class _HistoryTab extends StatelessWidget {
   final RewardsState state;
@@ -1024,12 +682,12 @@ class _HistoryTile extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            '${entry.points >= 0 ? '+' : ''}${entry.points} pts',
+            '+${entry.points}',
             style: const TextStyle(
               fontFamily: 'Poppins',
               fontWeight: FontWeight.w700,
-              color: Color(0xFF16A34A),
-              fontSize: 14,
+              color: AppColors.kAccent,
+              fontSize: 15,
             ),
           ),
         ],
@@ -1037,18 +695,17 @@ class _HistoryTile extends StatelessWidget {
     );
   }
 
-  String _formatWhen(DateTime dt) {
+  String _formatWhen(DateTime t) {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final that = DateTime(dt.year, dt.month, dt.day);
-    final diff = today.difference(that).inDays;
-    final time = DateFormat('h:mm a').format(dt);
-    if (diff == 0) return 'Today $time';
-    if (diff == 1) return 'Yesterday $time';
-    if (diff < 7) return '${DateFormat('EEEE').format(dt)} $time';
-    return DateFormat('MMM d · h:mm a').format(dt);
+    final diff = now.difference(t);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+    if (diff.inDays < 1) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return DateFormat('MMM d').format(t);
   }
 }
+
 
 // ---------------------------------------------------------------------------
 // Shared empty panel + shimmer

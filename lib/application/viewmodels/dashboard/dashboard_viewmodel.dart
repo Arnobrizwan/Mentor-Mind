@@ -7,6 +7,7 @@ import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/data/models/badge_item.dart';
 import 'package:mentor_minds/data/models/dashboard_user.dart';
 import 'package:mentor_minds/data/models/material_item.dart';
+import 'package:mentor_minds/data/models/points_history.dart';
 import 'package:mentor_minds/data/models/rewards_snapshot.dart';
 import 'package:mentor_minds/data/models/session_item.dart';
 import 'package:mentor_minds/data/models/subject_progress.dart';
@@ -14,6 +15,7 @@ import 'package:mentor_minds/data/repositories/auth_repository.dart';
 import 'package:mentor_minds/data/repositories/materials_repository.dart';
 import 'package:mentor_minds/data/repositories/notifications_repository.dart';
 import 'package:mentor_minds/data/repositories/sessions_repository.dart';
+import 'package:mentor_minds/data/repositories/rewards_repository.dart';
 import 'package:mentor_minds/data/repositories/users_repository.dart';
 
 // ---------------------------------------------------------------------------
@@ -194,6 +196,7 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     this._materialsRepo,
     this._notificationsRepo,
     this._authRepo,
+    this._rewardsRepo,
   ) : super(DashboardState(
           dailyChallengeResetsAt: _nextMidnight(DateTime.now()),
         )) {
@@ -205,8 +208,11 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   final MaterialsRepository _materialsRepo;
   final NotificationsRepository _notificationsRepo;
   final AuthRepository _authRepo;
+  final RewardsRepository _rewardsRepo;
 
   StreamSubscription<DashboardUser>? _userSub;
+  StreamSubscription<List<PointsHistory>>? _ledgerSub;
+  final Set<String> _seenLedgerKeys = {};
   StreamSubscription<List<SessionItem>>? _sessionsSub;
   StreamSubscription<List<MaterialItem>>? _materialsSub;
   StreamSubscription<int>? _notifSub;
@@ -241,7 +247,29 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
 
     // One-shot background work — intentionally fire-and-forget.
     unawaited(_fetchStreak(uid));
-    unawaited(_awardDailyLoginIfNeeded(uid));
+    _watchLedgerForDailyToast(uid);
+  }
+
+  void _watchLedgerForDailyToast(String uid) {
+    _ledgerSub?.cancel();
+    _ledgerSub = _rewardsRepo.watchLedger(uid, limit: 8).listen((entries) {
+      for (final entry in entries) {
+        if (entry.action != 'daily_login') continue;
+        final ts = entry.timestamp;
+        if (ts == null) continue;
+        final key = 'daily_login-${ts.millisecondsSinceEpoch}';
+        if (_seenLedgerKeys.contains(key)) continue;
+        _seenLedgerKeys.add(key);
+        if (DateTime.now().difference(ts) > const Duration(minutes: 15)) {
+          continue;
+        }
+        if (!mounted) return;
+        state = state.copyWith(
+          justAwardedDailyPoints: true,
+          dailyAwardAmount: entry.pointsAwarded,
+        );
+      }
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -379,31 +407,6 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   }
 
   // -------------------------------------------------------------------------
-  // Daily login reward — +5 pts once per calendar day
-  // -------------------------------------------------------------------------
-
-  Future<void> _awardDailyLoginIfNeeded(String uid) async {
-    try {
-      final todayKey = _usageKey(DateTime.now());
-
-      // Check if already rewarded today.
-      final usageData = await _usersRepo.getUsageDoc(uid, todayKey);
-      if (usageData?['loginRewarded'] == true) return;
-
-      // Delegate the atomic batch write (usage + points + rewards) to the repo.
-      await _usersRepo.awardDailyLogin(uid, todayKey, amount: 5);
-
-      if (!mounted) return;
-      state = state.copyWith(
-        justAwardedDailyPoints: true,
-        dailyAwardAmount: 5,
-      );
-    } catch (_) {
-      // Non-fatal — we'll retry on next app open.
-    }
-  }
-
-  // -------------------------------------------------------------------------
   // Public actions
   // -------------------------------------------------------------------------
 
@@ -445,6 +448,7 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     _sessionsSub?.cancel();
     _materialsSub?.cancel();
     _notifSub?.cancel();
+    _ledgerSub?.cancel();
     super.dispose();
   }
 }
@@ -461,5 +465,6 @@ final dashboardViewModelProvider =
     ref.read(materialsRepositoryProvider),
     ref.read(notificationsRepositoryProvider),
     ref.read(authRepositoryProvider),
+    ref.read(rewardsRepositoryProvider),
   ),
 );

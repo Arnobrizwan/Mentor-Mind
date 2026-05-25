@@ -17,6 +17,8 @@ import 'package:mentor_minds/data/repositories/auth_repository.dart';
 import 'package:mentor_minds/data/repositories/materials_repository.dart';
 import 'package:mentor_minds/data/repositories/notifications_repository.dart';
 import 'package:mentor_minds/data/repositories/sessions_repository.dart';
+import 'package:mentor_minds/data/models/points_history.dart';
+import 'package:mentor_minds/data/repositories/rewards_repository.dart';
 import 'package:mentor_minds/data/repositories/users_repository.dart';
 import 'package:mentor_minds/presentation/screens/dashboard/dashboard_screen.dart';
 import '../../_support/factories/user_factory.dart';
@@ -50,6 +52,11 @@ class _FakeNotificationsRepo implements NotificationsRepository {
 // AuthRepository stub — currentUser returns null so DashboardViewModel._init()
 // exits early (sets state.error = 'You are not signed in.') before our state
 // override in FakeDashboardViewModel's constructor body runs.
+class _FakeRewardsRepo implements RewardsRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => const Stream.empty();
+}
+
 class _FakeAuthRepo implements AuthRepository {
   @override
   User? get currentUser => null;
@@ -74,6 +81,7 @@ class FakeDashboardViewModel extends DashboardViewModel {
           _FakeMaterialsRepo(),
           _FakeNotificationsRepo(),
           _FakeAuthRepo(),
+          _FakeRewardsRepo(),
         ) {
     // Override state after _init() runs its synchronous early-exit path.
     // _init() calls _authRepo.currentUser == null → sets isLoading: false +

@@ -18,14 +18,30 @@ class HistoryEntry {
   });
 
   factory HistoryEntry.fromMap(Map<String, dynamic> m) {
-    final ts = m['timestamp'];
+    final ts = m['timestamp'] ?? m['awardedAt'];
+    final action = (m['action'] as String?)?.trim() ??
+        (m['type'] as String?)?.trim() ??
+        'Points earned';
     return HistoryEntry(
-      action: (m['action'] as String?)?.trim() ?? 'Points earned',
+      action: action,
       icon: (m['icon'] as String?)?.trim().isNotEmpty == true
           ? (m['icon'] as String).trim()
-          : '✨',
-      points: (m['points'] as num?)?.toInt() ?? 0,
+          : iconForAction(action),
+      points: (m['points'] as num?)?.toInt() ??
+          (m['amount'] as num?)?.toInt() ??
+          (m['pointsAwarded'] as num?)?.toInt() ??
+          0,
       timestamp: ts is Timestamp ? ts.toDate() : null,
     );
   }
+
+  static String iconForAction(String action) => switch (action) {
+        'daily_login' => '🌅',
+        'complete_session' => '✅',
+        'upload_diagram' => '🖼️',
+        'earn_badge' => '🏅',
+        'streak_7' || 'week_warrior' => '🔥',
+        'streak_30' || 'month_master' => '🗓️',
+        _ => '✨',
+      };
 }

@@ -51,13 +51,13 @@ Requirements for the v1.0 hardening + 12-screen polish milestone. The 12 screens
 
 ### Server-Authoritative Rewards
 
-- [ ] **REWD-01**: `onSessionWrite` Firestore trigger awards points idempotently based on session state deltas (first message of day, first-of-session, threshold crossings). Trigger dedupes by `clientRequestId` and document state.
-- [ ] **REWD-02**: `onUserCreate` trigger initializes `/rewards/{uid}` and sets default custom claims (`{ role: 'student', premium: false }`).
-- [ ] **REWD-03**: Rewards history is stored as an append-only subcollection at `/rewards/{uid}/ledger/{autoId}` (NOT an unbounded `history` array on the parent doc).
-- [ ] **REWD-04**: Client-side `FieldValue.increment('points')` writes are removed from `chat_viewmodel`, `dashboard_viewmodel`, and `gamification_viewmodel`.
-- [ ] **REWD-05**: `firestore.rules` forbid client writes to `points`, `badges`, `streak` on `/users/{uid}`; forbid all client writes under `/rewards/{uid}/**`.
-- [ ] **REWD-06**: A `@firebase/rules-unit-testing` suite asserts the lockdown: tests that pass before lockdown FAIL after, tests that should fail before PASS after.
-- [ ] **REWD-07**: Global leaderboard is cut from v1.0 scope; user sees only personal stats (points, streak, badges, history).
+- [x] **REWD-01**: `onSessionMessageWrite` Firestore trigger awards points idempotently based on session message writes (daily_login, complete_session, upload_diagram, badges). Dedupes via deterministic ledger doc ids.
+- [x] **REWD-02**: `onUserCreate` trigger initializes `/rewards/{uid}` and sets default custom claims (`{ role: 'student', premium: false }`).
+- [x] **REWD-03**: Rewards history is stored as an append-only subcollection at `/rewards/{uid}/ledger/{autoId}` (NOT an unbounded `history` array on the parent doc).
+- [x] **REWD-04**: Client-side `FieldValue.increment('points')` writes are removed from viewmodels and repositories.
+- [x] **REWD-05**: `firestore.rules` forbid client writes to `points`, `badges`, `streakDays` on `/users/{uid}`; forbid all client writes under `/rewards/{uid}/**`.
+- [x] **REWD-06**: A `@firebase/rules-unit-testing` suite asserts the lockdown (tests 8–12 in `rules.test.ts`).
+- [x] **REWD-07**: Global leaderboard is cut from v1.0 scope; Rewards screen shows Badges + History only.
 
 ### Subscription & Premium (Stripe)
 
@@ -295,13 +295,13 @@ Each v1 requirement maps to exactly one phase. Phases are defined in `.planning/
 | AI-08 | Phase 3 | Complete |
 | AI-09 | Phase 3 | Complete |
 | AI-10 | Phase 3 | Complete |
-| REWD-01 | Phase 4 | Pending |
-| REWD-02 | Phase 4 | Pending |
-| REWD-03 | Phase 4 | Pending |
-| REWD-04 | Phase 4 | Pending |
-| REWD-05 | Phase 4 | Pending |
-| REWD-06 | Phase 4 | Pending |
-| REWD-07 | Phase 4 | Pending |
+| REWD-01 | Phase 4 | Complete |
+| REWD-02 | Phase 4 | Complete |
+| REWD-03 | Phase 4 | Complete |
+| REWD-04 | Phase 4 | Complete |
+| REWD-05 | Phase 4 | Complete |
+| REWD-06 | Phase 4 | Complete |
+| REWD-07 | Phase 4 | Complete |
 | PAY-01 | Phase 5 | Pending |
 | PAY-02 | Phase 5 | Pending |
 | PAY-03 | Phase 5 | Pending |

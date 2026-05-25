@@ -453,3 +453,37 @@ was resolved by Plan 03-04 against the live Vertex API. The fallback chain is
 - **Resolution date:** 2026-05-20
 - **Re-verify command:** `node functions/tool/verify-model-availability.js`
   (requires fresh ADC: `gcloud auth application-default login`)
+
+---
+
+## Phase 4 — Server-Authoritative Rewards + Rules Lockdown
+
+> Deploy triggers and rules **together** — never one without the other.
+
+### 1. Deploy (required)
+
+```bash
+cd /path/to/Mentor-Mind
+firebase deploy --only firestore:rules,functions --project mentor-mind-aa765
+```
+
+Exports added: `onSessionMessageWrite` (Firestore trigger on session messages), `onUserCreate` (Auth trigger).
+
+### 2. Verify rules (local)
+
+```bash
+firebase emulators:start --only firestore   # port 8080
+# separate terminal:
+cd functions && FIRESTORE_EMULATOR_HOST=localhost:8080 npm test -- --testPathPattern=rules
+```
+
+### 3. Smoke test (device + emulator or prod)
+
+1. Sign in as a student.
+2. Send one tutor message (hits `mentorBotChat`).
+3. Within ~5s, confirm `/rewards/{uid}/ledger` has `complete_session` (+10) and possibly `daily_login` (+5).
+4. Confirm Rewards → History tab lists ledger entries (no Leaderboard tab).
+
+### 4. Optional: migrate legacy `history[]` arrays
+
+If prod `/rewards/{uid}` docs still have a `history` array, run a one-off admin script to copy entries into `/ledger` and delete the array field. Skip if greenfield.

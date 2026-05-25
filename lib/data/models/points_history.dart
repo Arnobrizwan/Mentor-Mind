@@ -16,10 +16,13 @@ class PointsHistory {
   });
 
   factory PointsHistory.fromMap(Map<String, dynamic> m) {
-    final ts = m['timestamp'];
+    final ts = m['timestamp'] ?? m['awardedAt'];
     return PointsHistory(
-      action: (m['action'] as String?)?.trim() ?? 'unknown',
+      action: (m['action'] as String?)?.trim() ??
+          (m['type'] as String?)?.trim() ??
+          'unknown',
       pointsAwarded: (m['pointsAwarded'] as num?)?.toInt() ??
+          (m['amount'] as num?)?.toInt() ??
           (m['points'] as num?)?.toInt() ??
           0,
       timestamp: ts is Timestamp ? ts.toDate() : null,

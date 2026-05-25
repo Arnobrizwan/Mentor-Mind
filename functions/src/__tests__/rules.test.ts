@@ -27,6 +27,7 @@ import {
   doc,
   setDoc,
   getDoc,
+  updateDoc,
   setLogLevel,
 } from 'firebase/firestore';
 
@@ -127,6 +128,83 @@ describe('AI-08: /system/usage_log_* client access (D-17)', () => {
     const aliceDb = testEnv.authenticatedContext('alice').firestore();
     await assertFails(
       setDoc(doc(aliceDb, 'system/usage_log_2026-05-19'), { calls: 0 }),
+    );
+  });
+});
+
+describe('REWD-05/06: gamification lockdown (Phase 4)', () => {
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'users/alice'), {
+        uid: 'alice',
+        role: 'student',
+        points: 10,
+        badges: [],
+      });
+      await setDoc(doc(db, 'rewards/alice'), {
+        userId: 'alice',
+        points: 10,
+        badges: [],
+      });
+    });
+  });
+
+  it('8. Owner CANNOT increment points on /users/{uid}', async () => {
+    const aliceDb = testEnv.authenticatedContext('alice').firestore();
+    await assertFails(
+      updateDoc(doc(aliceDb, 'users/alice'), {
+        points: 9999,
+      }),
+    );
+  });
+
+  it('9. Owner CANNOT write /rewards/{uid}', async () => {
+    const aliceDb = testEnv.authenticatedContext('alice').firestore();
+    await assertFails(
+      setDoc(doc(aliceDb, 'rewards/alice'), { points: 9999 }),
+    );
+  });
+
+  it('10. Owner CANNOT write /rewards/{uid}/ledger/{id}', async () => {
+    const aliceDb = testEnv.authenticatedContext('alice').firestore();
+    await assertFails(
+      setDoc(doc(aliceDb, 'rewards/alice/ledger/fake'), {
+        type: 'cheat',
+        amount: 1000,
+      }),
+    );
+  });
+
+  it('11. Owner CAN read /rewards/{uid}/ledger/{id}', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'rewards/alice/ledger/entry1'), {
+        type: 'daily_login',
+        amount: 5,
+        awardedAt: new Date(),
+      });
+    });
+    const aliceDb = testEnv.authenticatedContext('alice').firestore();
+    await assertSucceeds(
+      getDoc(doc(aliceDb, 'rewards/alice/ledger/entry1')),
+    );
+  });
+
+  it('12. Owner CANNOT write session messages (server-only)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'sessions/s1'), {
+        uid: 'alice',
+        messageCount: 0,
+      });
+    });
+    const aliceDb = testEnv.authenticatedContext('alice').firestore();
+    await assertFails(
+      setDoc(doc(aliceDb, 'sessions/s1/messages/m1'), {
+        role: 'user',
+        text: 'hi',
+      }),
     );
   });
 });

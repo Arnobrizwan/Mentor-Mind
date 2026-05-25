@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mentor_minds/data/models/badge_info.dart';
 import 'package:mentor_minds/data/models/earned_badge.dart';
 import 'package:mentor_minds/data/models/history_entry.dart';
-import 'package:mentor_minds/data/models/leaderboard_entry.dart';
+import 'package:mentor_minds/data/models/points_history.dart';
 import 'package:mentor_minds/data/models/locked_badge.dart';
 import 'package:mentor_minds/data/models/milestone.dart';
 import 'package:mentor_minds/data/repositories/auth_repository.dart';
@@ -103,8 +103,6 @@ class RewardsState {
   final List<EarnedBadge> earned;
   final List<LockedBadge> locked;
   final List<HistoryEntry> history;
-  final List<LeaderboardEntry> leaderboardTop;
-  final LeaderboardEntry? currentUserRow; // non-null if not in top 10
   final Milestone nextMilestone;
 
   const RewardsState({
@@ -114,8 +112,6 @@ class RewardsState {
     this.earned = const [],
     this.locked = const [],
     this.history = const [],
-    this.leaderboardTop = const [],
-    this.currentUserRow,
     this.nextMilestone = Milestone.maxed,
   });
 
@@ -126,9 +122,6 @@ class RewardsState {
     List<EarnedBadge>? earned,
     List<LockedBadge>? locked,
     List<HistoryEntry>? history,
-    List<LeaderboardEntry>? leaderboardTop,
-    LeaderboardEntry? currentUserRow,
-    bool clearCurrentUserRow = false,
     Milestone? nextMilestone,
     bool clearError = false,
   }) {
@@ -139,9 +132,6 @@ class RewardsState {
       earned: earned ?? this.earned,
       locked: locked ?? this.locked,
       history: history ?? this.history,
-      leaderboardTop: leaderboardTop ?? this.leaderboardTop,
-      currentUserRow:
-          clearCurrentUserRow ? null : (currentUserRow ?? this.currentUserRow),
       nextMilestone: nextMilestone ?? this.nextMilestone,
     );
   }
@@ -167,6 +157,7 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
 
   StreamSubscription<Map<String, dynamic>>? _rewardsSub;
   StreamSubscription<Map<String, dynamic>>? _userSub;
+  StreamSubscription<List<PointsHistory>>? _ledgerSub;
 
   void _bind(String uid) {
     _rewardsSub?.cancel();
@@ -204,8 +195,19 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
       onError: (_) {/* non-fatal */},
     );
 
-    // Leaderboard is a one-shot on bind; caller can refresh via refresh().
-    fetchLeaderboard();
+    _ledgerSub = _rewardsRepo.watchLedger(uid).listen((ledger) {
+      final history = ledger
+          .map(
+            (e) => HistoryEntry(
+              action: e.action,
+              icon: HistoryEntry.iconForAction(e.action),
+              points: e.pointsAwarded,
+              timestamp: e.timestamp,
+            ),
+          )
+          .toList(growable: false);
+      state = state.copyWith(history: history);
+    });
   }
 
   void _mergeRewards(Map<String, dynamic> data) {
@@ -254,23 +256,11 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
       return bx.compareTo(ax);
     });
 
-    final historyRaw = (data['history'] as List?) ?? const [];
-    final history = historyRaw
-        .whereType<Map>()
-        .map((m) => HistoryEntry.fromMap(m.cast<String, dynamic>()))
-        .toList()
-      ..sort((a, b) {
-        final ax = a.timestamp ?? DateTime.fromMillisecondsSinceEpoch(0);
-        final bx = b.timestamp ?? DateTime.fromMillisecondsSinceEpoch(0);
-        return bx.compareTo(ax);
-      });
-
     state = state.copyWith(
       isLoading: false,
       points: points,
       earned: earned,
       locked: locked,
-      history: history,
       nextMilestone: _computeMilestone(points),
       clearError: true,
     );
@@ -320,36 +310,17 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
         _ => '🎁 Surprise reward',
       };
 
-  // -------------------------------------------------------------------------
-  // Leaderboard
-  // -------------------------------------------------------------------------
-
-  Future<void> fetchLeaderboard() async {
+  Future<void> refresh() async {
     final uid = _authRepo.currentUser?.uid;
     if (uid == null) return;
-    try {
-      final result = await _usersRepo.getLeaderboard(uid, limit: 10);
-      state = state.copyWith(
-        leaderboardTop: result.top,
-        currentUserRow: result.currentUserRow,
-        clearCurrentUserRow: result.currentUserRow == null,
-      );
-    } catch (e) {
-      debugPrint('fetchLeaderboard error: $e');
-      // Leave prior leaderboard; don't surface to user since it's not blocking.
-    }
-  }
-
-  /// Pull-to-refresh entry point — re-fetches leaderboard and re-applies
-  /// the current rewards snapshot.
-  Future<void> refresh() async {
-    await fetchLeaderboard();
+    _bind(uid);
   }
 
   @override
   void dispose() {
     _rewardsSub?.cancel();
     _userSub?.cancel();
+    _ledgerSub?.cancel();
     super.dispose();
   }
 }
