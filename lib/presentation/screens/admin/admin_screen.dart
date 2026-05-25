@@ -412,72 +412,108 @@ class _NotificationsTab extends StatelessWidget {
   }
 }
 
-class _AnalyticsTab extends StatelessWidget {
+class _AnalyticsTab extends ConsumerWidget {
   const _AnalyticsTab();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final admin = ref.watch(adminViewModelProvider);
+
+    if (admin.analyticsLoading && admin.usageLogDays.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (admin.analyticsError != null) {
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(admin.analyticsError!, style: AppTextStyles.bodyMedium),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: () => ref
+                .read(adminViewModelProvider.notifier)
+                .loadUsageAnalytics(),
+            child: const Text('Retry'),
+          ),
+        ],
+      );
+    }
+
+    final days = admin.usageLogDays;
+    final spots = <FlSpot>[
+      for (var i = 0; i < days.length; i++)
+        FlSpot(i.toDouble(), days[i].calls.toDouble()),
+    ];
+    final maxCalls = days.isEmpty
+        ? 1.0
+        : days.map((d) => d.calls).reduce((a, b) => a > b ? a : b).toDouble();
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        Text('Gemini usage (last ${days.length} days)',
+            style: AppTextStyles.headingSmall),
+        const SizedBox(height: 8),
+        Text(
+          '${admin.totalCallsLast14Days} calls · '
+          '\$${admin.totalCostLast14Days.toStringAsFixed(2)} estimated',
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.kTextMuted),
+        ),
+        const SizedBox(height: 16),
         SizedBox(
-          height: 200,
-          child: LineChart(
-            LineChartData(
-              gridData: const FlGridData(show: false),
-              titlesData: const FlTitlesData(show: false),
-              borderData: FlBorderData(show: false),
-              lineBarsData: [
-                LineChartBarData(
-                  spots: const [
-                    FlSpot(0, 2),
-                    FlSpot(1, 3),
-                    FlSpot(2, 2.5),
-                    FlSpot(3, 4),
-                    FlSpot(4, 3.8),
-                  ],
-                  isCurved: true,
-                  color: AppColors.kPrimary,
-                  barWidth: 3,
-                  dotData: const FlDotData(show: false),
+          height: 220,
+          child: days.isEmpty
+              ? Center(
+                  child: Text(
+                    'No usage_log data yet — MentorBot calls will appear here.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.kTextMuted,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                )
+              : LineChart(
+                  LineChartData(
+                    minY: 0,
+                    maxY: maxCalls * 1.2,
+                    gridData: const FlGridData(show: false),
+                    titlesData: const FlTitlesData(show: false),
+                    borderData: FlBorderData(show: false),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: spots,
+                        isCurved: true,
+                        color: AppColors.kPrimary,
+                        barWidth: 3,
+                        dotData: const FlDotData(show: true),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ),
         ),
         const SizedBox(height: 8),
         Text(
-          'DAU (placeholder — wire to /system/usage_log in Phase 7)',
+          'Source: /system/usage_log_{YYYY-MM-DD} (server-written)',
           style: AppTextStyles.bodySmall.copyWith(color: AppColors.kTextMuted),
         ),
-        const SizedBox(height: 24),
-        SizedBox(
-          height: 180,
-          child: PieChart(
-            PieChartData(
-              sections: [
-                PieChartSectionData(
-                  value: 40,
-                  color: AppColors.kPrimary,
-                  title: 'Math',
-                  radius: 50,
-                ),
-                PieChartSectionData(
-                  value: 30,
-                  color: AppColors.kAccent,
-                  title: 'Phy',
-                  radius: 50,
-                ),
-                PieChartSectionData(
-                  value: 30,
-                  color: AppColors.kGold,
-                  title: 'Chem',
-                  radius: 50,
-                ),
-              ],
+        if (days.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          const Text('Daily breakdown', style: AppTextStyles.labelLarge),
+          const SizedBox(height: 8),
+          for (final d in days.reversed)
+            ListTile(
+              dense: true,
+              title: Text(d.dateKey, style: AppTextStyles.bodyMedium),
+              subtitle: Text(
+                '${d.calls} calls · ${d.promptTokens + d.completionTokens} tokens',
+                style: AppTextStyles.bodySmall,
+              ),
+              trailing: Text(
+                '\$${d.estimatedCostUsd.toStringAsFixed(3)}',
+                style: AppTextStyles.labelMedium,
+              ),
             ),
-          ),
-        ),
+        ],
       ],
     );
   }

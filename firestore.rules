@@ -171,8 +171,13 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------------------
-    // /system/** — server-only
+    // /system/** — server-only (admins may read daily usage_log_* aggregates)
     // -------------------------------------------------------------------------
+
+    match /system/{docId} {
+      allow read: if isAdmin() && docId.matches('usage_log_[0-9]{4}-[0-9]{2}-[0-9]{2}');
+      allow write: if false;
+    }
 
     match /system/{document=**} {
       allow read, write: if false;

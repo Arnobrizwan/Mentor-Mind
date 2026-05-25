@@ -14,6 +14,7 @@ class DashboardUser {
   final List<String> subjects;
   final String level;
   final List<String> badgeIds;
+  final Map<String, int> questionsPerSubject;
 
   const DashboardUser({
     required this.uid,
@@ -25,6 +26,7 @@ class DashboardUser {
     required this.subjects,
     required this.level,
     required this.badgeIds,
+    this.questionsPerSubject = const {},
   });
 
   factory DashboardUser.fromDoc(
@@ -53,6 +55,19 @@ class DashboardUser {
       badgeIds: ((data['badges'] as List?) ?? const [])
           .map((e) => e.toString())
           .toList(growable: false),
+      questionsPerSubject: _parseQuestionsPerSubject(
+        data['questionsPerSubject'],
+      ),
     );
   }
+}
+
+Map<String, int> _parseQuestionsPerSubject(Object? raw) {
+  if (raw is! Map) return const {};
+  return raw.map(
+    (key, value) => MapEntry(
+      key.toString(),
+      value is num ? value.toInt() : int.tryParse('$value') ?? 0,
+    ),
+  );
 }

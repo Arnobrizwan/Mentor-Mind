@@ -10,21 +10,13 @@ import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
 import 'package:mentor_minds/application/viewmodels/profile/profile_viewmodel.dart';
+import 'package:mentor_minds/core/constants/curriculum_subjects.dart';
 import 'package:mentor_minds/data/models/profile_stats.dart';
 import 'package:mentor_minds/data/models/profile_user.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  static const _allSubjects = <String>[
-    'Mathematics',
-    'Physics',
-    'Chemistry',
-    'Biology',
-    'English',
-    'ICT',
-    'Accounting',
-  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,7 +35,7 @@ class ProfileScreen extends ConsumerWidget {
       body: SafeArea(
         child: state.isLoading || state.user == null
             ? const _ProfileShimmer()
-            : _ProfileBody(state: state, allSubjects: _allSubjects),
+            : _ProfileBody(state: state, allSubjects: kCurriculumSubjects),
       ),
     );
   }

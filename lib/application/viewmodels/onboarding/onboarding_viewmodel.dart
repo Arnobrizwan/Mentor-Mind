@@ -2,24 +2,15 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mentor_minds/core/constants/curriculum_subjects.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const kSubjects = [
-  'Mathematics',
-  'Physics',
-  'Chemistry',
-  'Biology',
-  'English',
-  'ICT',
-  'Accounting',
-  'Economics',
-  'History',
-  'Geography',
-];
+/// Onboarding subject grid — same list as profile/materials filters.
+const kSubjects = kCurriculumSubjects;
 
 // ---------------------------------------------------------------------------
 // State

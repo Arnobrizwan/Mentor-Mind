@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:mentor_minds/core/constants/quota.dart';
+import 'package:mentor_minds/core/constants/quota_limits.dart';
 import 'package:mentor_minds/core/observability/analytics_service.dart';
 import 'package:mentor_minds/core/utils/email_verification.dart';
 import 'package:mentor_minds/data/models/chat_message.dart';
@@ -23,7 +24,7 @@ import 'package:uuid/uuid.dart';
 // ---------------------------------------------------------------------------
 
 class ChatState {
-  static const defaultDailyLimit = 10;
+  static const defaultDailyLimit = kDailyTextLimit;
 
   final List<ChatMessage> messages;
   final bool isLoading;
@@ -66,7 +67,10 @@ class ChatState {
       : (dailyLimit - dailyMessageCount).clamp(0, dailyLimit);
 
   bool get showLimitWarning =>
-      !isPremium && dailyMessageCount >= 8 && dailyMessageCount < dailyLimit;
+      !isPremium &&
+          dailyMessageCount >=
+              (dailyLimit - kDailyLimitWarningThreshold).clamp(0, dailyLimit) &&
+          dailyMessageCount < dailyLimit;
 
   ChatState copyWith({
     List<ChatMessage>? messages,

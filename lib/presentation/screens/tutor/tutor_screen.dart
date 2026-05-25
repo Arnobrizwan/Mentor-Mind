@@ -14,6 +14,7 @@ import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
 import 'package:mentor_minds/application/viewmodels/tutor/chat_viewmodel.dart';
 import 'package:mentor_minds/data/models/chat_message.dart';
+import 'package:mentor_minds/core/constants/tutor_prompts.dart';
 import 'package:mentor_minds/shared/widgets/premium_upgrade_modal.dart';
 
 class TutorScreen extends ConsumerStatefulWidget {
@@ -136,7 +137,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
     String current,
     List<String> available,
   ) async {
-    final options = available.isNotEmpty ? available : _fallbackSubjects;
+    final options = tutorSubjectOptions(available);
     final picked = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: AppColors.kSurface,
@@ -240,7 +241,10 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
             _LimitWarningBanner(remaining: state.messagesRemaining),
           Expanded(
             child: state.messages.isEmpty
-                ? _EmptyState(onSuggestionTap: _onSuggestionTap)
+                ? _EmptyState(
+                    suggestions: tutorSuggestionsFor(state.selectedSubject),
+                    onSuggestionTap: _onSuggestionTap,
+                  )
                 : _MessageList(
                     messages: state.messages,
                     onCopy: _copyToClipboard,
@@ -283,19 +287,6 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
 // ---------------------------------------------------------------------------
 // Subject pill + picker sheet
 // ---------------------------------------------------------------------------
-
-const _fallbackSubjects = [
-  'Mathematics',
-  'Physics',
-  'Chemistry',
-  'Biology',
-  'English',
-  'ICT',
-  'Accounting',
-  'Economics',
-  'History',
-  'Geography',
-];
 
 String _subjectEmoji(String s) => switch (s) {
       'Mathematics' => '\u{1F4D0}',
@@ -556,14 +547,13 @@ class _LimitWarningBanner extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _EmptyState extends StatelessWidget {
-  final ValueChanged<String> onSuggestionTap;
-  const _EmptyState({required this.onSuggestionTap});
+  const _EmptyState({
+    required this.suggestions,
+    required this.onSuggestionTap,
+  });
 
-  static const _suggestions = [
-    'Explain photosynthesis',
-    'Solve quadratic',
-    'Essay tips',
-  ];
+  final List<String> suggestions;
+  final ValueChanged<String> onSuggestionTap;
 
   @override
   Widget build(BuildContext context) {
@@ -631,7 +621,7 @@ class _EmptyState extends StatelessWidget {
             runSpacing: 8,
             alignment: WrapAlignment.center,
             children: [
-              for (final s in _suggestions)
+              for (final s in suggestions)
                 _SuggestionChip(
                   label: s,
                   onTap: () => onSuggestionTap(s),

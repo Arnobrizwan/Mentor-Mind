@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:mentor_minds/data/models/badge_info.dart';
+import 'package:mentor_minds/core/constants/badge_catalog.dart';
 import 'package:mentor_minds/data/models/earned_badge.dart';
 import 'package:mentor_minds/data/models/history_entry.dart';
 import 'package:mentor_minds/data/models/points_history.dart';
@@ -17,72 +17,6 @@ import 'package:mentor_minds/data/repositories/users_repository.dart';
 // come from /rewards/{uid}.badges; we join against this catalog to render
 // cards for both earned and locked states.
 // ---------------------------------------------------------------------------
-
-const _allBadges = <BadgeInfo>[
-  BadgeInfo(
-    id: 'first_login',
-    emoji: '🎓',
-    name: 'First Steps',
-    description: 'Welcome aboard! You signed up and joined MentorMinds.',
-    unlockHint: 'Sign up to earn',
-  ),
-  BadgeInfo(
-    id: 'streak_3',
-    emoji: '🔥',
-    name: 'Spark',
-    description: 'Study three days in a row to keep the momentum going.',
-    unlockHint: 'Study 3 days in a row',
-    target: 3,
-  ),
-  BadgeInfo(
-    id: 'streak_7',
-    emoji: '🏆',
-    name: 'Week Warrior',
-    description: 'A full week of daily study. Habits are forming.',
-    unlockHint: 'Study 7 days in a row',
-    target: 7,
-  ),
-  BadgeInfo(
-    id: 'streak_30',
-    emoji: '🗓️',
-    name: 'Marathon Mind',
-    description: 'A full month of daily learning. Few make it this far.',
-    unlockHint: 'Study 30 days in a row',
-    target: 30,
-  ),
-  BadgeInfo(
-    id: 'ai_questions_10',
-    emoji: '💬',
-    name: 'Curious',
-    description: 'Asked MentorBot 10 questions. Curiosity is the first step.',
-    unlockHint: 'Ask 10 questions to MentorBot',
-    target: 10,
-  ),
-  BadgeInfo(
-    id: 'ai_questions_50',
-    emoji: '🤖',
-    name: 'Tutor Tamer',
-    description: 'Asked MentorBot 50 questions. You know how to get answers.',
-    unlockHint: 'Ask 50 questions to MentorBot',
-    target: 50,
-  ),
-  BadgeInfo(
-    id: 'materials_viewed_10',
-    emoji: '📚',
-    name: 'Bookworm',
-    description: 'Viewed 10 different study materials.',
-    unlockHint: 'View 10 materials',
-    target: 10,
-  ),
-  BadgeInfo(
-    id: 'points_100',
-    emoji: '⭐',
-    name: 'Rising Star',
-    description: 'Earned your first 100 points.',
-    unlockHint: 'Earn 100 points',
-    target: 100,
-  ),
-];
 
 // ---------------------------------------------------------------------------
 // Milestones ladder — progress bar targets the next threshold after current
@@ -230,7 +164,7 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
     final now = DateTime.now();
     final earned = <EarnedBadge>[];
     final locked = <LockedBadge>[];
-    for (final b in _allBadges) {
+    for (final b in kBadgeCatalog) {
       if (earnedIds.contains(b.id)) {
         final earnedAt = earnedAtMap[b.id];
         final recent = earnedAt != null &&
@@ -265,24 +199,8 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
     );
   }
 
-  int? _progressForBadge(String badgeId, Map<String, dynamic> data, int points) {
-    // Opportunistic progress hints from data we already have. Absence just
-    // hides the progress bar — we don't fail.
-    switch (badgeId) {
-      case 'points_100':
-        return points.clamp(0, 100);
-      case 'streak_3':
-      case 'streak_7':
-      case 'streak_30':
-        final streak = (data['streakDays'] as num?)?.toInt();
-        return streak;
-      case 'ai_questions_10':
-      case 'ai_questions_50':
-        return (data['aiQuestionsAsked'] as num?)?.toInt();
-      case 'materials_viewed_10':
-        return (data['materialsViewed'] as num?)?.toInt();
-    }
-    return null;
+  int? _progressForBadge(String badgeId, Map<String, dynamic> data, int _) {
+    return badgeProgressCurrent(badgeId, data);
   }
 
   Milestone _computeMilestone(int points) {

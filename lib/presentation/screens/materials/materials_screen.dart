@@ -12,6 +12,7 @@ import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
 import 'package:mentor_minds/application/viewmodels/materials/materials_viewmodel.dart';
+import 'package:mentor_minds/core/constants/curriculum_subjects.dart';
 import 'package:mentor_minds/data/models/learning_material.dart';
 
 class MaterialsScreen extends ConsumerStatefulWidget {
@@ -300,22 +301,6 @@ class _FiltersHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.onToggleType,
   });
 
-  static const _subjects = <String>[
-    kSubjectAll,
-    'Mathematics',
-    'Physics',
-    'Chemistry',
-    'Biology',
-    'English',
-    'ICT',
-    'Accounting',
-  ];
-
-  static const _subjectShortLabels = <String, String>{
-    kSubjectAll: 'All',
-    'Mathematics': 'Math',
-  };
-
   static const _height = 124.0;
 
   @override
@@ -379,12 +364,12 @@ class _FiltersHeaderDelegate extends SliverPersistentHeaderDelegate {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _subjects.length,
+              itemCount: kMaterialsSubjectFilters.length,
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (_, i) {
-                final s = _subjects[i];
+                final s = kMaterialsSubjectFilters[i];
                 return _SubjectChip(
-                  label: _subjectShortLabels[s] ?? s,
+                  label: kMaterialsSubjectShortLabels[s] ?? s,
                   selected: selectedSubject == s,
                   onTap: () => onSelectSubject(s),
                 );

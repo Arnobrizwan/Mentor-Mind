@@ -10,7 +10,7 @@ Email **verified** on all accounts so verification screens are skipped. Password
 
 | Role | Email | Password | Subscription | Level | Notes |
 |---|---|---|---|---|---|
-| Student (free) | `student@mentorminds.test` | `Student1!` | free | O Level | Subjects: Math, Physics, Chemistry · 12 pts · 1 badge · **10/day chat limit** |
+| Student (free) | `student@mentorminds.test` | `Student1!` | free | O Level | Subjects: Math, Physics, Chemistry · 12 pts · 1 badge · **30 text msgs/day** (server-enforced) |
 | Student (premium) | `premium@mentorminds.test` | `Premium1!` | **premium** | A Level | Subjects: Math, Physics, Biology, English · 140 pts · 2 badges · unlimited chat |
 | Teacher (approved) | `teacher@mentorminds.test` | `Teacher1!` | free | A Level | Subjects: Chemistry, Biology · `isApproved: true` |
 | Admin | `admin@mentorminds.test` | `Admin1!` | premium | — | Full admin; can write materials/notifications via security rules |

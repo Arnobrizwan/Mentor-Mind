@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:mentor_minds/core/constants/badge_catalog.dart';
 import 'package:mentor_minds/data/models/badge_info.dart';
 import 'package:mentor_minds/data/models/points_history.dart';
 import 'package:mentor_minds/data/models/rewards_doc.dart';
@@ -21,65 +22,6 @@ import 'package:mentor_minds/data/repositories/rewards_repository.dart';
 // is simply skipped (the badge stays locked).
 // ---------------------------------------------------------------------------
 
-const _catalog = <BadgeInfo>[
-  BadgeInfo(
-    id: 'first_step',
-    emoji: '🌱',
-    name: 'First Step',
-    description: 'Complete your first tutoring session.',
-    unlockHint: 'Complete 1 session',
-    target: 1,
-  ),
-  BadgeInfo(
-    id: 'curious_learner',
-    emoji: '💬',
-    name: 'Curious Learner',
-    description: 'Ask MentorBot 50 questions across any subject.',
-    unlockHint: 'Ask 50 questions',
-    target: 50,
-  ),
-  BadgeInfo(
-    id: 'dedicated_learner',
-    emoji: '📚',
-    name: 'Dedicated Learner',
-    description: 'Complete 5 tutoring sessions.',
-    unlockHint: 'Complete 5 sessions',
-    target: 5,
-  ),
-  BadgeInfo(
-    id: 'week_warrior',
-    emoji: '🏆',
-    name: 'Week Warrior',
-    description: 'Maintain a 7-day study streak.',
-    unlockHint: 'Study 7 days in a row',
-    target: 7,
-  ),
-  BadgeInfo(
-    id: 'month_master',
-    emoji: '🗓️',
-    name: 'Month Master',
-    description: 'Maintain a 30-day study streak.',
-    unlockHint: 'Study 30 days in a row',
-    target: 30,
-  ),
-  BadgeInfo(
-    id: 'diagram_detective',
-    emoji: '🔍',
-    name: 'Diagram Detective',
-    description: 'Upload 10 diagrams for MentorBot to analyze.',
-    unlockHint: 'Upload 10 diagrams',
-    target: 10,
-  ),
-  BadgeInfo(
-    id: 'subject_expert',
-    emoji: '🎯',
-    name: 'Subject Expert',
-    description: 'Ask 100 questions in a single subject.',
-    unlockHint: 'Ask 100 questions in one subject',
-    target: 100,
-  ),
-];
-
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
@@ -95,7 +37,7 @@ class GamificationState {
   const GamificationState({
     this.rewards,
     this.badges = const [],
-    this.allBadges = _catalog,
+    this.allBadges = kBadgeCatalog,
     this.history = const [],
     this.isLoading = true,
     this.error,
@@ -183,7 +125,7 @@ class GamificationViewModel extends StateNotifier<GamificationState> {
 
         final nextBadges = doc.badges.toSet();
         for (final id in nextBadges.difference(_previousBadgeIds)) {
-          final badge = _catalog.where((b) => b.id == id).firstOrNull;
+          final badge = kBadgeCatalogById[id];
           if (badge != null && !_badgeEarnedController.isClosed) {
             _badgeEarnedController.add(badge);
           }

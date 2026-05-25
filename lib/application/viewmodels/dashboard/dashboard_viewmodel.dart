@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:mentor_minds/core/constants/app_colors.dart';
+import 'package:mentor_minds/core/constants/badge_catalog.dart';
+import 'package:mentor_minds/core/constants/subject_colors.dart';
 import 'package:mentor_minds/data/models/daily_challenge.dart';
 import 'package:mentor_minds/data/models/badge_item.dart';
 import 'package:mentor_minds/data/models/dashboard_user.dart';
@@ -19,25 +19,6 @@ import 'package:mentor_minds/data/repositories/notifications_repository.dart';
 import 'package:mentor_minds/data/repositories/sessions_repository.dart';
 import 'package:mentor_minds/data/repositories/rewards_repository.dart';
 import 'package:mentor_minds/data/repositories/users_repository.dart';
-
-// ---------------------------------------------------------------------------
-// Subject → brand color mapping (shared helper)
-// ---------------------------------------------------------------------------
-
-const _subjectColors = <String, Color>{
-  'Mathematics': Color(0xFF3B82F6),
-  'Physics':     Color(0xFF8B5CF6),
-  'Chemistry':   Color(0xFF22C55E),
-  'Biology':     Color(0xFF14B8A6),
-  'English':     Color(0xFFEC4899),
-  'ICT':         Color(0xFF06B6D4),
-  'Accounting':  Color(0xFFF59E0B),
-  'Economics':   Color(0xFFEF4444),
-  'History':     Color(0xFFA855F7),
-  'Geography':   Color(0xFF10B981),
-};
-
-Color _colorForSubject(String s) => _subjectColors[s] ?? AppColors.kPrimary;
 
 // ---------------------------------------------------------------------------
 // State
@@ -94,19 +75,22 @@ class DashboardState {
 
   List<SubjectProgress> get subjects {
     final list = user?.subjects ?? const <String>[];
+    final counts = user?.questionsPerSubject ?? const {};
     return list
         .map(
           (s) => SubjectProgress(
             name: s,
-            progress: _stubProgress(s),
-            color: _colorForSubject(s),
+            progress: subjectQuestionProgress(counts, s),
+            color: colorForSubject(s),
           ),
         )
         .toList(growable: false);
   }
 
-  List<BadgeItem> get badges =>
-      rewards.badgeIds.take(3).map(_mapBadge).toList(growable: false);
+  List<BadgeItem> get badges => (user?.badgeIds ?? rewards.badgeIds)
+      .take(3)
+      .map(badgeItemForId)
+      .toList(growable: false);
 
   DashboardState copyWith({
     bool? isLoading,
@@ -141,54 +125,6 @@ class DashboardState {
       dailyAwardAmount: dailyAwardAmount ?? this.dailyAwardAmount,
     );
   }
-}
-
-// Demo/stub progress per subject — deterministic variation until real
-// per-subject progress tracking lands.
-double _stubProgress(String subject) {
-  final hash = subject.codeUnits.fold<int>(0, (a, b) => a + b);
-  return 0.15 + (hash % 75) / 100;
-}
-
-BadgeItem _mapBadge(String id) {
-  return switch (id) {
-    'first_login' => const BadgeItem(
-        id: 'first_login',
-        name: 'First Login',
-        icon: Icons.rocket_launch_rounded,
-        color: AppColors.kGold,
-      ),
-    'streak_3' => const BadgeItem(
-        id: 'streak_3',
-        name: '3-Day Streak',
-        icon: Icons.local_fire_department_rounded,
-        color: AppColors.kError,
-      ),
-    'streak_7' => const BadgeItem(
-        id: 'streak_7',
-        name: '7-Day Streak',
-        icon: Icons.local_fire_department_rounded,
-        color: AppColors.kError,
-      ),
-    'first_quiz' => const BadgeItem(
-        id: 'first_quiz',
-        name: 'First Quiz',
-        icon: Icons.quiz_rounded,
-        color: AppColors.kAccent,
-      ),
-    'top_scorer' => const BadgeItem(
-        id: 'top_scorer',
-        name: 'Top Scorer',
-        icon: Icons.emoji_events_rounded,
-        color: AppColors.kGold,
-      ),
-    _ => BadgeItem(
-        id: id,
-        name: id,
-        icon: Icons.workspace_premium_rounded,
-        color: AppColors.kGold,
-      ),
-  };
 }
 
 // ---------------------------------------------------------------------------
