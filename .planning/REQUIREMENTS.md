@@ -100,7 +100,7 @@ Requirements for the v1.0 hardening + 12-screen polish milestone. The 12 screens
 ### Student Dashboard (Polish on Existing)
 
 - [ ] **DASH-01**: Dashboard renders `SliverAppBar` with time-of-day greeting (`Good [morning/afternoon/evening], {Name}!`), streak counter, and total points chip per Screen 05 spec.
-- [ ] **DASH-02**: A Daily Challenge card is shown with today's challenge (subject + question), "Attempt Now" CTA, and a countdown to reset (UTC+6 midnight). Challenge content is rotated daily by a Cloud Scheduler job that writes to `/daily_challenges/{YYYY-MM-DD}`.
+- [x] **DASH-02**: A Daily Challenge card is shown with today's challenge (subject + question), "Attempt Now" CTA, and a countdown to reset (UTC+6 midnight). Challenge content is rotated daily by a Cloud Scheduler job that writes to `/daily_challenges/{YYYY-MM-DD}`.
 - [ ] **DASH-03**: Subject progress rings are shown horizontally for each of the user's selected subjects; ring fill = (sessions on subject this week) / (target = 5).
 - [ ] **DASH-04**: Recent Sessions section shows the last 3 sessions; tapping opens that session in the AI Tutor screen.
 - [ ] **DASH-05**: New Materials carousel shows the 6 most recent materials matching the user's subject list.
@@ -155,14 +155,14 @@ Requirements for the v1.0 hardening + 12-screen polish milestone. The 12 screens
 
 ### Notifications (Polish on Existing + FCM Wiring)
 
-- [ ] **NOTF-01**: `firebase_messaging` is fully wired: SDK initialized in `main.dart` before `runApp`; request permission with rationale; obtain FCM token; poll for APNs token (up to 10s); subscribe to topics `role_student` / `role_premium_student` / `role_teacher` / `role_admin` / `role_all` per the user's role.
-- [ ] **NOTF-02**: Top-level background handler annotated with `@pragma('vm:entry-point')`; persists received messages to `/notifications/{nid}` so the in-app list mirrors push history.
-- [ ] **NOTF-03**: Foreground messages display via `flutter_local_notifications` banner.
-- [ ] **NOTF-04**: On `onTokenRefresh`, re-subscribe to all current topics.
-- [ ] **NOTF-05**: Notifications screen renders the date-grouped list (Today / Yesterday / This Week) + filter chips (All / Announcements / Achievements / Reminders) + swipe-to-dismiss (marks read) per Screen 11 spec.
-- [ ] **NOTF-06**: Unread count badge on top-app-bar bell icon (`/notifications` where `recipientRole in [user.role, 'all']` and `read == false`).
-- [ ] **NOTF-07**: "Mark all read" action batch-writes `{read: true}` to all unread notifications for the user's role.
-- [ ] **NOTF-08**: Tapping a notification opens detail bottom sheet; supports type-specific CTAs (new_material → "Open Material"; achievement → "View Rewards").
+- [x] **NOTF-01**: `firebase_messaging` is fully wired: SDK initialized in `main.dart` before `runApp`; request permission with rationale; obtain FCM token; poll for APNs token (up to 10s); subscribe to topics `role_student` / `role_premium_student` / `role_teacher` / `role_admin` / `role_all` per the user's role.
+- [x] **NOTF-02**: Top-level background handler annotated with `@pragma('vm:entry-point')`; persists received messages to `/notifications/{nid}` so the in-app list mirrors push history.
+- [x] **NOTF-03**: Foreground messages display via `flutter_local_notifications` banner.
+- [x] **NOTF-04**: On `onTokenRefresh`, re-subscribe to all current topics.
+- [x] **NOTF-05**: Notifications screen renders the date-grouped list (Today / Yesterday / This Week) + filter chips (All / Announcements / Achievements / Reminders) + swipe-to-dismiss (marks read) per Screen 11 spec.
+- [x] **NOTF-06**: Unread count badge on top-app-bar bell icon (`/notifications` where `recipientRole in [user.role, 'all']` and `read == false`).
+- [x] **NOTF-07**: "Mark all read" action batch-writes `{read: true}` to all unread notifications for the user's role.
+- [x] **NOTF-08**: Tapping a notification opens detail bottom sheet; supports type-specific CTAs (new_material → "Open Material"; achievement → "View Rewards").
 
 ### Admin Panel (Polish on Existing)
 
@@ -170,7 +170,7 @@ Requirements for the v1.0 hardening + 12-screen polish milestone. The 12 screens
 - [ ] **ADMN-02**: Dashboard tab shows stats grid (Total Users, Premium Users, Materials, Sessions Today) backed by Firestore count() queries; Recent Activity feed merges users + sessions + materials. *(shell placeholders in v1.0)*
 - [x] **ADMN-03**: Users tab lists users (50 per page, cursor pagination) with role/subscription badges; menu offers Toggle Premium (`setPremium` callable). *(Change Role / Delete deferred)*
 - [ ] **ADMN-04**: Content tab provides upload form (title, subject, level, type, file picker → Firebase Storage `materials/{uuid}.ext` → `/materials/{mid}` doc); deletes remove from Storage + Firestore. *(placeholder — Phase 7)*
-- [ ] **ADMN-05**: After material upload, FCM topic broadcast to `role_student` via `sendBroadcast` callable ("New material added: {title}"). *(depends Phase 6 FCM)*
+- [x] **ADMN-05**: `sendBroadcast` sends FCM topic push + Firestore doc. *(Material-upload trigger deferred — use Admin Notifications tab for now.)*
 - [x] **ADMN-06**: Notifications tab provides broadcast form (title, message, target role); "Send" calls `sendBroadcast` callable.
 - [x] **ADMN-07**: Analytics tab shows charts via `fl_chart` *(placeholder sample data — wire to `/system/usage_log` in Phase 7)*.
 - [x] **ADMN-08**: Admin role is gated via `request.auth.token.role == 'admin'` custom claim AND `/users/{uid}.role == 'admin'`; non-admin routes to `/dashboard` with a "Not authorized" snackbar.
@@ -327,7 +327,7 @@ Each v1 requirement maps to exactly one phase. Phases are defined in `.planning/
 | SPLA-02 | Phase 7 | Pending |
 | SPLA-03 | Phase 7 | Pending |
 | DASH-01 | Phase 7 | Pending |
-| DASH-02 | Phase 6 | Pending |
+| DASH-02 | Phase 6 | Complete |
 | DASH-03 | Phase 7 | Pending |
 | DASH-04 | Phase 7 | Pending |
 | DASH-05 | Phase 7 | Pending |
@@ -364,14 +364,14 @@ Each v1 requirement maps to exactly one phase. Phases are defined in `.planning/
 | RWRD-04 | Phase 7 | Pending |
 | RWRD-05 | Phase 7 | Pending |
 | RWRD-06 | Phase 7 | Pending |
-| NOTF-01 | Phase 6 | Pending |
-| NOTF-02 | Phase 6 | Pending |
-| NOTF-03 | Phase 6 | Pending |
-| NOTF-04 | Phase 6 | Pending |
-| NOTF-05 | Phase 6 | Pending |
-| NOTF-06 | Phase 6 | Pending |
-| NOTF-07 | Phase 6 | Pending |
-| NOTF-08 | Phase 6 | Pending |
+| NOTF-01 | Phase 6 | Complete |
+| NOTF-02 | Phase 6 | Complete |
+| NOTF-03 | Phase 6 | Complete |
+| NOTF-04 | Phase 6 | Complete |
+| NOTF-05 | Phase 6 | Complete |
+| NOTF-06 | Phase 6 | Complete |
+| NOTF-07 | Phase 6 | Complete |
+| NOTF-08 | Phase 6 | Complete |
 | ADMN-01 | Phase 5 | Complete |
 | ADMN-02 | Phase 5 | Partial (shell) |
 | ADMN-03 | Phase 5 | Complete (toggle premium) |

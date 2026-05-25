@@ -151,9 +151,18 @@ service cloud.firestore {
     // /notifications/{id}
     // -------------------------------------------------------------------------
 
+    match /daily_challenges/{dateKey} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
     match /notifications/{id} {
       allow read: if isSignedIn();
-      allow create: if isAdmin();
+      allow create: if isAdmin() || (
+        isSignedIn()
+        && request.resource.data.get('source', '') == 'fcm_client'
+        && request.resource.data.read == false
+      );
       allow update: if isSignedIn()
         && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['read'])

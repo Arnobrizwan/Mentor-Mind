@@ -467,6 +467,18 @@ cd /path/to/Mentor-Mind
 firebase deploy --only firestore:rules,functions --project mentor-mind-aa765
 ```
 
+**If `onSessionMessageWrite` fails with Eventarc Service Agent permission denied** (first 2nd-gen Firestore trigger):
+
+```bash
+# Project number from: gcloud projects describe mentor-mind-aa765 --format='value(projectNumber)'
+gcloud projects add-iam-policy-binding mentor-mind-aa765 \
+  --member="serviceAccount:service-PROJECT_NUMBER@gcp-sa-eventarc.iam.gserviceaccount.com" \
+  --role="roles/eventarc.serviceAgent"
+gcloud services enable eventarc.googleapis.com --project=mentor-mind-aa765
+# Wait 2–5 minutes, then redeploy:
+firebase deploy --only functions:onSessionMessageWrite --project mentor-mind-aa765
+```
+
 Exports added: `onSessionMessageWrite` (Firestore trigger on session messages), `onUserCreate` (Auth trigger).
 
 ### 2. Verify rules (local)
@@ -508,12 +520,25 @@ Set params in Firebase Console → Functions → Environment variables (or `fire
 | `STRIPE_CHECKOUT_CANCEL_URL` | `mentorminds://subscription/cancel` |
 | `STRIPE_PORTAL_RETURN_URL` | `mentorminds://subscription/portal` |
 
-### 2. Stripe webhook
+### 2. Stripe webhook (test mode — configured 2026-05-25)
 
-1. Stripe Dashboard → Developers → Webhooks → Add endpoint.
-2. URL: `https://asia-south1-mentor-mind-aa765.cloudfunctions.net/stripeWebhook` (verify in deploy output).
-3. Events: `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`.
-4. Copy signing secret → `firebase functions:secrets:set STRIPE_WEBHOOK_SECRET` (if wired in `stripe_webhook.ts`).
+Webhook endpoint (via Stripe API):
+
+- **URL:** `https://asia-south1-mentor-mind-aa765.cloudfunctions.net/stripeWebhook`
+- **Events:** `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`
+- **Signing secret:** stored in Secret Manager as `STRIPE_WEBHOOK_SECRET` (version 2+)
+
+**Test product (Dashboard → Products):**
+
+| Field | Value |
+|-------|--------|
+| Product | `prod_Ua5yh8n8ZzoAzM` — MentorMinds Premium |
+| Monthly price | `price_1TavmqRsUzHvoLE35LSTqXZ0` — $4.99 USD/month (test) |
+| Portal config | `bpc_1Tavn9RsUzHvoLE3DyfOP1sl` |
+
+`functions/.env` sets `STRIPE_PRICE_MONTHLY=price_1TavmqRsUzHvoLE35LSTqXZ0`.
+
+To recreate manually: [Stripe Dashboard (test)](https://dashboard.stripe.com/acct_1RFW5nRsUzHvoLE3/test/dashboard) → Developers → Webhooks.
 
 ### 3. Deploy
 
@@ -529,3 +554,36 @@ New exports: `createCheckoutSession`, `createPortalSession`, `setPremium`, `send
 2. Sign in → should route to `/admin`.
 3. Users tab → Grant premium → confirm `/subscriptions/{uid}` + token `premium: true` after `getIdToken(true)`.
 4. Notifications tab → Send broadcast → doc appears in `/notifications`.
+
+---
+
+## Phase 6 — FCM + Daily Challenge
+
+### 1. APNs (required for iOS push)
+
+1. [Apple Developer](https://developer.apple.com) → Keys → create **APNs Auth Key** (.p8).
+2. Firebase Console → Project Settings → Cloud Messaging → Apple app (`com.mentorminds.mentorMinds`) → upload .p8 (Key ID + Team ID).
+3. Xcode → Runner target → **Signing & Capabilities** → add **Push Notifications** and **Background Modes → Remote notifications**.
+
+`Runner.entitlements` includes `aps-environment` (use `production` for App Store archive).
+
+### 2. Deploy
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes,functions --project mentor-mind-aa765
+```
+
+New exports: `onUserFcmSync`, `publishDailyChallenge` (scheduler 18:00 UTC = Dhaka midnight).
+
+### 3. Seed today's challenge (optional)
+
+```bash
+cd functions && node tool/seed-daily-challenge.js
+```
+
+### 4. Smoke test
+
+1. Install app on a **physical iPhone** (push does not work on simulator).
+2. Open Dashboard → accept notification rationale → verify `/users/{uid}` has `fcmToken` + `fcmTopics`.
+3. Firebase Console → Cloud Messaging → Send test message → topic `role_all`.
+4. Admin → Notifications → Send broadcast → device receives push + in-app list updates.

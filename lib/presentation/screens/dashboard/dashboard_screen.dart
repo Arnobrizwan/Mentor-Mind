@@ -10,6 +10,8 @@ import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
 import 'package:mentor_minds/application/viewmodels/dashboard/dashboard_viewmodel.dart';
+import 'package:mentor_minds/data/models/daily_challenge.dart';
+import 'package:mentor_minds/data/services/messaging_service.dart';
 import 'package:mentor_minds/data/models/badge_item.dart';
 import 'package:mentor_minds/data/models/material_item.dart';
 import 'package:mentor_minds/data/models/session_item.dart';
@@ -25,6 +27,7 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   int _navIndex = 0;
   late final ProviderSubscription<DashboardState> _dashboardListener;
+  bool _fcmRegistered = false;
 
   // Daily-login award toast — one-shot pill anchored below the app bar.
   int? _awardAmount;
@@ -79,9 +82,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     });
   }
 
+  void _maybeRegisterFcm(DashboardState state) {
+    if (!ref.read(fcmRegistrationEnabledProvider)) return;
+    final user = state.user;
+    if (user == null || _fcmRegistered) return;
+    _fcmRegistered = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final isPremium = user.subscriptionType == 'premium';
+      await ref.read(messagingServiceProvider).ensureRegistered(
+            context: context,
+            role: user.role,
+            isPremium: isPremium,
+          );
+      if (!mounted) return;
+      ref.read(messagingServiceProvider).handlePendingNavigation(context);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(dashboardViewModelProvider);
+    _maybeRegisterFcm(state);
 
     return Scaffold(
       backgroundColor: AppColors.kBackground,
@@ -107,6 +129,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       const _QuickActionRow(),
                       const SizedBox(height: 20),
                       _DailyChallengeCard(
+                        challenge: state.dailyChallenge,
                         resetsAt: state.dailyChallengeResetsAt,
                       ),
                       const SizedBox(height: 24),
@@ -524,8 +547,12 @@ class _QuickActionTile extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _DailyChallengeCard extends StatefulWidget {
+  final DailyChallenge? challenge;
   final DateTime resetsAt;
-  const _DailyChallengeCard({required this.resetsAt});
+  const _DailyChallengeCard({
+    required this.challenge,
+    required this.resetsAt,
+  });
 
   @override
   State<_DailyChallengeCard> createState() => _DailyChallengeCardState();
@@ -626,11 +653,15 @@ class _DailyChallengeCardState extends State<_DailyChallengeCard> {
           ),
           const SizedBox(height: 8),
           Text(
-            "Solve today's Physics question for +25 pts",
+            widget.challenge != null
+                ? "${widget.challenge!.subject}: ${widget.challenge!.question}"
+                : "Loading today's challenge…",
             style: AppTextStyles.bodyMedium.copyWith(
               color: Colors.white.withOpacity(0.92),
               height: 1.4,
             ),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 14),
           OutlinedButton(

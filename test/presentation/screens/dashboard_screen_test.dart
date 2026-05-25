@@ -20,6 +20,8 @@ import 'package:mentor_minds/data/repositories/sessions_repository.dart';
 import 'package:mentor_minds/data/models/points_history.dart';
 import 'package:mentor_minds/data/repositories/rewards_repository.dart';
 import 'package:mentor_minds/data/repositories/users_repository.dart';
+import 'package:mentor_minds/data/repositories/daily_challenges_repository.dart';
+import 'package:mentor_minds/data/services/messaging_service.dart';
 import 'package:mentor_minds/presentation/screens/dashboard/dashboard_screen.dart';
 import '../../_support/factories/user_factory.dart';
 
@@ -57,6 +59,11 @@ class _FakeRewardsRepo implements RewardsRepository {
   dynamic noSuchMethod(Invocation invocation) => const Stream.empty();
 }
 
+class _FakeDailyChallengesRepo implements DailyChallengesRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => const Stream.empty();
+}
+
 class _FakeAuthRepo implements AuthRepository {
   @override
   User? get currentUser => null;
@@ -82,6 +89,7 @@ class FakeDashboardViewModel extends DashboardViewModel {
           _FakeNotificationsRepo(),
           _FakeAuthRepo(),
           _FakeRewardsRepo(),
+          _FakeDailyChallengesRepo(),
         ) {
     // Override state after _init() runs its synchronous early-exit path.
     // _init() calls _authRepo.currentUser == null → sets isLoading: false +
@@ -121,6 +129,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              fcmRegistrationEnabledProvider.overrideWith((ref) => false),
               dashboardViewModelProvider.overrideWith(
                 (ref) => FakeDashboardViewModel(),
               ),

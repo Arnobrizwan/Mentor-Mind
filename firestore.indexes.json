@@ -19,6 +19,15 @@
       ]
     },
     {
+      "_comment": "Notifications list: recipientRole + timestamp desc",
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "recipientRole", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
       "_comment": "Materials filter: subject + createdAt",
       "collectionGroup": "materials",
       "queryScope": "COLLECTION",

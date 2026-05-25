@@ -17,6 +17,8 @@ export { createCheckoutSession } from "./callables/create_checkout_session";
 export { createPortalSession } from "./callables/create_portal_session";
 export { sendBroadcast } from "./callables/send_broadcast";
 export { stripeWebhook } from "./http/stripe_webhook";
+export { onUserFcmSync } from "./triggers/on_user_fcm_sync";
+export { publishDailyChallenge } from "./schedulers/publish_daily_challenge";
 
 // ---------------------------------------------------------------------------
 // Cost estimation helper (D-15 — pinned per-million-token rates as of 2026-05)

@@ -7,7 +7,10 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+import 'package:mentor_minds/data/services/messaging_service.dart';
 
 import 'core/routes/app_router.dart';
 import 'core/theme/app_theme.dart';
@@ -62,7 +65,16 @@ void main() async {
     FirebaseFunctions.instance.useFunctionsEmulator('localhost', 5001);
   }
 
-  runApp(const ProviderScope(child: MentorMindsApp()));
+  // NOTF-01 — FCM must initialize before runApp; background handler registered here.
+  final container = ProviderContainer();
+  await container.read(messagingServiceProvider).initialize();
+
+  runApp(
+    UncontrolledProviderScope(
+      container: container,
+      child: const MentorMindsApp(),
+    ),
+  );
 }
 
 class MentorMindsApp extends ConsumerWidget {

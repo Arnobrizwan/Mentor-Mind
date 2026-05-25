@@ -9,6 +9,7 @@ class DashboardUser {
   final String name;
   final String firstName;
   final String role;
+  final String subscriptionType;
   final int points;
   final List<String> subjects;
   final String level;
@@ -19,6 +20,7 @@ class DashboardUser {
     required this.name,
     required this.firstName,
     required this.role,
+    this.subscriptionType = 'free',
     required this.points,
     required this.subjects,
     required this.level,
@@ -41,6 +43,8 @@ class DashboardUser {
       name: name,
       firstName: name.split(RegExp(r'\s+')).first,
       role: (data['role'] as String?)?.trim() ?? 'student',
+      subscriptionType:
+          (data['subscriptionType'] as String?)?.trim() ?? 'free',
       points: (data['points'] as num?)?.toInt() ?? 0,
       subjects: ((data['subjects'] as List?) ?? const [])
           .map((e) => e.toString())

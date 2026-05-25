@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:mentor_minds/core/constants/app_colors.dart';
+import 'package:mentor_minds/data/models/daily_challenge.dart';
 import 'package:mentor_minds/data/models/badge_item.dart';
 import 'package:mentor_minds/data/models/dashboard_user.dart';
 import 'package:mentor_minds/data/models/material_item.dart';
@@ -12,6 +13,7 @@ import 'package:mentor_minds/data/models/rewards_snapshot.dart';
 import 'package:mentor_minds/data/models/session_item.dart';
 import 'package:mentor_minds/data/models/subject_progress.dart';
 import 'package:mentor_minds/data/repositories/auth_repository.dart';
+import 'package:mentor_minds/data/repositories/daily_challenges_repository.dart';
 import 'package:mentor_minds/data/repositories/materials_repository.dart';
 import 'package:mentor_minds/data/repositories/notifications_repository.dart';
 import 'package:mentor_minds/data/repositories/sessions_repository.dart';
@@ -53,6 +55,7 @@ class DashboardState {
   final int notificationCount;
 
   final DateTime dailyChallengeResetsAt;
+  final DailyChallenge? dailyChallenge;
 
   // One-shot signal: set true when the daily login reward was just granted.
   // The screen shows the toast and calls ackDailyAward() to clear it.
@@ -69,6 +72,7 @@ class DashboardState {
     this.streak = 0,
     this.notificationCount = 0,
     required this.dailyChallengeResetsAt,
+    this.dailyChallenge,
     this.justAwardedDailyPoints = false,
     this.dailyAwardAmount = 0,
   });
@@ -114,6 +118,7 @@ class DashboardState {
     int? streak,
     int? notificationCount,
     DateTime? dailyChallengeResetsAt,
+    DailyChallenge? dailyChallenge,
     bool? justAwardedDailyPoints,
     int? dailyAwardAmount,
     bool clearError = false,
@@ -130,6 +135,7 @@ class DashboardState {
       notificationCount: notificationCount ?? this.notificationCount,
       dailyChallengeResetsAt:
           dailyChallengeResetsAt ?? this.dailyChallengeResetsAt,
+      dailyChallenge: dailyChallenge ?? this.dailyChallenge,
       justAwardedDailyPoints:
           justAwardedDailyPoints ?? this.justAwardedDailyPoints,
       dailyAwardAmount: dailyAwardAmount ?? this.dailyAwardAmount,
@@ -197,8 +203,9 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     this._notificationsRepo,
     this._authRepo,
     this._rewardsRepo,
+    this._dailyChallengesRepo,
   ) : super(DashboardState(
-          dailyChallengeResetsAt: _nextMidnight(DateTime.now()),
+          dailyChallengeResetsAt: _nextDhakaMidnight(),
         )) {
     _init();
   }
@@ -209,8 +216,10 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   final NotificationsRepository _notificationsRepo;
   final AuthRepository _authRepo;
   final RewardsRepository _rewardsRepo;
+  final DailyChallengesRepository _dailyChallengesRepo;
 
   StreamSubscription<DashboardUser>? _userSub;
+  StreamSubscription<DailyChallenge>? _challengeSub;
   StreamSubscription<List<PointsHistory>>? _ledgerSub;
   final Set<String> _seenLedgerKeys = {};
   StreamSubscription<List<SessionItem>>? _sessionsSub;
@@ -222,8 +231,13 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   List<String> _lastSubjects = const [];
   String _lastRole = '';
 
-  static DateTime _nextMidnight(DateTime now) =>
-      DateTime(now.year, now.month, now.day + 1);
+  /// UTC+6 (Dhaka) midnight — matches daily challenge scheduler.
+  static DateTime _nextDhakaMidnight() {
+    final now = DateTime.now().toUtc();
+    final dhaka = now.add(const Duration(hours: 6));
+    final next = DateTime.utc(dhaka.year, dhaka.month, dhaka.day + 1);
+    return next.subtract(const Duration(hours: 6));
+  }
 
   // -------------------------------------------------------------------------
   // Init — kicks off all streams in parallel
@@ -248,6 +262,18 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     // One-shot background work — intentionally fire-and-forget.
     unawaited(_fetchStreak(uid));
     _watchLedgerForDailyToast(uid);
+    _streamDailyChallenge();
+  }
+
+  void _streamDailyChallenge() {
+    _challengeSub?.cancel();
+    _challengeSub = _dailyChallengesRepo.watchToday().listen((c) {
+      if (!mounted) return;
+      state = state.copyWith(
+        dailyChallenge: c,
+        dailyChallengeResetsAt: _nextDhakaMidnight(),
+      );
+    });
   }
 
   void _watchLedgerForDailyToast(String uid) {
@@ -449,6 +475,7 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     _materialsSub?.cancel();
     _notifSub?.cancel();
     _ledgerSub?.cancel();
+    _challengeSub?.cancel();
     super.dispose();
   }
 }
@@ -466,5 +493,6 @@ final dashboardViewModelProvider =
     ref.read(notificationsRepositoryProvider),
     ref.read(authRepositoryProvider),
     ref.read(rewardsRepositoryProvider),
+    ref.read(dailyChallengesRepositoryProvider),
   ),
 );
