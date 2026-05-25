@@ -10,6 +10,10 @@
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
+  exclude:
+    - integration_test/**
+    - functions/**
+    - tool/seed/**
   plugins:
     - custom_lint
 

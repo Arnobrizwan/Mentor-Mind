@@ -56,8 +56,11 @@ jobs:
       # → data import direction (Plan 02 / QUAL-04).
       # IMPORTANT: dart run custom_lint is a SEPARATE step from flutter analyze;
       # custom_lint does not run as part of flutter analyze (RESEARCH Pitfall 4).
-      - name: Custom lint (layered_imports)
-        run: dart run custom_lint
+      # Layered-import gate (QUAL-04). Ripgrep mirror of mentormind_lints — custom_lint
+      # + riverpod_lint exceeds the 15m job budget on CI; run locally:
+      #   dart run custom_lint lib test
+      - name: Layered imports check
+        run: bash tool/ci/check_layered_imports.sh
 
       # Unit + widget tests with coverage (CI-02).
       # integration_test/ is NOT included — flutter test only picks up test/**
