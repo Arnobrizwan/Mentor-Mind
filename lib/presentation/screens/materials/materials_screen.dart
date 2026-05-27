@@ -6,14 +6,18 @@ import 'package:flutter/material.dart' hide MaterialType;
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:shimmer/shimmer.dart';
 
 import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
 import 'package:mentor_minds/application/viewmodels/materials/materials_viewmodel.dart';
-import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
+import 'package:mentor_minds/core/theme/app_radius.dart';
+import 'package:mentor_minds/core/theme/app_spacing.dart';
+import 'package:mentor_minds/core/theme/brand_colors.dart';
 import 'package:mentor_minds/data/models/learning_material.dart';
+import 'package:mentor_minds/shared/widgets/empty_state.dart';
+import 'package:mentor_minds/shared/widgets/pill_button.dart';
+import 'package:mentor_minds/shared/widgets/skeleton_block.dart';
 
 class MaterialsScreen extends ConsumerStatefulWidget {
   const MaterialsScreen({super.key});
@@ -38,7 +42,6 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
   }
 
   void _onScroll() {
-    // Auto-load more when within 400px of the bottom.
     if (!_scrollCtrl.hasClients) return;
     final pos = _scrollCtrl.position;
     if (pos.maxScrollExtent - pos.pixels < 400) {
@@ -65,10 +68,10 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
         .incrementViewCount(m.materialId);
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.kSurface,
+      backgroundColor: context.brand.surface,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: AppRadius.xlRadius),
       ),
       builder: (ctx) => _MaterialDetailSheet(
         material: m,
@@ -95,12 +98,10 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
             message,
             style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
           ),
-          backgroundColor: AppColors.kTextDark,
+          backgroundColor: context.brand.textDark,
           behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          margin: const EdgeInsets.all(AppSpacing.lg),
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdBorder),
           duration: const Duration(milliseconds: 2400),
         ),
       );
@@ -108,13 +109,14 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final state = ref.watch(materialsViewModelProvider);
     final curriculum = ref.watch(currentCurriculumConfigProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.kBackground,
+      backgroundColor: brand.background,
       body: RefreshIndicator(
-        color: AppColors.kPrimary,
+        color: brand.primary,
         onRefresh: () =>
             ref.read(materialsViewModelProvider.notifier).refresh(),
         child: CustomScrollView(
@@ -140,6 +142,11 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
                 onToggleType: (t) => ref
                     .read(materialsViewModelProvider.notifier)
                     .toggleType(t),
+                brandBackground: brand.background,
+                brandSurface: brand.surface,
+                brandBorder: brand.border,
+                brandPrimary: brand.primary,
+                brandTextDark: brand.textDark,
               ),
             ),
             if (state.isLoading)
@@ -147,7 +154,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
             else if (state.filteredMaterials.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
-                child: _EmptyState(
+                child: _MaterialsEmptyState(
                   hasActiveFilters: state.anyFilterActive,
                   onClearFilters: () => ref
                       .read(materialsViewModelProvider.notifier)
@@ -156,7 +163,9 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
               )
             else ...[
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm,
+                ),
                 sliver: SliverGrid(
                   gridDelegate:
                       const SliverGridDelegateWithFixedCrossAxisCount(
@@ -202,19 +211,23 @@ class _MaterialsAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return SliverAppBar(
-      backgroundColor: AppColors.kSurface,
-      foregroundColor: AppColors.kTextDark,
-      surfaceTintColor: AppColors.kSurface,
+      backgroundColor: brand.surface,
+      foregroundColor: brand.textDark,
+      surfaceTintColor: brand.surface,
       elevation: 0,
       pinned: true,
       scrolledUnderElevation: 0,
       titleSpacing: 0,
       title: Padding(
-        padding: const EdgeInsets.only(left: 4),
+        padding: const EdgeInsets.only(left: AppSpacing.xs),
         child: Text(
           'Learning Materials',
-          style: AppTextStyles.headingMedium.copyWith(fontSize: 20),
+          style: AppTextStyles.headingMedium.copyWith(
+            color: brand.textDark,
+            fontSize: 20,
+          ),
         ),
       ),
       leading: IconButton(
@@ -226,7 +239,9 @@ class _MaterialsAppBar extends StatelessWidget {
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(60),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg, AppSpacing.xs, AppSpacing.lg, AppSpacing.md,
+          ),
           child: _SearchField(controller: controller),
         ),
       ),
@@ -240,29 +255,29 @@ class _SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.kBackground,
-        borderRadius: BorderRadius.circular(12),
+        color: brand.background,
+        borderRadius: AppRadius.mdBorder,
       ),
       child: TextField(
         controller: controller,
         textInputAction: TextInputAction.search,
-        style: AppTextStyles.bodyMedium,
+        style: AppTextStyles.bodyMedium.copyWith(color: brand.textDark),
         decoration: InputDecoration(
           isCollapsed: true,
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          hintText: 'Search notes, videos, PDFs...',
-          hintStyle: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.kTextMuted,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.md,
           ),
-          prefixIcon: const Icon(
+          hintText: 'Search notes, videos, PDFs...',
+          hintStyle: AppTextStyles.bodyMedium.copyWith(color: brand.textMuted),
+          prefixIcon: Icon(
             Icons.search_rounded,
-            color: AppColors.kTextMuted,
+            color: brand.textMuted,
             size: 20,
           ),
           prefixIconConstraints:
@@ -273,7 +288,7 @@ class _SearchField extends StatelessWidget {
               onPressed: null,
               icon: Icon(
                 Icons.mic_none_rounded,
-                color: AppColors.kTextMuted.withValues(alpha: 0.5),
+                color: brand.textMuted.withValues(alpha: 0.5),
                 size: 20,
               ),
             ),
@@ -286,6 +301,12 @@ class _SearchField extends StatelessWidget {
 
 // ---------------------------------------------------------------------------
 // Filters header (pinned)
+//
+// Brand colors are passed in via the constructor because
+// SliverPersistentHeaderDelegate.build receives its own context that
+// can be outside the BrandColors theme scope at hot-reload time. Reading
+// brand once at the parent and threading it through avoids subtle
+// "extension not found" hot-reload errors.
 // ---------------------------------------------------------------------------
 
 class _FiltersHeaderDelegate extends SliverPersistentHeaderDelegate {
@@ -299,6 +320,12 @@ class _FiltersHeaderDelegate extends SliverPersistentHeaderDelegate {
   final ValueChanged<String> onSelectSubject;
   final ValueChanged<MaterialType> onToggleType;
 
+  final Color brandBackground;
+  final Color brandSurface;
+  final Color brandBorder;
+  final Color brandPrimary;
+  final Color brandTextDark;
+
   _FiltersHeaderDelegate({
     required this.selectedLevel,
     required this.selectedSubject,
@@ -309,6 +336,11 @@ class _FiltersHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.onSelectLevel,
     required this.onSelectSubject,
     required this.onToggleType,
+    required this.brandBackground,
+    required this.brandSurface,
+    required this.brandBorder,
+    required this.brandPrimary,
+    required this.brandTextDark,
   });
 
   static const _height = 124.0;
@@ -326,59 +358,59 @@ class _FiltersHeaderDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Container(
-      color: AppColors.kBackground,
+      color: brandBackground,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.sm + 2),
           SizedBox(
             height: 34,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               children: [
                 _LevelPill(
                   label: 'O-Level',
                   active: selectedLevel == 'O Level',
                   onTap: () => onSelectLevel('O Level'),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 _LevelPill(
                   label: 'A-Level',
                   active: selectedLevel == 'A Level',
                   onTap: () => onSelectLevel('A Level'),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 _LevelPill(
                   label: 'Both',
                   active: selectedLevel == levelBothSentinel,
                   onTap: () => onSelectLevel(levelBothSentinel),
                 ),
-                const SizedBox(width: 16),
-                Container(width: 1, color: const Color(0xFFE5E7EB)),
-                const SizedBox(width: 16),
+                const SizedBox(width: AppSpacing.lg),
+                Container(width: 1, color: brandBorder),
+                const SizedBox(width: AppSpacing.lg),
                 for (final t in MaterialType.values) ...[
                   _TypeChip(
                     type: t,
                     active: selectedType == t,
                     onTap: () => onToggleType(t),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                 ],
               ],
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.sm + 2),
           SizedBox(
             height: 34,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               itemCount: subjectFilters.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
               itemBuilder: (_, i) {
                 final s = subjectFilters[i];
-                return _SubjectChip(
+                return _FilterChip(
                   label: subjectShortLabels[s] ?? s,
                   selected: selectedSubject == s,
                   onTap: () => onSelectSubject(s),
@@ -386,7 +418,7 @@ class _FiltersHeaderDelegate extends SliverPersistentHeaderDelegate {
               },
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.sm + 2),
         ],
       ),
     );
@@ -396,7 +428,9 @@ class _FiltersHeaderDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _FiltersHeaderDelegate old) {
     return old.selectedLevel != selectedLevel ||
         old.selectedSubject != selectedSubject ||
-        old.selectedType != selectedType;
+        old.selectedType != selectedType ||
+        old.brandBackground != brandBackground ||
+        old.brandSurface != brandSurface;
   }
 }
 
@@ -413,24 +447,27 @@ class _LevelPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Material(
-      color: active ? AppColors.kPrimary : AppColors.kSurface,
-      borderRadius: BorderRadius.circular(999),
+      color: active ? brand.primary : brand.surface,
+      borderRadius: AppRadius.pillBorder,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pillBorder,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md + 2, vertical: 7,
+          ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: AppRadius.pillBorder,
             border: Border.all(
-              color: active ? AppColors.kPrimary : const Color(0xFFE5E7EB),
+              color: active ? brand.primary : brand.border,
             ),
           ),
           child: Text(
             label,
             style: AppTextStyles.labelSmall.copyWith(
-              color: active ? Colors.white : AppColors.kTextDark,
+              color: active ? Colors.white : brand.textDark,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -440,12 +477,15 @@ class _LevelPill extends StatelessWidget {
   }
 }
 
-class _SubjectChip extends StatelessWidget {
+/// Local subject filter chip used inside the materials filter row.
+/// (The shared SubjectChip widget is similar but expects 8-pt vertical
+/// padding; the materials filter row needs slightly tighter geometry.)
+class _FilterChip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
-  const _SubjectChip({
+  const _FilterChip({
     required this.label,
     required this.selected,
     required this.onTap,
@@ -453,24 +493,27 @@ class _SubjectChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Material(
-      color: selected ? AppColors.kPrimary : AppColors.kSurface,
-      borderRadius: BorderRadius.circular(999),
+      color: selected ? brand.primary : brand.surface,
+      borderRadius: AppRadius.pillBorder,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pillBorder,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: 7,
+          ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: AppRadius.pillBorder,
             border: Border.all(
-              color: selected ? AppColors.kPrimary : const Color(0xFFE5E7EB),
+              color: selected ? brand.primary : brand.border,
             ),
           ),
           child: Text(
             label,
             style: AppTextStyles.labelSmall.copyWith(
-              color: selected ? Colors.white : AppColors.kTextDark,
+              color: selected ? Colors.white : brand.textDark,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -493,20 +536,21 @@ class _TypeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final color = type.badgeColor;
     return Material(
-      color: active ? color : AppColors.kSurface,
-      borderRadius: BorderRadius.circular(999),
+      color: active ? color : brand.surface,
+      borderRadius: AppRadius.pillBorder,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pillBorder,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: 7,
+          ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: active ? color : const Color(0xFFE5E7EB),
-            ),
+            borderRadius: AppRadius.pillBorder,
+            border: Border.all(color: active ? color : brand.border),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -515,11 +559,11 @@ class _TypeChip extends StatelessWidget {
                 type.emoji,
                 style: const TextStyle(fontSize: 13, height: 1),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: AppSpacing.xs + 2),
               Text(
                 type.longLabel,
                 style: AppTextStyles.labelSmall.copyWith(
-                  color: active ? Colors.white : AppColors.kTextDark,
+                  color: active ? Colors.white : brand.textDark,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -543,9 +587,10 @@ class _MaterialCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Material(
-      color: AppColors.kSurface,
-      borderRadius: BorderRadius.circular(14),
+      color: brand.surface,
+      borderRadius: AppRadius.lgBorder,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -556,7 +601,10 @@ class _MaterialCard extends StatelessWidget {
             Expanded(
               flex: 45,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.sm + 2, AppSpacing.sm,
+                  AppSpacing.sm + 2, AppSpacing.sm,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -566,32 +614,33 @@ class _MaterialCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.labelMedium.copyWith(
+                          color: brand.textDark,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           height: 1.25,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.xs + 2),
                     Row(
                       children: [
                         Expanded(
                           child: _SmallSubjectChip(subject: material.subject),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: AppSpacing.xs + 2),
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.remove_red_eye_outlined,
                               size: 12,
-                              color: AppColors.kTextMuted,
+                              color: brand.textMuted,
                             ),
                             const SizedBox(width: 3),
                             Text(
                               _fmtViews(material.views),
                               style: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.kTextMuted,
+                                color: brand.textMuted,
                                 fontSize: 11,
                               ),
                             ),
@@ -621,6 +670,7 @@ class _ThumbnailArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final hasThumb = (material.thumbnailUrl ?? '').isNotEmpty;
     return Stack(
       fit: StackFit.expand,
@@ -643,8 +693,8 @@ class _ThumbnailArea extends StatelessWidget {
             ),
           ),
         Positioned(
-          top: 8,
-          left: 8,
+          top: AppSpacing.sm,
+          left: AppSpacing.sm,
           child: Container(
             width: 24,
             height: 24,
@@ -655,25 +705,26 @@ class _ThumbnailArea extends StatelessWidget {
             ),
             child: Text(
               material.level.startsWith('A') ? 'A' : 'O',
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: AppColors.kTextDark,
+                color: brand.textDark,
                 height: 1.0,
               ),
             ),
           ),
         ),
         Positioned(
-          top: 8,
-          right: 8,
+          top: AppSpacing.sm,
+          right: AppSpacing.sm,
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xs + 2, vertical: 3,
+            ),
             decoration: BoxDecoration(
               color: material.type.badgeColor,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: AppRadius.xsBorder,
             ),
             child: Text(
               material.type.label,
@@ -725,10 +776,12 @@ class _SmallSubjectChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = subjectColorFor(subject);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xs + 2, vertical: 3,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pillBorder,
       ),
       child: Text(
         subject,
@@ -759,10 +812,13 @@ class _MaterialDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.md, AppSpacing.xl, AppSpacing.xl,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -772,12 +828,12 @@ class _MaterialDetailSheet extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(2),
+                  color: brand.border,
+                  borderRadius: AppRadius.xsBorder,
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -786,7 +842,7 @@ class _MaterialDetailSheet extends StatelessWidget {
                   height: 52,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: AppRadius.mdBorder,
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -798,19 +854,21 @@ class _MaterialDetailSheet extends StatelessWidget {
                     style: const TextStyle(fontSize: 26, height: 1),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         material.title,
-                        style: AppTextStyles.headingSmall,
+                        style: AppTextStyles.headingSmall.copyWith(
+                          color: brand.textDark,
+                        ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppSpacing.xs),
                       Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.xs,
                         children: [
                           _MetaChip(
                             label: material.subject,
@@ -820,7 +878,7 @@ class _MaterialDetailSheet extends StatelessWidget {
                             label: material.level.startsWith('A')
                                 ? 'A-Level'
                                 : 'O-Level',
-                            color: AppColors.kAccent,
+                            color: brand.accent,
                           ),
                           _MetaChip(
                             label: material.type.longLabel,
@@ -833,52 +891,51 @@ class _MaterialDetailSheet extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: AppSpacing.md + 2),
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.calendar_today_rounded,
                   size: 14,
-                  color: AppColors.kTextMuted,
+                  color: brand.textMuted,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: AppSpacing.xs + 2),
                 Text(
                   'Uploaded ${DateFormat.yMMMd().format(material.createdAt)}',
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.kTextMuted,
+                    color: brand.textMuted,
                   ),
                 ),
-                const SizedBox(width: 14),
-                const Icon(
+                const SizedBox(width: AppSpacing.md + 2),
+                Icon(
                   Icons.remove_red_eye_outlined,
                   size: 14,
-                  color: AppColors.kTextMuted,
+                  color: brand.textMuted,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: AppSpacing.xs + 2),
                 Text(
                   '${material.views} views',
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.kTextMuted,
+                    color: brand.textMuted,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
+            const SizedBox(height: AppSpacing.xl - 4),
+            PillButton(
+              label: material.type.ctaLabel,
+              icon: _ctaIcon(material.type),
               onPressed: onOpen,
-              icon: Icon(_ctaIcon(material.type), size: 18),
-              label: Text(material.type.ctaLabel),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-              ),
             ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.kTextMuted,
+            const SizedBox(height: AppSpacing.sm),
+            Center(
+              child: PillButton(
+                label: 'Close',
+                variant: PillVariant.ghost,
+                fullWidth: false,
+                dense: true,
+                onPressed: () => Navigator.of(context).pop(),
               ),
-              child: const Text('Close'),
             ),
           ],
         ),
@@ -901,10 +958,12 @@ class _MetaChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm, vertical: 3,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pillBorder,
       ),
       child: Text(
         label,
@@ -937,46 +996,36 @@ class _PaginationFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.xl,
+      ),
       child: Center(
         child: isLoadingMore
-            ? const SizedBox(
+            ? SizedBox(
                 width: 28,
                 height: 28,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.4,
-                  valueColor: AlwaysStoppedAnimation(AppColors.kPrimary),
+                  valueColor: AlwaysStoppedAnimation(brand.primary),
                 ),
               )
             : hasMore
-                ? OutlinedButton.icon(
+                ? PillButton(
+                    label: 'Load More',
+                    icon: Icons.expand_more_rounded,
+                    variant: PillVariant.secondary,
+                    dense: true,
+                    fullWidth: false,
                     onPressed: onLoadMore,
-                    icon: const Icon(
-                      Icons.expand_more_rounded,
-                      size: 18,
-                    ),
-                    label: const Text('Load More'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.kPrimary,
-                      side: BorderSide(
-                        color: AppColors.kPrimary.withValues(alpha: 0.4),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                    ),
                   )
                 : Text(
                     isSearching
                         ? 'End of search results'
                         : 'All materials loaded',
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.kTextMuted,
+                      color: brand.textMuted,
                     ),
                   ),
       ),
@@ -985,7 +1034,8 @@ class _PaginationFooter extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Shimmer loading grid
+// Shimmer loading grid — uses shared SkeletonGroup + SkeletonBlock so the
+// shimmer animation matches the rest of the redesign.
 // ---------------------------------------------------------------------------
 
 class _ShimmerGrid extends StatelessWidget {
@@ -994,7 +1044,9 @@ class _ShimmerGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xl,
+      ),
       sliver: SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
@@ -1016,51 +1068,39 @@ class _ShimmerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Shimmer.fromColors(
-      baseColor: const Color(0xFFE5E7EB),
-      highlightColor: const Color(0xFFF3F4F6),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-        ),
+    final brand = context.brand;
+    return Container(
+      decoration: BoxDecoration(
+        color: brand.surface,
+        borderRadius: AppRadius.lgBorder,
+      ),
+      child: SkeletonGroup(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
               flex: 55,
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE5E7EB),
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(14)),
+                decoration: BoxDecoration(
+                  color: brand.border,
+                  borderRadius: const BorderRadius.vertical(
+                    top: AppRadius.lgRadius,
+                  ),
                 ),
               ),
             ),
-            Expanded(
+            const Expanded(
               flex: 45,
               child: Padding(
-                padding: const EdgeInsets.all(10),
+                padding: EdgeInsets.all(AppSpacing.sm + 2),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      height: 10,
-                      width: double.infinity,
-                      color: const Color(0xFFE5E7EB),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      height: 10,
-                      width: 120,
-                      color: const Color(0xFFE5E7EB),
-                    ),
-                    const Spacer(),
-                    Container(
-                      height: 14,
-                      width: 60,
-                      color: const Color(0xFFE5E7EB),
-                    ),
+                    SkeletonBlock(height: 10),
+                    SizedBox(height: AppSpacing.xs + 2),
+                    SkeletonBlock(width: 120, height: 10),
+                    Spacer(),
+                    SkeletonBlock(width: 60, height: 14),
                   ],
                 ),
               ),
@@ -1073,70 +1113,29 @@ class _ShimmerCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Empty state
+// Empty state — wraps the shared EmptyState with a "Clear filters" CTA
+// when filters are active.
 // ---------------------------------------------------------------------------
 
-class _EmptyState extends StatelessWidget {
+class _MaterialsEmptyState extends StatelessWidget {
   final bool hasActiveFilters;
   final VoidCallback onClearFilters;
-  const _EmptyState({
+  const _MaterialsEmptyState({
     required this.hasActiveFilters,
     required this.onClearFilters,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.kPrimary.withValues(alpha: 0.08),
-            ),
-            child: const Icon(
-              Icons.menu_book_outlined,
-              size: 60,
-              color: AppColors.kPrimary,
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'No materials found',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.headingMedium,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            hasActiveFilters
-                ? 'Try adjusting your filters.'
-                : 'Materials will appear here as teachers publish them.',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.kTextMuted,
-              height: 1.4,
-            ),
-          ),
-          if (hasActiveFilters) ...[
-            const SizedBox(height: 20),
-            OutlinedButton.icon(
-              onPressed: onClearFilters,
-              icon: const Icon(Icons.filter_alt_off_rounded, size: 16),
-              label: const Text('Clear filters'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.kPrimary,
-                side: BorderSide(color: AppColors.kPrimary.withValues(alpha: 0.5)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-          ],
-        ],
+    return Center(
+      child: EmptyState(
+        title: 'No materials found',
+        message: hasActiveFilters
+            ? 'Try adjusting your filters.'
+            : 'Materials will appear here as teachers publish them.',
+        icon: Icons.menu_book_outlined,
+        actionLabel: hasActiveFilters ? 'Clear filters' : null,
+        onAction: hasActiveFilters ? onClearFilters : null,
       ),
     );
   }
