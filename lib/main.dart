@@ -12,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:mentor_minds/application/viewmodels/settings/theme_mode_provider.dart';
 import 'package:mentor_minds/core/observability/crashlytics_setup.dart';
 import 'package:mentor_minds/data/services/messaging_service.dart';
 import 'package:mentor_minds/presentation/app/app_shell.dart';
@@ -95,11 +96,12 @@ class MentorMindsApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    final themeMode = ref.watch(themeModeProvider);
     return MaterialApp.router(
       title: 'MentorMinds',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
       builder: (context, child) => AppShell(child: child),

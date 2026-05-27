@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
 import 'package:mentor_minds/application/viewmodels/profile/profile_viewmodel.dart';
+import 'package:mentor_minds/application/viewmodels/settings/theme_mode_provider.dart';
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
@@ -674,15 +675,7 @@ class _SettingsList extends ConsumerWidget {
                     .read(profileViewModelProvider.notifier)
                     .toggleNotifications(v),
               ),
-              _Tile(
-                icon: Icons.dark_mode_rounded,
-                title: 'Dark Mode',
-                subtitle: 'Follows your iOS Display setting',
-                onTap: () => _showSnack(
-                  context,
-                  'Toggle Dark Mode from iOS Control Center.',
-                ),
-              ),
+              _ThemeModeTile(),
               _Tile(
                 icon: Icons.language_rounded,
                 title: 'Language',
@@ -1613,6 +1606,108 @@ class _DangerButton extends StatelessWidget {
       ),
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Theme mode tile — System / Light / Dark picker. Opens a small modal sheet
+// (consistent with the Level and Subjects sheets) so the choice persists
+// to SharedPreferences via the themeModeProvider.
+// ---------------------------------------------------------------------------
+
+class _ThemeModeTile extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final brand = context.brand;
+    final mode = ref.watch(themeModeProvider);
+    return ListTile(
+      onTap: () => _openThemeModeSheet(context, ref, mode),
+      leading: Icon(Icons.dark_mode_rounded, color: brand.primary),
+      title: Text(
+        'Theme',
+        style: AppTextStyles.labelLarge.copyWith(
+          color: brand.textDark, fontSize: 15,
+        ),
+      ),
+      subtitle: Text(
+        themeModeLabel(mode),
+        style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
+      ),
+      trailing: Icon(Icons.chevron_right_rounded, color: brand.textMuted),
+    );
+  }
+}
+
+void _openThemeModeSheet(
+  BuildContext context,
+  WidgetRef ref,
+  ThemeMode current,
+) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: context.brand.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: AppRadius.xxlRadius),
+    ),
+    builder: (sheetCtx) {
+      final brand = sheetCtx.brand;
+      Future<void> pick(ThemeMode m) async {
+        await ref.read(themeModeProvider.notifier).setMode(m);
+        if (sheetCtx.mounted) Navigator.of(sheetCtx).pop();
+      }
+
+      Widget option(ThemeMode m, IconData icon) {
+        final selected = m == current;
+        return ListTile(
+          onTap: () => pick(m),
+          leading: Icon(
+            selected
+                ? Icons.radio_button_checked_rounded
+                : Icons.radio_button_off_rounded,
+            color: selected ? brand.accent : brand.textMuted,
+          ),
+          title: Text(
+            themeModeLabel(m),
+            style: AppTextStyles.labelLarge.copyWith(color: brand.textDark),
+          ),
+          trailing: Icon(icon, color: brand.textMuted),
+        );
+      }
+
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.xxl - 4,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: brand.textMuted.withValues(alpha: 0.3),
+                    borderRadius: AppRadius.xsBorder,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'Theme',
+                style:
+                    AppTextStyles.headingMedium.copyWith(color: brand.textDark),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              option(ThemeMode.system, Icons.settings_suggest_rounded),
+              option(ThemeMode.light, Icons.light_mode_rounded),
+              option(ThemeMode.dark, Icons.dark_mode_rounded),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
 
 // ---------------------------------------------------------------------------

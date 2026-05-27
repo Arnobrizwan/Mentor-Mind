@@ -35,13 +35,17 @@ class MentorMindsLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLight = mode == MentorMindsLogoMode.onLight;
-    return SizedBox.square(
-      dimension: size,
-      child: CustomPaint(
-        painter: _MentorMindsMarkPainter(
-          mColor: isLight ? AppColors.kPrimary : Colors.white,
-          bubbleColor: AppColors.kAccent,
-          dotColor: AppColors.kGold,
+    return Semantics(
+      label: 'MentorMinds',
+      image: true,
+      child: SizedBox.square(
+        dimension: size,
+        child: CustomPaint(
+          painter: _MentorMindsMarkPainter(
+            mColor: isLight ? AppColors.kPrimary : Colors.white,
+            bubbleColor: AppColors.kAccent,
+            dotColor: AppColors.kGold,
+          ),
         ),
       ),
     );
