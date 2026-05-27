@@ -98,6 +98,8 @@ class MentorMindsApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'MentorMinds',
       theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.system,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
       builder: (context, child) => AppShell(child: child),
