@@ -1,0 +1,15 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MentorMinds option A — brain with graduation cap">
+  <!-- Mortarboard top (rhombus) -->
+  <path d="M100 22 L172 52 L100 82 L28 52 Z" fill="#00C9A7"/>
+  <!-- Cap base where it sits on the head -->
+  <path d="M84 65 L116 78 L116 92 L84 79 Z" fill="#0E2C6F"/>
+  <!-- Tassel string -->
+  <path d="M150 56 Q 160 80 158 105" stroke="#F5A623" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  <!-- Tassel knot -->
+  <circle cx="158" cy="110" r="7" fill="#F5A623"/>
+  <!-- Head / brain (rounded squircle) -->
+  <rect x="44" y="86" width="112" height="90" rx="38" fill="#1A3C8F"/>
+  <!-- Brain folds -->
+  <path d="M58 122 Q 78 108 100 122 T 142 122" stroke="#00C9A7" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <path d="M64 148 Q 84 134 104 148 T 142 148" stroke="#00C9A7" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0.55"/>
+</svg>

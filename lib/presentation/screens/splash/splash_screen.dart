@@ -4,10 +4,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:mentor_minds/application/viewmodels/splash/splash_viewmodel.dart';
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
-import 'package:mentor_minds/application/viewmodels/splash/splash_viewmodel.dart';
+import 'package:mentor_minds/shared/widgets/mentor_minds_logo.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -196,7 +197,10 @@ class _LogoSection extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Lettermark: "M" in a frosted rounded square with teal glow
+// Lettermark — Option B brand mark on a frosted card with a teal bloom.
+// The frosted backdrop keeps continuity with the splash gradient; the
+// MentorMindsLogo inside renders the actual M + chat-bubble mark in
+// onDark mode (white M, teal bubble, gold typing dots).
 // ---------------------------------------------------------------------------
 
 class _Lettermark extends StatelessWidget {
@@ -205,11 +209,12 @@ class _Lettermark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 84,
-      height: 84,
+      width: 96,
+      height: 96,
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: AppColors.kAccent.withValues(alpha: 0.45),
           width: 1.5,
@@ -219,7 +224,6 @@ class _Lettermark extends StatelessWidget {
           BoxShadow(
             color: AppColors.kAccent.withValues(alpha: 0.50),
             blurRadius: 28,
-            spreadRadius: 0,
           ),
           // Outer bloom — wide, soft
           BoxShadow(
@@ -229,17 +233,9 @@ class _Lettermark extends StatelessWidget {
           ),
         ],
       ),
-      child: const Center(
-        child: Text(
-          'M',
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 46,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-            height: 1.0,
-          ),
-        ),
+      child: const MentorMindsLogo(
+        size: 72,
+        mode: MentorMindsLogoMode.onDark,
       ),
     );
   }

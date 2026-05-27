@@ -1,0 +1,12 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" fill="none" role="img" aria-label="MentorMinds option C — spark of two converging paths">
+  <!-- Indigo arcs converging from the left -->
+  <path d="M 30 30 Q 30 100 100 100" stroke="#1A3C8F" stroke-width="14" stroke-linecap="round"/>
+  <path d="M 30 170 Q 30 100 100 100" stroke="#1A3C8F" stroke-width="14" stroke-linecap="round"/>
+  <!-- Teal arcs converging from the right -->
+  <path d="M 170 30 Q 170 100 100 100" stroke="#00C9A7" stroke-width="14" stroke-linecap="round"/>
+  <path d="M 170 170 Q 170 100 100 100" stroke="#00C9A7" stroke-width="14" stroke-linecap="round"/>
+  <!-- Gold 4-point spark at convergence -->
+  <path d="M100 78 L108 93 L124 100 L108 107 L100 124 L92 107 L76 100 L92 93 Z" fill="#F5A623"/>
+  <!-- Bright inner highlight -->
+  <circle cx="100" cy="100" r="4" fill="#FFFFFF"/>
+</svg>

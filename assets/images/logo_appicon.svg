@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="MentorMinds — iOS app icon (1024)">
+  <!-- App Store icons must be opaque. Indigo background. -->
+  <rect width="1024" height="1024" fill="#1A3C8F"/>
+  <!-- Inner SVG re-uses the 200×200 mark source, cropped to its
+       content bounds (21,36→190,192) and centered in an 820×820
+       safe area so the mark has ~10% breathing room on all sides. -->
+  <svg x="102" y="102" width="820" height="820"
+       viewBox="21 36 169 156"
+       preserveAspectRatio="xMidYMid meet" fill="none">
+    <!-- M in white for max contrast against the indigo background -->
+    <path d="M30 165 L30 45 L100 115 L170 45 L170 130"
+          stroke="#FFFFFF" stroke-width="18"
+          stroke-linejoin="round" stroke-linecap="round"/>
+    <rect x="135" y="125" width="55" height="50" rx="14" fill="#00C9A7"/>
+    <path d="M165 175 L160 192 L150 178 Z" fill="#00C9A7"/>
+    <circle cx="148" cy="150" r="3.5" fill="#F5A623"/>
+    <circle cx="162" cy="150" r="3.5" fill="#F5A623"/>
+    <circle cx="176" cy="150" r="3.5" fill="#F5A623"/>
+  </svg>
+</svg>

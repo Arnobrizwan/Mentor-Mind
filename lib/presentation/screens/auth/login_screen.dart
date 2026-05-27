@@ -3,10 +3,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:mentor_minds/application/viewmodels/auth/auth_viewmodel.dart';
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
-import 'package:mentor_minds/application/viewmodels/auth/auth_viewmodel.dart';
+import 'package:mentor_minds/shared/widgets/mentor_minds_logo.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -288,16 +289,19 @@ class _LogoBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Indigo→deep-indigo gradient pill with the Option B mark in onDark
+    // mode (white M, teal bubble, gold dots) sitting inside.
     return Container(
-      width: 68,
-      height: 68,
+      width: 76,
+      height: 76,
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [AppColors.kSplashTop, AppColors.kSplashBottom],
         ),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: AppColors.kPrimary.withValues(alpha: 0.28),
@@ -311,17 +315,9 @@ class _LogoBadge extends StatelessWidget {
           ),
         ],
       ),
-      child: const Center(
-        child: Text(
-          'M',
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 36,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-            height: 1.0,
-          ),
-        ),
+      child: const MentorMindsLogo(
+        size: 60,
+        mode: MentorMindsLogoMode.onDark,
       ),
     );
   }

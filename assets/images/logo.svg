@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" role="img" aria-label="MentorMinds — M monogram with chat bubble">
+  <!-- M strokes — indigo, right leg ends short so the chat bubble takes over -->
+  <path d="M30 165 L30 45 L100 115 L170 45 L170 130"
+        stroke="#1A3C8F" stroke-width="18" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- Chat bubble body — teal -->
+  <rect x="135" y="125" width="55" height="50" rx="14" fill="#00C9A7"/>
+  <!-- Chat bubble tail -->
+  <path d="M165 175 L160 192 L150 178 Z" fill="#00C9A7"/>
+  <!-- Typing-indicator dots — gold -->
+  <circle cx="148" cy="150" r="3.5" fill="#F5A623"/>
+  <circle cx="162" cy="150" r="3.5" fill="#F5A623"/>
+  <circle cx="176" cy="150" r="3.5" fill="#F5A623"/>
+</svg>
