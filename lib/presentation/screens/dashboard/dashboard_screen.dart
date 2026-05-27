@@ -6,16 +6,22 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import 'package:mentor_minds/application/viewmodels/dashboard/dashboard_viewmodel.dart';
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
-import 'package:mentor_minds/application/viewmodels/dashboard/dashboard_viewmodel.dart';
-import 'package:mentor_minds/data/models/daily_challenge.dart';
-import 'package:mentor_minds/data/services/messaging_service.dart';
+import 'package:mentor_minds/core/theme/app_motion.dart';
+import 'package:mentor_minds/core/theme/app_radius.dart';
+import 'package:mentor_minds/core/theme/app_spacing.dart';
+import 'package:mentor_minds/core/theme/brand_colors.dart';
 import 'package:mentor_minds/data/models/badge_item.dart';
+import 'package:mentor_minds/data/models/daily_challenge.dart';
 import 'package:mentor_minds/data/models/material_item.dart';
 import 'package:mentor_minds/data/models/session_item.dart';
 import 'package:mentor_minds/data/models/subject_progress.dart';
+import 'package:mentor_minds/data/services/messaging_service.dart';
+import 'package:mentor_minds/shared/widgets/empty_state.dart';
+import 'package:mentor_minds/shared/widgets/section_header.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -60,7 +66,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     setState(() => _navIndex = index);
     switch (index) {
       case 0:
-        // Home — stay
         break;
       case 1:
         context.goNamed(AppRoutes.tutor);
@@ -102,15 +107,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final state = ref.watch(dashboardViewModelProvider);
     _maybeRegisterFcm(state);
 
     return Scaffold(
-      backgroundColor: AppColors.kBackground,
+      backgroundColor: brand.background,
       body: Stack(
         children: [
           RefreshIndicator(
-            color: AppColors.kPrimary,
+            color: brand.primary,
             onRefresh: () =>
                 ref.read(dashboardViewModelProvider.notifier).refresh(),
             child: CustomScrollView(
@@ -123,29 +129,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   notificationCount: state.notificationCount,
                 ),
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xl,
+                  ),
                   sliver: SliverList.list(
                     children: [
                       const _QuickActionRow(),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: AppSpacing.xl - 4),
                       _DailyChallengeCard(
                         challenge: state.dailyChallenge,
                         resetsAt: state.dailyChallengeResetsAt,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: AppSpacing.xl),
                       _SubjectProgressSection(subjects: state.subjects),
-                      const SizedBox(height: 24),
-                      _RecentSessionsSection(
-                        sessions: state.recentSessions,
-                      ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: AppSpacing.xl),
+                      _RecentSessionsSection(sessions: state.recentSessions),
+                      const SizedBox(height: AppSpacing.xl),
                       _MaterialsCarousel(materials: state.materials),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: AppSpacing.xl),
                       _BadgeShowcase(
                         badges: state.badges,
                         totalCount: state.totalBadgeCount,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: AppSpacing.xl),
                     ],
                   ),
                 ),
@@ -154,23 +160,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           if (_awardAmount != null)
             Positioned(
-              top: MediaQuery.of(context).padding.top + kToolbarHeight + 12,
+              top: MediaQuery.of(context).padding.top + kToolbarHeight +
+                  AppSpacing.md,
               left: 0,
               right: 0,
               child: Center(child: _AwardToast(amount: _awardAmount!)),
             ),
         ],
       ),
-      bottomNavigationBar: _BottomNav(
-        index: _navIndex,
-        onTap: _onNavTap,
-      ),
+      bottomNavigationBar: _BottomNav(index: _navIndex, onTap: _onNavTap),
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Daily-login award toast — "+5 pts 🎉"
+// Daily-login award toast — "+5 pts 🎉" (gold pill, identical in both themes)
 // ---------------------------------------------------------------------------
 
 class _AwardToast extends StatelessWidget {
@@ -180,10 +184,12 @@ class _AwardToast extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg, vertical: AppSpacing.sm + 2,
+      ),
       decoration: BoxDecoration(
         color: AppColors.kGold,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pillBorder,
         boxShadow: [
           BoxShadow(
             color: AppColors.kGold.withValues(alpha: 0.45),
@@ -196,7 +202,7 @@ class _AwardToast extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.star_rounded, size: 18, color: Colors.white),
-          const SizedBox(width: 6),
+          const SizedBox(width: AppSpacing.xs + 2),
           Text(
             '+$amount pts \u{1F389}',
             style: const TextStyle(
@@ -215,7 +221,7 @@ class _AwardToast extends StatelessWidget {
           begin: const Offset(0.7, 0.7),
           end: const Offset(1.0, 1.0),
           duration: 260.ms,
-          curve: Curves.easeOutBack,
+          curve: AppMotion.celebrate,
         )
         .fade(duration: 220.ms)
         .then(delay: 1600.ms)
@@ -225,8 +231,7 @@ class _AwardToast extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Sliver AppBar — crossfades between collapsed "MentorMinds + bell" and the
-// expanded greeting + date + points chip.
+// Sliver app bar — always indigo gradient hero (brand identity, both themes).
 // ---------------------------------------------------------------------------
 
 class _DashboardAppBar extends StatelessWidget {
@@ -245,7 +250,6 @@ class _DashboardAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const expandedHeight = 140.0;
-
     return SliverAppBar(
       pinned: true,
       expandedHeight: expandedHeight,
@@ -260,7 +264,6 @@ class _DashboardAppBar extends StatelessWidget {
           final minH = kToolbarHeight + topInset;
           final t =
               ((constraints.maxHeight - minH) / (maxH - minH)).clamp(0.0, 1.0);
-
           return Stack(
             fit: StackFit.expand,
             children: [
@@ -273,14 +276,13 @@ class _DashboardAppBar extends StatelessWidget {
                   ),
                 ),
               ),
-              // Collapsed-state top bar: logo (fades in as we collapse) + bell
               Positioned(
                 top: topInset,
                 left: 0,
                 right: 0,
                 height: kToolbarHeight,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: Row(
                     children: [
                       Opacity(
@@ -299,11 +301,10 @@ class _DashboardAppBar extends StatelessWidget {
                   ),
                 ),
               ),
-              // Expanded content — greeting, date/streak, points chip
               Positioned(
-                left: 16,
-                right: 16,
-                bottom: 14,
+                left: AppSpacing.lg,
+                right: AppSpacing.lg,
+                bottom: AppSpacing.md + 2,
                 child: IgnorePointer(
                   ignoring: t < 0.15,
                   child: Opacity(
@@ -316,8 +317,7 @@ class _DashboardAppBar extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                '${_greeting(DateTime.now())}, '
-                                '$firstName! \u{1F44B}',
+                                '${_greeting(DateTime.now())}, $firstName! \u{1F44B}',
                                 style: const TextStyle(
                                   fontFamily: 'Poppins',
                                   fontSize: 18,
@@ -329,11 +329,11 @@ class _DashboardAppBar extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: AppSpacing.sm),
                             _PointsChip(points: points),
                           ],
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: AppSpacing.xs),
                         Text(
                           _dateAndStreak(DateTime.now(), streak),
                           style: TextStyle(
@@ -375,10 +375,12 @@ class _PointsChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm + 2, vertical: AppSpacing.xs + 1,
+      ),
       decoration: BoxDecoration(
         color: AppColors.kGold,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pillBorder,
         boxShadow: [
           BoxShadow(
             color: AppColors.kGold.withValues(alpha: 0.35),
@@ -391,7 +393,7 @@ class _PointsChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.star_rounded, size: 14, color: Colors.white),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppSpacing.xs),
           Text(
             '$points pts',
             style: const TextStyle(
@@ -431,11 +433,12 @@ class _NotificationBell extends StatelessWidget {
               top: -4,
               child: Container(
                 constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                 decoration: BoxDecoration(
                   color: AppColors.kError,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: AppColors.kPrimary, width: 1.5),
+                  borderRadius: AppRadius.pillBorder,
+                  border:
+                      Border.all(color: AppColors.kPrimary, width: 1.5),
                 ),
                 child: Text(
                   count > 9 ? '9+' : '$count',
@@ -474,7 +477,7 @@ class _QuickActionRow extends StatelessWidget {
             onTap: () => context.goNamed(AppRoutes.tutor),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppSpacing.md),
         Expanded(
           child: _QuickActionTile(
             emoji: '\u{1F4DA}',
@@ -482,7 +485,7 @@ class _QuickActionRow extends StatelessWidget {
             onTap: () => context.goNamed(AppRoutes.materials),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppSpacing.md),
         Expanded(
           child: _QuickActionTile(
             emoji: '\u{1F3C6}',
@@ -508,20 +511,23 @@ class _QuickActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Material(
-      color: AppColors.kPrimary,
-      borderRadius: BorderRadius.circular(16),
+      color: brand.primary,
+      borderRadius: AppRadius.lgBorder,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.lgBorder,
         child: Container(
           height: 80,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm, vertical: AppSpacing.md,
+          ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(emoji, style: const TextStyle(fontSize: 28, height: 1)),
-              const SizedBox(height: 6),
+              const SizedBox(height: AppSpacing.xs + 2),
               Text(
                 label,
                 style: const TextStyle(
@@ -543,7 +549,7 @@ class _QuickActionTile extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Daily challenge — gradient card with periodic countdown
+// Daily challenge — teal gradient (brand identity, identical in both themes)
 // ---------------------------------------------------------------------------
 
 class _DailyChallengeCard extends StatefulWidget {
@@ -586,9 +592,9 @@ class _DailyChallengeCardState extends State<_DailyChallengeCard> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(AppSpacing.lg + 2),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: AppRadius.xlBorder,
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -620,12 +626,11 @@ class _DailyChallengeCardState extends State<_DailyChallengeCard> {
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
+                  horizontal: AppSpacing.sm, vertical: AppSpacing.xs,
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: AppRadius.pillBorder,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -635,7 +640,7 @@ class _DailyChallengeCardState extends State<_DailyChallengeCard> {
                       size: 12,
                       color: Colors.white,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: AppSpacing.xs),
                     Text(
                       _countdown(),
                       style: const TextStyle(
@@ -651,7 +656,7 @@ class _DailyChallengeCardState extends State<_DailyChallengeCard> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             widget.challenge != null
                 ? "${widget.challenge!.subject}: ${widget.challenge!.question}"
@@ -663,18 +668,17 @@ class _DailyChallengeCardState extends State<_DailyChallengeCard> {
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.md + 2),
           OutlinedButton(
             onPressed: () => context.goNamed(AppRoutes.tutor),
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.white,
               side: const BorderSide(color: Colors.white, width: 1.4),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
+              shape: const RoundedRectangleBorder(
+                borderRadius: AppRadius.pillBorder,
               ),
               padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 10,
+                horizontal: AppSpacing.lg, vertical: AppSpacing.sm + 2,
               ),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -689,7 +693,7 @@ class _DailyChallengeCardState extends State<_DailyChallengeCard> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: AppSpacing.xs + 2),
                 const Icon(Icons.arrow_forward_rounded, size: 16),
               ],
             ),
@@ -713,17 +717,22 @@ class _SubjectProgressSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(
+        SectionHeader(
           title: 'Your Subjects',
-          trailing: subjects.isEmpty ? null : 'Manage',
-          onTrailingTap: () => context.goNamed(AppRoutes.profile),
+          actionLabel: subjects.isEmpty ? null : 'Manage',
+          onAction: () => context.goNamed(AppRoutes.profile),
+          padding: EdgeInsets.zero,
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: AppSpacing.md + 2),
         if (subjects.isEmpty)
-          const _EmptyStateCard(
-            icon: Icons.menu_book_outlined,
+          const EmptyState(
+            title: 'No subjects yet',
             message:
                 'Pick your subjects in Profile to start tracking progress.',
+            icon: Icons.menu_book_outlined,
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg, vertical: AppSpacing.lg,
+            ),
           )
         else
           SizedBox(
@@ -732,8 +741,10 @@ class _SubjectProgressSection extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
               itemCount: subjects.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 16),
-              itemBuilder: (_, i) => _SubjectProgressRing(subject: subjects[i]),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(width: AppSpacing.lg),
+              itemBuilder: (_, i) =>
+                  _SubjectProgressRing(subject: subjects[i]),
             ),
           ),
       ],
@@ -747,6 +758,7 @@ class _SubjectProgressRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final pct = (subject.progress * 100).round();
     return SizedBox(
       width: 88,
@@ -777,14 +789,14 @@ class _SubjectProgressRing extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             subject.name,
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.kTextDark,
+              color: brand.textDark,
               fontWeight: FontWeight.w500,
               fontSize: 12,
             ),
@@ -808,23 +820,29 @@ class _RecentSessionsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(
+        SectionHeader(
           title: 'Recent Sessions',
-          trailing: 'View All',
-          onTrailingTap: () => context.goNamed(AppRoutes.tutor),
+          actionLabel: 'View All',
+          onAction: () => context.goNamed(AppRoutes.tutor),
+          padding: EdgeInsets.zero,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         if (sessions.isEmpty)
-          const _EmptyStateCard(
-            icon: Icons.chat_bubble_outline_rounded,
+          const EmptyState(
+            title: 'No sessions yet',
             message: 'Ask the AI tutor a question to start your first session.',
+            icon: Icons.chat_bubble_outline_rounded,
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg, vertical: AppSpacing.lg,
+            ),
           )
         else
           Column(
             children: [
               for (var i = 0; i < sessions.length; i++) ...[
                 _SessionTile(session: sessions[i]),
-                if (i != sessions.length - 1) const SizedBox(height: 10),
+                if (i != sessions.length - 1)
+                  const SizedBox(height: AppSpacing.sm + 2),
               ],
             ],
           ),
@@ -839,21 +857,21 @@ class _SessionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Material(
-      color: AppColors.kSurface,
-      borderRadius: BorderRadius.circular(14),
+      color: brand.surface,
+      borderRadius: AppRadius.lgBorder,
       child: InkWell(
         onTap: () => context.goNamed(AppRoutes.tutor),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadius.lgBorder,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md + 2, vertical: AppSpacing.md,
+          ),
           child: Row(
             children: [
-              _SubjectChip(
-                label: session.subject,
-                color: session.subjectColor,
-              ),
-              const SizedBox(width: 12),
+              _SubjectTag(label: session.subject, color: session.subjectColor),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -863,7 +881,7 @@ class _SessionTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.kTextDark,
+                        color: brand.textDark,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -871,17 +889,17 @@ class _SessionTile extends StatelessWidget {
                     Text(
                       _timeAgo(session.timestamp),
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.kTextMuted,
+                        color: brand.textMuted,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              const Icon(
+              const SizedBox(width: AppSpacing.sm),
+              Icon(
                 Icons.arrow_forward_ios_rounded,
                 size: 14,
-                color: AppColors.kTextMuted,
+                color: brand.textMuted,
               ),
             ],
           ),
@@ -900,18 +918,21 @@ class _SessionTile extends StatelessWidget {
   }
 }
 
-class _SubjectChip extends StatelessWidget {
+/// Small subject-colored label tag (decorative, not selectable).
+class _SubjectTag extends StatelessWidget {
   final String label;
   final Color color;
-  const _SubjectChip({required this.label, required this.color});
+  const _SubjectTag({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm + 2, vertical: AppSpacing.xs + 2,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pillBorder,
       ),
       child: Text(
         label,
@@ -937,16 +958,21 @@ class _MaterialsCarousel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(
+        SectionHeader(
           title: 'New Materials',
-          trailing: 'Browse All',
-          onTrailingTap: () => context.goNamed(AppRoutes.materials),
+          actionLabel: 'Browse All',
+          onAction: () => context.goNamed(AppRoutes.materials),
+          padding: EdgeInsets.zero,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         if (materials.isEmpty)
-          const _EmptyStateCard(
-            icon: Icons.auto_stories_outlined,
+          const EmptyState(
+            title: 'No materials yet',
             message: 'Materials will appear here as teachers publish them.',
+            icon: Icons.auto_stories_outlined,
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg, vertical: AppSpacing.lg,
+            ),
           )
         else
           SizedBox(
@@ -955,7 +981,8 @@ class _MaterialsCarousel extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
               itemCount: materials.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(width: AppSpacing.md),
               itemBuilder: (_, i) => _MaterialCard(material: materials[i]),
             ),
           ),
@@ -970,23 +997,23 @@ class _MaterialCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return SizedBox(
       width: 140,
       child: Material(
-        color: AppColors.kSurface,
-        borderRadius: BorderRadius.circular(14),
+        color: brand.surface,
+        borderRadius: AppRadius.lgBorder,
         child: InkWell(
           onTap: () => context.goNamed(AppRoutes.materials),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadius.lgBorder,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Thumbnail area — gradient tinted by subject
               Container(
                 height: 100,
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(14),
+                    top: AppRadius.lgRadius,
                   ),
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -997,16 +1024,15 @@ class _MaterialCard extends StatelessWidget {
                 child: Stack(
                   children: [
                     Positioned(
-                      left: 10,
-                      bottom: 10,
+                      left: AppSpacing.sm + 2,
+                      bottom: AppSpacing.sm + 2,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
+                          horizontal: AppSpacing.sm, vertical: 3,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.22),
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: AppRadius.pillBorder,
                         ),
                         child: Text(
                           material.level,
@@ -1021,8 +1047,8 @@ class _MaterialCard extends StatelessWidget {
                       ),
                     ),
                     Positioned(
-                      right: 8,
-                      top: 8,
+                      right: AppSpacing.sm,
+                      top: AppSpacing.sm,
                       child: Icon(
                         Icons.auto_stories_rounded,
                         color: Colors.white.withValues(alpha: 0.85),
@@ -1033,7 +1059,10 @@ class _MaterialCard extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.sm + 2, AppSpacing.sm + 2,
+                  AppSpacing.sm + 2, AppSpacing.md,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1042,16 +1071,16 @@ class _MaterialCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.labelMedium.copyWith(
-                        color: AppColors.kTextDark,
+                        color: brand.textDark,
                         fontWeight: FontWeight.w600,
                         height: 1.3,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       material.subject,
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.kTextMuted,
+                        color: brand.textMuted,
                       ),
                     ),
                   ],
@@ -1079,23 +1108,28 @@ class _BadgeShowcase extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(
+        SectionHeader(
           title: 'My Badges',
-          trailing: totalCount > badges.length ? 'See all' : null,
-          onTrailingTap: () => context.goNamed(AppRoutes.rewards),
+          actionLabel: totalCount > badges.length ? 'See all' : null,
+          onAction: () => context.goNamed(AppRoutes.rewards),
+          padding: EdgeInsets.zero,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         if (badges.isEmpty)
-          const _EmptyStateCard(
-            icon: Icons.emoji_events_outlined,
+          const EmptyState(
+            title: 'No badges yet',
             message: 'Keep learning to earn your first badge.',
+            icon: Icons.emoji_events_outlined,
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg, vertical: AppSpacing.lg,
+            ),
           )
         else
           Row(
             children: [
               for (final b in badges) ...[
                 _BadgeCard(badge: b),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.md),
               ],
               if (totalCount > badges.length)
                 _BadgeMoreCard(extra: totalCount - badges.length),
@@ -1112,6 +1146,7 @@ class _BadgeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return SizedBox(
       width: 70,
       child: Column(
@@ -1129,14 +1164,14 @@ class _BadgeCard extends StatelessWidget {
             ),
             child: Icon(badge.icon, color: badge.color, size: 28),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.xs + 2),
           Text(
             badge.name,
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.kTextDark,
+              color: brand.textDark,
               fontWeight: FontWeight.w500,
               fontSize: 11,
             ),
@@ -1153,6 +1188,7 @@ class _BadgeMoreCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return SizedBox(
       width: 70,
       child: GestureDetector(
@@ -1166,25 +1202,25 @@ class _BadgeMoreCard extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.kPrimary.withValues(alpha: 0.08),
+                color: brand.primary.withValues(alpha: 0.08),
                 border: Border.all(
-                  color: AppColors.kPrimary.withValues(alpha: 0.25),
+                  color: brand.primary.withValues(alpha: 0.25),
                   width: 1.5,
                 ),
               ),
               child: Text(
                 '+$extra',
                 style: AppTextStyles.labelLarge.copyWith(
-                  color: AppColors.kPrimary,
+                  color: brand.primary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: AppSpacing.xs + 2),
             Text(
               'more',
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.kTextMuted,
+                color: brand.textMuted,
                 fontSize: 11,
               ),
             ),
@@ -1196,102 +1232,7 @@ class _BadgeMoreCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Section header + empty state helpers
-// ---------------------------------------------------------------------------
-
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String? trailing;
-  final VoidCallback? onTrailingTap;
-
-  const _SectionHeader({
-    required this.title,
-    this.trailing,
-    this.onTrailingTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(
-          title,
-          style: AppTextStyles.headingSmall.copyWith(
-            color: AppColors.kTextDark,
-            fontSize: 16,
-          ),
-        ),
-        const Spacer(),
-        if (trailing != null)
-          TextButton(
-            onPressed: onTrailingTap,
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.kPrimary,
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  trailing!,
-                  style: AppTextStyles.labelMedium.copyWith(
-                    color: AppColors.kPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(width: 2),
-                const Icon(
-                  Icons.arrow_forward_rounded,
-                  size: 14,
-                  color: AppColors.kPrimary,
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _EmptyStateCard extends StatelessWidget {
-  final IconData icon;
-  final String message;
-  const _EmptyStateCard({required this.icon, required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-      decoration: BoxDecoration(
-        color: AppColors.kSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.kTextMuted, size: 22),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.kTextMuted,
-                height: 1.4,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Bottom nav — Material 3 NavigationBar
+// Bottom nav — Material 3 NavigationBar (theme-aware)
 // ---------------------------------------------------------------------------
 
 class _BottomNav extends StatelessWidget {
@@ -1302,14 +1243,15 @@ class _BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return NavigationBarTheme(
       data: NavigationBarThemeData(
-        backgroundColor: AppColors.kSurface,
-        indicatorColor: AppColors.kPrimary.withValues(alpha: 0.12),
+        backgroundColor: brand.surface,
+        indicatorColor: brand.primary.withValues(alpha: 0.12),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return AppTextStyles.labelSmall.copyWith(
-            color: selected ? AppColors.kPrimary : AppColors.kTextMuted,
+            color: selected ? brand.primary : brand.textMuted,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
             fontSize: 11,
           );
@@ -1317,7 +1259,7 @@ class _BottomNav extends StatelessWidget {
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            color: selected ? AppColors.kPrimary : AppColors.kTextMuted,
+            color: selected ? brand.primary : brand.textMuted,
             size: 22,
           );
         }),
@@ -1326,7 +1268,7 @@ class _BottomNav extends StatelessWidget {
       child: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: onTap,
-        surfaceTintColor: AppColors.kSurface,
+        surfaceTintColor: brand.surface,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
