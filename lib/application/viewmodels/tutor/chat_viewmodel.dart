@@ -4,12 +4,13 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
 import 'package:mentor_minds/core/constants/quota.dart';
-import 'package:mentor_minds/core/constants/quota_limits.dart';
 import 'package:mentor_minds/core/observability/analytics_service.dart';
 import 'package:mentor_minds/core/utils/email_verification.dart';
 import 'package:mentor_minds/data/models/chat_message.dart';
 import 'package:mentor_minds/data/models/mentor_bot_response.dart';
+import 'package:mentor_minds/data/models/quotas_config.dart';
 import 'package:mentor_minds/data/repositories/auth_repository.dart';
 import 'package:mentor_minds/data/repositories/mentor_bot_repository.dart';
 import 'package:mentor_minds/data/models/subscription_doc.dart';
@@ -24,8 +25,6 @@ import 'package:uuid/uuid.dart';
 // ---------------------------------------------------------------------------
 
 class ChatState {
-  static const defaultDailyLimit = kDailyTextLimit;
-
   final List<ChatMessage> messages;
   final bool isLoading;
   final bool isStreaming;
@@ -33,6 +32,7 @@ class ChatState {
   final String selectedLevel;
   final int dailyMessageCount;
   final int dailyLimit;
+  final int warningThreshold;
   final bool isPremium;
   final bool canSendMessage;
   final String? sessionId;
@@ -50,7 +50,8 @@ class ChatState {
     this.selectedSubject = 'General',
     this.selectedLevel = 'O Level',
     this.dailyMessageCount = 0,
-    this.dailyLimit = defaultDailyLimit,
+    this.dailyLimit = 30,
+    this.warningThreshold = 8,
     this.isPremium = false,
     this.canSendMessage = true,
     this.sessionId,
@@ -69,7 +70,7 @@ class ChatState {
   bool get showLimitWarning =>
       !isPremium &&
           dailyMessageCount >=
-              (dailyLimit - kDailyLimitWarningThreshold).clamp(0, dailyLimit) &&
+              (dailyLimit - warningThreshold).clamp(0, dailyLimit) &&
           dailyMessageCount < dailyLimit;
 
   ChatState copyWith({
@@ -80,6 +81,7 @@ class ChatState {
     String? selectedLevel,
     int? dailyMessageCount,
     int? dailyLimit,
+    int? warningThreshold,
     bool? isPremium,
     bool? canSendMessage,
     String? sessionId,
@@ -99,6 +101,7 @@ class ChatState {
       selectedLevel: selectedLevel ?? this.selectedLevel,
       dailyMessageCount: dailyMessageCount ?? this.dailyMessageCount,
       dailyLimit: dailyLimit ?? this.dailyLimit,
+      warningThreshold: warningThreshold ?? this.warningThreshold,
       isPremium: isPremium ?? this.isPremium,
       canSendMessage: canSendMessage ?? this.canSendMessage,
       sessionId: clearSession ? null : (sessionId ?? this.sessionId),
@@ -119,6 +122,7 @@ class ChatState {
 
 class ChatViewModel extends StateNotifier<ChatState> {
   ChatViewModel(
+    this._ref,
     this._mentorBotRepository,
     this._authRepo,
     this._usersRepo,
@@ -126,10 +130,16 @@ class ChatViewModel extends StateNotifier<ChatState> {
     this._sessionsRepo,
     this._storageRepo,
     this._analytics,
-  ) : super(const ChatState()) {
+  ) : super(ChatState(
+          dailyLimit: _ref.read(currentQuotasConfigProvider).dailyTextLimit,
+          warningThreshold:
+              _ref.read(currentQuotasConfigProvider).warningThreshold,
+        )) {
     _loadContext();
+    _watchQuotasConfig();
   }
 
+  final Ref _ref;
   final MentorBotRepository _mentorBotRepository;
   final AuthRepository _authRepo;
   final UsersRepository _usersRepo;
@@ -140,6 +150,21 @@ class ChatViewModel extends StateNotifier<ChatState> {
   final Random _random = Random();
 
   StreamSubscription<SubscriptionDoc>? _subSub;
+
+  void _watchQuotasConfig() {
+    _ref.listen<QuotasConfig>(
+      currentQuotasConfigProvider,
+      (_, next) {
+        if (!mounted) return;
+        state = state.copyWith(
+          dailyLimit: next.dailyTextLimit,
+          warningThreshold: next.warningThreshold,
+          canSendMessage: state.isPremium ||
+              state.dailyMessageCount < next.dailyTextLimit,
+        );
+      },
+    );
+  }
 
   // -------------------------------------------------------------------------
   // Load — subjects, level, premium flag, today's usage
@@ -183,7 +208,7 @@ class ChatViewModel extends StateNotifier<ChatState> {
         selectedLevel: level,
         isPremium: isPremium,
         dailyMessageCount: count,
-        canSendMessage: isPremium || count < ChatState.defaultDailyLimit,
+        canSendMessage: isPremium || count < state.dailyLimit,
       );
 
       _subSub?.cancel();
@@ -504,6 +529,7 @@ class ChatViewModel extends StateNotifier<ChatState> {
 final chatViewModelProvider =
     StateNotifierProvider.autoDispose<ChatViewModel, ChatState>((ref) {
   return ChatViewModel(
+    ref,
     ref.read(mentorBotRepositoryProvider),
     ref.read(authRepositoryProvider),
     ref.read(usersRepositoryProvider),

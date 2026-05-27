@@ -1,28 +1,20 @@
+import 'package:mentor_minds/data/models/curriculum_config.dart';
+
 // ---------------------------------------------------------------------------
-// Curriculum subjects — single source of truth for onboarding, profile,
-// materials filters, and tutor fallbacks. Keep in sync with seed data.
+// DEPRECATED hardcoded curriculum constants — retained as fallback for code
+// paths that can't reach Riverpod (e.g. pure-Dart helpers). The CANONICAL
+// source is /config/curriculum via currentCurriculumConfigProvider.
+//
+// New code MUST read from the provider so admins can edit the catalog
+// without a release: ref.watch(currentCurriculumConfigProvider).subjects
 // ---------------------------------------------------------------------------
 
-const kCurriculumSubjects = <String>[
-  'Mathematics',
-  'Physics',
-  'Chemistry',
-  'Biology',
-  'English',
-  'ICT',
-  'Accounting',
-  'Economics',
-  'History',
-  'Geography',
+final List<String> kCurriculumSubjects = CurriculumConfig.defaults.subjects;
+
+final List<String> kMaterialsSubjectFilters = <String>[
+  CurriculumConfig.defaults.materialsSubjectAllSentinel,
+  ...CurriculumConfig.defaults.subjects,
 ];
 
-/// Materials filter chips: "all" + every curriculum subject.
-const kMaterialsSubjectFilters = <String>[
-  'all',
-  ...kCurriculumSubjects,
-];
-
-const kMaterialsSubjectShortLabels = <String, String>{
-  'all': 'All',
-  'Mathematics': 'Math',
-};
+final Map<String, String> kMaterialsSubjectShortLabels =
+    CurriculumConfig.defaults.subjectShortLabels;

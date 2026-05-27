@@ -1,73 +1,17 @@
 import 'package:flutter/material.dart';
 
 import 'package:mentor_minds/core/constants/app_colors.dart';
-import 'package:mentor_minds/data/models/badge_info.dart';
 import 'package:mentor_minds/data/models/badge_item.dart';
+import 'package:mentor_minds/data/models/gamification_config.dart';
 
+// ---------------------------------------------------------------------------
+// Badge presentation helpers — icon and color mapping by badge id.
+// The CANONICAL badge data (name, description, target, progressField) lives
+// in /config/gamification via GamificationConfig. Icons/colors stay in code
+// because Material IconData and Color constants can't be Firestore-encoded.
+//
 // MIRROR: functions/src/lib/rewards.ts BADGE_IDS — keep IDs in sync.
-
-const kBadgeCatalog = <BadgeInfo>[
-  BadgeInfo(
-    id: 'first_step',
-    emoji: '🌱',
-    name: 'First Step',
-    description: 'Complete your first tutoring session.',
-    unlockHint: 'Complete 1 session',
-    target: 1,
-  ),
-  BadgeInfo(
-    id: 'curious_learner',
-    emoji: '💬',
-    name: 'Curious Learner',
-    description: 'Ask MentorBot 50 questions across any subject.',
-    unlockHint: 'Ask 50 questions',
-    target: 50,
-  ),
-  BadgeInfo(
-    id: 'dedicated_learner',
-    emoji: '📚',
-    name: 'Dedicated Learner',
-    description: 'Complete 5 tutoring sessions.',
-    unlockHint: 'Complete 5 sessions',
-    target: 5,
-  ),
-  BadgeInfo(
-    id: 'week_warrior',
-    emoji: '🏆',
-    name: 'Week Warrior',
-    description: 'Maintain a 7-day study streak.',
-    unlockHint: 'Study 7 days in a row',
-    target: 7,
-  ),
-  BadgeInfo(
-    id: 'month_master',
-    emoji: '🗓️',
-    name: 'Month Master',
-    description: 'Maintain a 30-day study streak.',
-    unlockHint: 'Study 30 days in a row',
-    target: 30,
-  ),
-  BadgeInfo(
-    id: 'diagram_detective',
-    emoji: '🔍',
-    name: 'Diagram Detective',
-    description: 'Upload 10 diagrams for MentorBot to analyze.',
-    unlockHint: 'Upload 10 diagrams',
-    target: 10,
-  ),
-  BadgeInfo(
-    id: 'subject_expert',
-    emoji: '🎯',
-    name: 'Subject Expert',
-    description: 'Ask 100 questions in a single subject.',
-    unlockHint: 'Ask 100 questions in one subject',
-    target: 100,
-  ),
-];
-
-final Map<String, BadgeInfo> kBadgeCatalogById = {
-  for (final b in kBadgeCatalog) b.id: b,
-};
+// ---------------------------------------------------------------------------
 
 const _badgeIcons = <String, IconData>{
   'first_step': Icons.rocket_launch_rounded,
@@ -89,47 +33,48 @@ const _badgeColors = <String, Color>{
   'subject_expert': AppColors.kGold,
 };
 
-BadgeItem badgeItemForId(String id) {
-  final info = kBadgeCatalogById[id];
+/// Builds a presentation [BadgeItem] for a given badge id. Pass [catalog]
+/// to resolve the badge's display name from the current GamificationConfig
+/// (falls back to defaults if omitted).
+BadgeItem badgeItemForId(String id, {GamificationConfig? catalog}) {
+  final cfg = catalog ?? GamificationConfig.defaults;
+  final def = cfg.badgesById[id];
   return BadgeItem(
     id: id,
-    name: info?.name ?? id,
+    name: def?.name ?? id,
     icon: _badgeIcons[id] ?? Icons.workspace_premium_rounded,
     color: _badgeColors[id] ?? AppColors.kGold,
   );
 }
 
-/// Progress toward [subject_expert] (0..1) from per-subject question counts.
-double subjectQuestionProgress(Map<String, int> perSubject, String subject) {
+/// Progress (0..1) toward the [subject_expert] target from per-subject
+/// question counts. [target] defaults to 100 but the caller should pass
+/// the live target from GamificationConfig when possible.
+double subjectQuestionProgress(
+  Map<String, int> perSubject,
+  String subject, {
+  int target = 100,
+}) {
   final count = perSubject[subject] ?? 0;
-  if (count <= 0) return 0;
-  const target = 100;
+  if (count <= 0 || target <= 0) return 0;
   return (count / target).clamp(0.05, 1.0);
 }
 
-/// Locked-badge progress hint from /users/{uid} fields (server-maintained).
-int? badgeProgressCurrent(String badgeId, Map<String, dynamic> userData) {
-  switch (badgeId) {
-    case 'first_step':
-      return (userData['sessionsCompleted'] as num?)?.toInt();
-    case 'curious_learner':
-      return (userData['totalQuestions'] as num?)?.toInt();
-    case 'dedicated_learner':
-      return (userData['sessionsCompleted'] as num?)?.toInt();
-    case 'week_warrior':
-    case 'month_master':
-      return (userData['streakDays'] as num?)?.toInt();
-    case 'diagram_detective':
-      return (userData['diagramUploads'] as num?)?.toInt();
-    case 'subject_expert':
-      final per = userData['questionsPerSubject'];
-      if (per is! Map) return null;
-      var max = 0;
-      for (final v in per.values) {
-        final n = v is num ? v.toInt() : int.tryParse('$v') ?? 0;
-        if (n > max) max = n;
-      }
-      return max;
+/// Locked-badge progress reading from /users/{uid} fields. Reads the
+/// configured [BadgeDef.progressField]; supports the sentinel
+/// '_questionsPerSubjectMax' for the subject_expert per-subject max.
+int? badgeProgressCurrent(BadgeDef def, Map<String, dynamic> userData) {
+  final field = def.progressField;
+  if (field == null || field.isEmpty) return null;
+  if (field == '_questionsPerSubjectMax') {
+    final per = userData['questionsPerSubject'];
+    if (per is! Map) return null;
+    var max = 0;
+    for (final v in per.values) {
+      final n = v is num ? v.toInt() : int.tryParse('$v') ?? 0;
+      if (n > max) max = n;
+    }
+    return max;
   }
-  return null;
+  return (userData[field] as num?)?.toInt();
 }

@@ -8,11 +8,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 
+import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
+import 'package:mentor_minds/application/viewmodels/materials/materials_viewmodel.dart';
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
-import 'package:mentor_minds/application/viewmodels/materials/materials_viewmodel.dart';
-import 'package:mentor_minds/core/constants/curriculum_subjects.dart';
 import 'package:mentor_minds/data/models/learning_material.dart';
 
 class MaterialsScreen extends ConsumerStatefulWidget {
@@ -109,6 +109,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(materialsViewModelProvider);
+    final curriculum = ref.watch(currentCurriculumConfigProvider);
 
     return Scaffold(
       backgroundColor: AppColors.kBackground,
@@ -127,6 +128,9 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
                 selectedLevel: state.selectedLevel,
                 selectedSubject: state.selectedSubject,
                 selectedType: state.selectedType,
+                subjectFilters: curriculum.materialsSubjectFilters,
+                subjectShortLabels: curriculum.subjectShortLabels,
+                levelBothSentinel: curriculum.materialsLevelBothSentinel,
                 onSelectLevel: (l) => ref
                     .read(materialsViewModelProvider.notifier)
                     .setLevel(l),
@@ -288,6 +292,9 @@ class _FiltersHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String selectedLevel;
   final String selectedSubject;
   final MaterialType? selectedType;
+  final List<String> subjectFilters;
+  final Map<String, String> subjectShortLabels;
+  final String levelBothSentinel;
   final ValueChanged<String> onSelectLevel;
   final ValueChanged<String> onSelectSubject;
   final ValueChanged<MaterialType> onToggleType;
@@ -296,6 +303,9 @@ class _FiltersHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.selectedLevel,
     required this.selectedSubject,
     required this.selectedType,
+    required this.subjectFilters,
+    required this.subjectShortLabels,
+    required this.levelBothSentinel,
     required this.onSelectLevel,
     required this.onSelectSubject,
     required this.onToggleType,
@@ -341,8 +351,8 @@ class _FiltersHeaderDelegate extends SliverPersistentHeaderDelegate {
                 const SizedBox(width: 8),
                 _LevelPill(
                   label: 'Both',
-                  active: selectedLevel == kLevelBoth,
-                  onTap: () => onSelectLevel(kLevelBoth),
+                  active: selectedLevel == levelBothSentinel,
+                  onTap: () => onSelectLevel(levelBothSentinel),
                 ),
                 const SizedBox(width: 16),
                 Container(width: 1, color: const Color(0xFFE5E7EB)),
@@ -364,12 +374,12 @@ class _FiltersHeaderDelegate extends SliverPersistentHeaderDelegate {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: kMaterialsSubjectFilters.length,
+              itemCount: subjectFilters.length,
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (_, i) {
-                final s = kMaterialsSubjectFilters[i];
+                final s = subjectFilters[i];
                 return _SubjectChip(
-                  label: kMaterialsSubjectShortLabels[s] ?? s,
+                  label: subjectShortLabels[s] ?? s,
                   selected: selectedSubject == s,
                   onTap: () => onSelectSubject(s),
                 );

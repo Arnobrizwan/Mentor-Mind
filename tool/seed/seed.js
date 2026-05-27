@@ -362,6 +362,125 @@ const notifications = [
 ];
 
 // ---------------------------------------------------------------------------
+// Seed data — /config/* documents (admin-editable runtime config)
+// Mirrors lib/data/models/*_config.dart defaults so a fresh project boots
+// with sensible values. Admins edit these docs in Firebase Console; the
+// Flutter app picks up changes live via RemoteConfigService.
+// ---------------------------------------------------------------------------
+
+const configDocs = {
+  gamification: {
+    badges: [
+      {
+        id: 'first_step',
+        emoji: '🌱',
+        name: 'First Step',
+        description: 'Complete your first tutoring session.',
+        unlockHint: 'Complete 1 session',
+        target: 1,
+        progressField: 'sessionsCompleted',
+      },
+      {
+        id: 'curious_learner',
+        emoji: '💬',
+        name: 'Curious Learner',
+        description: 'Ask MentorBot 50 questions across any subject.',
+        unlockHint: 'Ask 50 questions',
+        target: 50,
+        progressField: 'totalQuestions',
+      },
+      {
+        id: 'dedicated_learner',
+        emoji: '📚',
+        name: 'Dedicated Learner',
+        description: 'Complete 5 tutoring sessions.',
+        unlockHint: 'Complete 5 sessions',
+        target: 5,
+        progressField: 'sessionsCompleted',
+      },
+      {
+        id: 'week_warrior',
+        emoji: '🏆',
+        name: 'Week Warrior',
+        description: 'Maintain a 7-day study streak.',
+        unlockHint: 'Study 7 days in a row',
+        target: 7,
+        progressField: 'streakDays',
+      },
+      {
+        id: 'month_master',
+        emoji: '🗓️',
+        name: 'Month Master',
+        description: 'Maintain a 30-day study streak.',
+        unlockHint: 'Study 30 days in a row',
+        target: 30,
+        progressField: 'streakDays',
+      },
+      {
+        id: 'diagram_detective',
+        emoji: '🔍',
+        name: 'Diagram Detective',
+        description: 'Upload 10 diagrams for MentorBot to analyze.',
+        unlockHint: 'Upload 10 diagrams',
+        target: 10,
+        progressField: 'diagramUploads',
+      },
+      {
+        id: 'subject_expert',
+        emoji: '🎯',
+        name: 'Subject Expert',
+        description: 'Ask 100 questions in a single subject.',
+        unlockHint: 'Ask 100 questions in one subject',
+        target: 100,
+        progressField: '_questionsPerSubjectMax',
+      },
+    ],
+    milestones: [
+      { points: 50, rewardHint: '🌱 Learner badge' },
+      { points: 100, rewardHint: '⭐ Rising Star badge' },
+      { points: 200, rewardHint: '📚 Bookworm bonus' },
+      { points: 500, rewardHint: '🏆 Week Warrior badge' },
+      { points: 1000, rewardHint: '💎 Premium trial day' },
+      { points: 2500, rewardHint: '🚀 Booster pack' },
+      { points: 5000, rewardHint: '👑 Grandmaster title' },
+    ],
+    streak: {
+      graceDays: 1,
+      lookbackDays: 45,
+    },
+  },
+  curriculum: {
+    subjects: [
+      'Mathematics',
+      'Physics',
+      'Chemistry',
+      'Biology',
+      'English',
+      'ICT',
+      'Accounting',
+      'Economics',
+      'History',
+      'Geography',
+    ],
+    levels: ['O Level', 'A Level'],
+    subjectShortLabels: {
+      all: 'All',
+      Mathematics: 'Math',
+    },
+    materialsSubjectAllSentinel: 'all',
+    materialsLevelBothSentinel: 'both',
+  },
+  quotas: {
+    // MIRROR: functions/src/lib/rate_limit.ts — server enforcement is
+    // independent. Update both when changing limits.
+    dailyTextLimit: 30,
+    dailyImageLimit: 3,
+    warningThreshold: 8,
+    timezone: 'Asia/Dhaka',
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Seed data — test accounts (Firebase Auth + /users + /rewards)
 // ---------------------------------------------------------------------------
 
@@ -476,6 +595,12 @@ async function seedUser(u) {
 // ---------------------------------------------------------------------------
 
 async function run() {
+  console.log(`\nSeeding /config/* documents...`);
+  for (const [docId, data] of Object.entries(configDocs)) {
+    await db.collection('config').doc(docId).set(data, { merge: true });
+    console.log(`  ✓ config/${docId.padEnd(28)} — seeded`);
+  }
+
   console.log(`\nSeeding ${testUsers.length} test accounts...`);
   for (const u of testUsers) {
     await seedUser(u);

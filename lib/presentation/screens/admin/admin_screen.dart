@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:mentor_minds/application/viewmodels/admin/admin_viewmodel.dart';
+import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
@@ -98,6 +99,11 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                       selectedIcon: Icon(Icons.insights),
                       label: Text('Analytics'),
                     ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.tune_outlined),
+                      selectedIcon: Icon(Icons.tune),
+                      label: Text('Config'),
+                    ),
                   ],
                 ),
                 const VerticalDivider(width: 1),
@@ -132,6 +138,10 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
               NavigationDestination(
                 icon: Icon(Icons.insights_outlined),
                 label: 'Analytics',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.tune_outlined),
+                label: 'Config',
               ),
             ],
           ),
@@ -180,6 +190,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
           },
         ),
       4 => const _AnalyticsTab(),
+      5 => const _ConfigTab(),
       _ => const SizedBox.shrink(),
     };
 
@@ -518,3 +529,222 @@ class _AnalyticsTab extends ConsumerWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Config tab — live view of /config/gamification, /config/curriculum,
+// /config/quotas. Read-only here; admins edit values directly in Firebase
+// Console and the Flutter app picks up changes via the stream providers.
+// ---------------------------------------------------------------------------
+
+class _ConfigTab extends ConsumerWidget {
+  const _ConfigTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final gamAsync = ref.watch(gamificationConfigStreamProvider);
+    final curAsync = ref.watch(curriculumConfigStreamProvider);
+    final quoAsync = ref.watch(quotasConfigStreamProvider);
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          'Live values streamed from /config/* in Firestore. '
+          'Edit these docs in Firebase Console to change them — the app '
+          'reloads automatically.',
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.kTextMuted),
+        ),
+        const SizedBox(height: 16),
+
+        // -- /config/quotas --
+        _ConfigSection(
+          title: '/config/quotas',
+          asyncStatus: quoAsync,
+          builder: (cfg) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ConfigRow('Daily text limit', '${cfg.dailyTextLimit}'),
+              _ConfigRow('Daily image limit', '${cfg.dailyImageLimit}'),
+              _ConfigRow('Warning threshold', '${cfg.warningThreshold}'),
+              _ConfigRow('Timezone', cfg.timezone),
+            ],
+          ),
+        ),
+
+        // -- /config/curriculum --
+        _ConfigSection(
+          title: '/config/curriculum',
+          asyncStatus: curAsync,
+          builder: (cfg) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ConfigRow('Levels', cfg.levels.join(' · ')),
+              const SizedBox(height: 6),
+              Text('Subjects (${cfg.subjects.length})',
+                  style: AppTextStyles.labelMedium),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final s in cfg.subjects)
+                    Chip(
+                      label: Text(s, style: AppTextStyles.bodySmall),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              _ConfigRow(
+                'Subject "all" sentinel',
+                cfg.materialsSubjectAllSentinel,
+              ),
+              _ConfigRow(
+                'Level "both" sentinel',
+                cfg.materialsLevelBothSentinel,
+              ),
+            ],
+          ),
+        ),
+
+        // -- /config/gamification --
+        _ConfigSection(
+          title: '/config/gamification',
+          asyncStatus: gamAsync,
+          builder: (cfg) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ConfigRow('Streak grace days', '${cfg.streakGraceDays}'),
+              _ConfigRow(
+                'Streak lookback days',
+                '${cfg.streakLookbackDays}',
+              ),
+              const SizedBox(height: 8),
+              Text('Badges (${cfg.badges.length})',
+                  style: AppTextStyles.labelMedium),
+              const SizedBox(height: 6),
+              for (final b in cfg.badges)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(b.emoji, style: const TextStyle(fontSize: 18)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('${b.name} · target ${b.target ?? '—'}',
+                                style: AppTextStyles.bodyMedium),
+                            Text(
+                              'id: ${b.id} · field: ${b.progressField ?? '—'}',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.kTextMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 8),
+              Text('Milestones (${cfg.milestones.length})',
+                  style: AppTextStyles.labelMedium),
+              const SizedBox(height: 4),
+              for (final m in cfg.milestones)
+                _ConfigRow('${m.points} pts', m.rewardHint),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ConfigSection<T> extends StatelessWidget {
+  const _ConfigSection({
+    required this.title,
+    required this.asyncStatus,
+    required this.builder,
+  });
+
+  final String title;
+  final AsyncValue<T> asyncStatus;
+  final Widget Function(T value) builder;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.kSurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.kTextMuted.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(title, style: AppTextStyles.headingSmall),
+              const Spacer(),
+              if (asyncStatus.isLoading)
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          asyncStatus.when(
+            data: builder,
+            error: (e, _) => Text(
+              'Could not load: $e',
+              style:
+                  AppTextStyles.bodySmall.copyWith(color: AppColors.kError),
+            ),
+            loading: () => Text(
+              'Loading…',
+              style: AppTextStyles.bodySmall
+                  .copyWith(color: AppColors.kTextMuted),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConfigRow extends StatelessWidget {
+  const _ConfigRow(this.label, this.value);
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 160,
+            child: Text(
+              label,
+              style: AppTextStyles.bodySmall
+                  .copyWith(color: AppColors.kTextMuted),
+            ),
+          ),
+          Expanded(
+            child: Text(value, style: AppTextStyles.bodyMedium),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

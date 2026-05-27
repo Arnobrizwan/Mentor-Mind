@@ -2,15 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mentor_minds/core/constants/curriculum_subjects.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-/// Onboarding subject grid — same list as profile/materials filters.
-const kSubjects = kCurriculumSubjects;
+// The onboarding subject grid now reads from currentCurriculumConfigProvider
+// in the screen — the viewmodel no longer re-exports a static list.
 
 // ---------------------------------------------------------------------------
 // State

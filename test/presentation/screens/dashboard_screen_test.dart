@@ -80,8 +80,9 @@ class _FakeAuthRepo implements AuthRepository {
 // ---------------------------------------------------------------------------
 
 class FakeDashboardViewModel extends DashboardViewModel {
-  FakeDashboardViewModel()
+  FakeDashboardViewModel(Ref ref)
       : super(
+          ref,
           _FakeUsersRepo(),
           _FakeSessionsRepo(),
           _FakeMaterialsRepo(),
@@ -130,7 +131,7 @@ void main() {
             overrides: [
               fcmRegistrationEnabledProvider.overrideWith((ref) => false),
               dashboardViewModelProvider.overrideWith(
-                (ref) => FakeDashboardViewModel(),
+                (ref) => FakeDashboardViewModel(ref),
               ),
             ],
             child: const MaterialApp(home: DashboardScreen()),

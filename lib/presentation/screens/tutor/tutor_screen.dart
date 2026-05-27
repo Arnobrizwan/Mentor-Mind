@@ -9,12 +9,13 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
+import 'package:mentor_minds/application/viewmodels/tutor/chat_viewmodel.dart';
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
-import 'package:mentor_minds/core/routes/app_router.dart';
-import 'package:mentor_minds/application/viewmodels/tutor/chat_viewmodel.dart';
-import 'package:mentor_minds/data/models/chat_message.dart';
 import 'package:mentor_minds/core/constants/tutor_prompts.dart';
+import 'package:mentor_minds/core/routes/app_router.dart';
+import 'package:mentor_minds/data/models/chat_message.dart';
 import 'package:mentor_minds/shared/widgets/premium_upgrade_modal.dart';
 
 class TutorScreen extends ConsumerStatefulWidget {
@@ -137,7 +138,10 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
     String current,
     List<String> available,
   ) async {
-    final options = tutorSubjectOptions(available);
+    final options = tutorSubjectOptions(
+      available,
+      fallback: ref.read(currentCurriculumConfigProvider).subjects,
+    );
     final picked = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: AppColors.kSurface,

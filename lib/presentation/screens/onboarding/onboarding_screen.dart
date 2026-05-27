@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
+import 'package:mentor_minds/application/viewmodels/onboarding/onboarding_viewmodel.dart';
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
-import 'package:mentor_minds/application/viewmodels/onboarding/onboarding_viewmodel.dart';
 
 // ---------------------------------------------------------------------------
 // Root screen — owns PageController
@@ -247,6 +248,8 @@ class _SelectSubjectsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(onboardingViewModelProvider);
     final vm = ref.read(onboardingViewModelProvider.notifier);
+    final subjects =
+        ref.watch(currentCurriculumConfigProvider).subjects;
     final count = state.selectedSubjects.length;
 
     return Scaffold(
@@ -299,9 +302,9 @@ class _SelectSubjectsPage extends ConsumerWidget {
                         mainAxisSpacing: 12,
                         mainAxisExtent: 44,
                       ),
-                      itemCount: kSubjects.length,
+                      itemCount: subjects.length,
                       itemBuilder: (context, i) {
-                        final subject = kSubjects[i];
+                        final subject = subjects[i];
                         final selected =
                             state.selectedSubjects.contains(subject);
                         return _SubjectChip(

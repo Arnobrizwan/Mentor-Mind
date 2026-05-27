@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
 import 'package:mentor_minds/core/constants/badge_catalog.dart';
 import 'package:mentor_minds/data/models/earned_badge.dart';
+import 'package:mentor_minds/data/models/gamification_config.dart';
 import 'package:mentor_minds/data/models/history_entry.dart';
 import 'package:mentor_minds/data/models/points_history.dart';
 import 'package:mentor_minds/data/models/locked_badge.dart';
@@ -13,17 +15,10 @@ import 'package:mentor_minds/data/repositories/rewards_repository.dart';
 import 'package:mentor_minds/data/repositories/users_repository.dart';
 
 // ---------------------------------------------------------------------------
-// Static badge catalog — the full set of achievable badges. Earned badge IDs
-// come from /rewards/{uid}.badges; we join against this catalog to render
-// cards for both earned and locked states.
+// Badge catalog + milestone ladder both come from /config/gamification via
+// currentGamificationConfigProvider. Earned badge IDs come from /rewards/{uid}
+// and are joined against the live catalog to render earned/locked cards.
 // ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Milestones ladder — progress bar targets the next threshold after current
-// points. If the user has passed all of them, we show "Max tier" state.
-// ---------------------------------------------------------------------------
-
-const _milestones = <int>[50, 100, 200, 500, 1000, 2500, 5000];
 
 // ---------------------------------------------------------------------------
 // State
@@ -76,6 +71,7 @@ class RewardsState {
 
 class RewardsViewModel extends StateNotifier<RewardsState> {
   RewardsViewModel(
+    this._ref,
     this._authRepo,
     this._usersRepo,
     this._rewardsRepo,
@@ -84,9 +80,13 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
     if (uid != null) _bind(uid);
   }
 
+  final Ref _ref;
   final AuthRepository _authRepo;
   final UsersRepository _usersRepo;
   final RewardsRepository _rewardsRepo;
+
+  GamificationConfig get _gamConfig =>
+      _ref.read(currentGamificationConfigProvider);
 
   StreamSubscription<Map<String, dynamic>>? _rewardsSub;
   StreamSubscription<Map<String, dynamic>>? _userSub;
@@ -161,23 +161,25 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
       });
     }
 
+    final cfg = _gamConfig;
     final now = DateTime.now();
     final earned = <EarnedBadge>[];
     final locked = <LockedBadge>[];
-    for (final b in kBadgeCatalog) {
-      if (earnedIds.contains(b.id)) {
-        final earnedAt = earnedAtMap[b.id];
+    for (final def in cfg.badges) {
+      final info = def.toBadgeInfo();
+      if (earnedIds.contains(def.id)) {
+        final earnedAt = earnedAtMap[def.id];
         final recent = earnedAt != null &&
             now.difference(earnedAt).inDays < 3;
         earned.add(EarnedBadge(
-          info: b,
+          info: info,
           earnedAt: earnedAt,
           recentlyEarned: recent,
         ));
       } else {
         locked.add(LockedBadge(
-          info: b,
-          currentProgress: _progressForBadge(b.id, data, points),
+          info: info,
+          currentProgress: _progressForBadge(def, data, points),
         ));
       }
     }
@@ -199,33 +201,22 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
     );
   }
 
-  int? _progressForBadge(String badgeId, Map<String, dynamic> data, int _) {
-    return badgeProgressCurrent(badgeId, data);
+  int? _progressForBadge(BadgeDef def, Map<String, dynamic> data, int _) {
+    return badgeProgressCurrent(def, data);
   }
 
   Milestone _computeMilestone(int points) {
-    for (final target in _milestones) {
-      if (points < target) {
+    for (final m in _gamConfig.milestones) {
+      if (points < m.points) {
         return Milestone(
-          target: target,
+          target: m.points,
           current: points,
-          rewardHint: _rewardHintFor(target),
+          rewardHint: m.rewardHint,
         );
       }
     }
     return Milestone.maxed;
   }
-
-  String _rewardHintFor(int milestone) => switch (milestone) {
-        50 => '🌱 Learner badge',
-        100 => '⭐ Rising Star badge',
-        200 => '📚 Bookworm bonus',
-        500 => '🏆 Week Warrior badge',
-        1000 => '💎 Premium trial day',
-        2500 => '🚀 Booster pack',
-        5000 => '👑 Grandmaster title',
-        _ => '🎁 Surprise reward',
-      };
 
   Future<void> refresh() async {
     final uid = _authRepo.currentUser?.uid;
@@ -249,6 +240,7 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
 final rewardsViewModelProvider =
     StateNotifierProvider<RewardsViewModel, RewardsState>(
   (ref) => RewardsViewModel(
+    ref,
     ref.read(authRepositoryProvider),
     ref.read(usersRepositoryProvider),
     ref.read(rewardsRepositoryProvider),

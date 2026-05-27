@@ -1,4 +1,4 @@
-import 'package:mentor_minds/core/constants/curriculum_subjects.dart';
+import 'package:mentor_minds/data/models/curriculum_config.dart';
 
 const kDefaultTutorSuggestions = <String>[
   'Explain photosynthesis step by step',
@@ -47,8 +47,13 @@ List<String> tutorSuggestionsFor(String? subject) {
       ];
 }
 
-/// Ensures fallback picker includes curriculum list.
-List<String> tutorSubjectOptions(List<String> userSubjects) {
+/// Ensures fallback picker includes the curriculum list. Pass [fallback]
+/// from currentCurriculumConfigProvider.subjects when available so admin
+/// edits are honored; falls back to the model defaults otherwise.
+List<String> tutorSubjectOptions(
+  List<String> userSubjects, {
+  List<String>? fallback,
+}) {
   if (userSubjects.isNotEmpty) return userSubjects;
-  return kCurriculumSubjects;
+  return fallback ?? CurriculumConfig.defaults.subjects;
 }

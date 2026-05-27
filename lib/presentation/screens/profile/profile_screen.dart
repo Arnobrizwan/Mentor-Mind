@@ -6,11 +6,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shimmer/shimmer.dart';
 
+import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
+import 'package:mentor_minds/application/viewmodels/profile/profile_viewmodel.dart';
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
-import 'package:mentor_minds/application/viewmodels/profile/profile_viewmodel.dart';
-import 'package:mentor_minds/core/constants/curriculum_subjects.dart';
 import 'package:mentor_minds/data/models/profile_stats.dart';
 import 'package:mentor_minds/data/models/profile_user.dart';
 
@@ -30,12 +30,15 @@ class ProfileScreen extends ConsumerWidget {
       }
     });
 
+    final allSubjects =
+        ref.watch(currentCurriculumConfigProvider).subjects;
+
     return Scaffold(
       backgroundColor: AppColors.kBackground,
       body: SafeArea(
         child: state.isLoading || state.user == null
             ? const _ProfileShimmer()
-            : _ProfileBody(state: state, allSubjects: kCurriculumSubjects),
+            : _ProfileBody(state: state, allSubjects: allSubjects),
       ),
     );
   }

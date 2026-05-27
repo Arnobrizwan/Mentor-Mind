@@ -3,23 +3,19 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:mentor_minds/core/constants/badge_catalog.dart';
+import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
 import 'package:mentor_minds/data/models/badge_info.dart';
+import 'package:mentor_minds/data/models/gamification_config.dart';
 import 'package:mentor_minds/data/models/points_history.dart';
 import 'package:mentor_minds/data/models/rewards_doc.dart';
 import 'package:mentor_minds/data/repositories/auth_repository.dart';
 import 'package:mentor_minds/data/repositories/rewards_repository.dart';
 
 // ---------------------------------------------------------------------------
-// Point awards per action. Authoritative — writers elsewhere in the app
-// call awardPoints(uid, '<action>') and the value is looked up here so we
-// never let callers pick their own point values.
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Badge catalog — canonical list for gamification. Eligibility is computed
-// from scalar counters on /users/{uid}. If a counter is missing, the check
-// is simply skipped (the badge stays locked).
+// Badge catalog — canonical list comes from /config/gamification (via
+// currentGamificationConfigProvider). Earned-badge events fire when the
+// /rewards/{uid}.badges set grows; the matching BadgeInfo is resolved from
+// the live config. Eligibility is computed server-side from /users/{uid}.
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
@@ -37,7 +33,7 @@ class GamificationState {
   const GamificationState({
     this.rewards,
     this.badges = const [],
-    this.allBadges = kBadgeCatalog,
+    this.allBadges = const [],
     this.history = const [],
     this.isLoading = true,
     this.error,
@@ -69,9 +65,16 @@ class GamificationState {
 
 class GamificationViewModel extends StateNotifier<GamificationState> {
   GamificationViewModel(
+    this._ref,
     this._authRepo,
     this._rewardsRepo,
-  ) : super(const GamificationState()) {
+  ) : super(GamificationState(
+          allBadges: _ref
+              .read(currentGamificationConfigProvider)
+              .badges
+              .map((b) => b.toBadgeInfo())
+              .toList(growable: false),
+        )) {
     final uid = _authRepo.currentUser?.uid;
     if (uid != null) {
       loadRewards(uid);
@@ -81,8 +84,12 @@ class GamificationViewModel extends StateNotifier<GamificationState> {
     }
   }
 
+  final Ref _ref;
   final AuthRepository _authRepo;
   final RewardsRepository _rewardsRepo;
+
+  GamificationConfig get _gamConfig =>
+      _ref.read(currentGamificationConfigProvider);
 
   StreamSubscription<RewardsDoc>? _rewardsSub;
   StreamSubscription<List<PointsHistory>>? _ledgerSub;
@@ -124,10 +131,11 @@ class GamificationViewModel extends StateNotifier<GamificationState> {
           });
 
         final nextBadges = doc.badges.toSet();
+        final cfg = _gamConfig;
         for (final id in nextBadges.difference(_previousBadgeIds)) {
-          final badge = kBadgeCatalogById[id];
-          if (badge != null && !_badgeEarnedController.isClosed) {
-            _badgeEarnedController.add(badge);
+          final def = cfg.badgesById[id];
+          if (def != null && !_badgeEarnedController.isClosed) {
+            _badgeEarnedController.add(def.toBadgeInfo());
           }
         }
         _previousBadgeIds = nextBadges;
@@ -182,6 +190,7 @@ class GamificationViewModel extends StateNotifier<GamificationState> {
 final gamificationViewModelProvider =
     StateNotifierProvider<GamificationViewModel, GamificationState>(
   (ref) => GamificationViewModel(
+    ref,
     ref.read(authRepositoryProvider),
     ref.read(rewardsRepositoryProvider),
   ),

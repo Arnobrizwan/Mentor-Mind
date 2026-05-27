@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
 import 'package:mentor_minds/core/constants/badge_catalog.dart';
 import 'package:mentor_minds/core/constants/subject_colors.dart';
 import 'package:mentor_minds/data/models/daily_challenge.dart';
 import 'package:mentor_minds/data/models/badge_item.dart';
 import 'package:mentor_minds/data/models/dashboard_user.dart';
+import 'package:mentor_minds/data/models/gamification_config.dart';
 import 'package:mentor_minds/data/models/material_item.dart';
 import 'package:mentor_minds/data/models/points_history.dart';
 import 'package:mentor_minds/data/models/rewards_snapshot.dart';
@@ -43,6 +45,10 @@ class DashboardState {
   final bool justAwardedDailyPoints;
   final int dailyAwardAmount;
 
+  /// Live gamification config — drives badge presentation and the
+  /// subject_expert target used for progress bars on the dashboard.
+  final GamificationConfig gamConfig;
+
   const DashboardState({
     this.isLoading = true,
     this.error,
@@ -56,6 +62,7 @@ class DashboardState {
     this.dailyChallenge,
     this.justAwardedDailyPoints = false,
     this.dailyAwardAmount = 0,
+    this.gamConfig = GamificationConfig.defaults,
   });
 
   // -------------------------------------------------------------------------
@@ -76,11 +83,14 @@ class DashboardState {
   List<SubjectProgress> get subjects {
     final list = user?.subjects ?? const <String>[];
     final counts = user?.questionsPerSubject ?? const {};
+    final expertTarget =
+        gamConfig.badgesById['subject_expert']?.target ?? 100;
     return list
         .map(
           (s) => SubjectProgress(
             name: s,
-            progress: subjectQuestionProgress(counts, s),
+            progress:
+                subjectQuestionProgress(counts, s, target: expertTarget),
             color: colorForSubject(s),
           ),
         )
@@ -89,7 +99,7 @@ class DashboardState {
 
   List<BadgeItem> get badges => (user?.badgeIds ?? rewards.badgeIds)
       .take(3)
-      .map(badgeItemForId)
+      .map((id) => badgeItemForId(id, catalog: gamConfig))
       .toList(growable: false);
 
   DashboardState copyWith({
@@ -105,6 +115,7 @@ class DashboardState {
     DailyChallenge? dailyChallenge,
     bool? justAwardedDailyPoints,
     int? dailyAwardAmount,
+    GamificationConfig? gamConfig,
     bool clearError = false,
     bool clearUser = false,
   }) {
@@ -123,6 +134,7 @@ class DashboardState {
       justAwardedDailyPoints:
           justAwardedDailyPoints ?? this.justAwardedDailyPoints,
       dailyAwardAmount: dailyAwardAmount ?? this.dailyAwardAmount,
+      gamConfig: gamConfig ?? this.gamConfig,
     );
   }
 }
@@ -133,6 +145,7 @@ class DashboardState {
 
 class DashboardViewModel extends StateNotifier<DashboardState> {
   DashboardViewModel(
+    this._ref,
     this._usersRepo,
     this._sessionsRepo,
     this._materialsRepo,
@@ -142,10 +155,13 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
     this._dailyChallengesRepo,
   ) : super(DashboardState(
           dailyChallengeResetsAt: _nextDhakaMidnight(),
+          gamConfig: _ref.read(currentGamificationConfigProvider),
         )) {
     _init();
+    _watchGamConfig();
   }
 
+  final Ref _ref;
   final UsersRepository _usersRepo;
   final SessionsRepository _sessionsRepo;
   final MaterialsRepository _materialsRepo;
@@ -153,6 +169,16 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
   final AuthRepository _authRepo;
   final RewardsRepository _rewardsRepo;
   final DailyChallengesRepository _dailyChallengesRepo;
+
+  void _watchGamConfig() {
+    _ref.listen<GamificationConfig>(
+      currentGamificationConfigProvider,
+      (_, next) {
+        if (!mounted) return;
+        state = state.copyWith(gamConfig: next);
+      },
+    );
+  }
 
   StreamSubscription<DashboardUser>? _userSub;
   StreamSubscription<DailyChallenge>? _challengeSub;
@@ -423,6 +449,7 @@ class DashboardViewModel extends StateNotifier<DashboardState> {
 final dashboardViewModelProvider =
     StateNotifierProvider.autoDispose<DashboardViewModel, DashboardState>(
   (ref) => DashboardViewModel(
+    ref,
     ref.read(usersRepositoryProvider),
     ref.read(sessionsRepositoryProvider),
     ref.read(materialsRepositoryProvider),
