@@ -2,22 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:shimmer/shimmer.dart';
 
+import 'package:mentor_minds/application/viewmodels/notifications/notifications_viewmodel.dart';
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
-import 'package:mentor_minds/application/viewmodels/notifications/notifications_viewmodel.dart';
+import 'package:mentor_minds/core/theme/app_radius.dart';
+import 'package:mentor_minds/core/theme/app_spacing.dart';
+import 'package:mentor_minds/core/theme/brand_colors.dart';
 import 'package:mentor_minds/data/models/app_notification.dart';
+import 'package:mentor_minds/shared/widgets/empty_state.dart';
+import 'package:mentor_minds/shared/widgets/pill_button.dart';
+import 'package:mentor_minds/shared/widgets/skeleton_block.dart';
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final brand = context.brand;
     final state = ref.watch(notificationsViewModelProvider);
     return Scaffold(
-      backgroundColor: AppColors.kBackground,
+      backgroundColor: brand.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -28,7 +34,7 @@ class NotificationsScreen extends ConsumerWidget {
                   .read(notificationsViewModelProvider.notifier)
                   .filterNotifications(f),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Expanded(
               child: state.isLoading
                   ? const _ListShimmer()
@@ -54,8 +60,11 @@ class _Header extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final brand = context.brand;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xs, AppSpacing.xs, AppSpacing.md, AppSpacing.xs,
+      ),
       child: Row(
         children: [
           IconButton(
@@ -66,7 +75,9 @@ class _Header extends ConsumerWidget {
           ),
           Text(
             'Notifications',
-            style: AppTextStyles.headingLarge.copyWith(fontSize: 20),
+            style: AppTextStyles.headingLarge.copyWith(
+              color: brand.textDark, fontSize: 20,
+            ),
           ),
           const Spacer(),
           if (unreadCount > 0)
@@ -86,7 +97,7 @@ class _Header extends ConsumerWidget {
                 }
               },
               style: TextButton.styleFrom(
-                foregroundColor: AppColors.kPrimary,
+                foregroundColor: brand.primary,
                 textStyle: const TextStyle(
                   fontFamily: 'Inter',
                   fontWeight: FontWeight.w600,
@@ -99,7 +110,6 @@ class _Header extends ConsumerWidget {
       ),
     );
   }
-
 }
 
 // ---------------------------------------------------------------------------
@@ -113,6 +123,7 @@ class _FilterChipsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     const items = <(String, String)>[
       (NotificationFilter.all, 'All'),
       (NotificationFilter.announcements, 'Announcements'),
@@ -123,9 +134,9 @@ class _FilterChipsRow extends StatelessWidget {
       height: 42,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
         itemBuilder: (_, i) {
           final (value, label) = items[i];
           final isSelected = value == selected;
@@ -133,21 +144,19 @@ class _FilterChipsRow extends StatelessWidget {
             label: Text(label),
             selected: isSelected,
             onSelected: (_) => onChanged(value),
-            backgroundColor: AppColors.kSurface,
-            selectedColor: AppColors.kPrimary,
+            backgroundColor: brand.surface,
+            selectedColor: brand.primary,
             labelStyle: TextStyle(
               fontFamily: 'Inter',
               fontWeight: FontWeight.w600,
               fontSize: 13,
-              color: isSelected ? Colors.white : AppColors.kTextDark,
+              color: isSelected ? Colors.white : brand.textDark,
             ),
             side: BorderSide(
-              color: isSelected
-                  ? AppColors.kPrimary
-                  : const Color(0xFFE6E9F2),
+              color: isSelected ? brand.primary : brand.border,
             ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(999),
+            shape: const RoundedRectangleBorder(
+              borderRadius: AppRadius.pillBorder,
             ),
           );
         },
@@ -166,6 +175,7 @@ class _NotificationsList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final brand = context.brand;
     final groups = _group(items);
     final flattened = <_ListRow>[];
     for (final g in groups) {
@@ -177,16 +187,23 @@ class _NotificationsList extends ConsumerWidget {
 
     return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.xl,
+      ),
       itemCount: flattened.length,
       itemBuilder: (_, i) {
         final row = flattened[i];
         if (row is _HeaderRow) {
           return Padding(
-            padding: const EdgeInsets.fromLTRB(0, 14, 0, 8),
+            padding: const EdgeInsets.fromLTRB(
+              0, AppSpacing.md + 2, 0, AppSpacing.sm,
+            ),
             child: Text(
               row.label.toUpperCase(),
-              style: AppTextStyles.labelSmall.copyWith(letterSpacing: 1.2),
+              style: AppTextStyles.labelSmall.copyWith(
+                color: brand.textMuted,
+                letterSpacing: 1.2,
+              ),
             ),
           );
         }
@@ -269,12 +286,18 @@ class _NotifRow extends _ListRow {
 // Tile
 // ---------------------------------------------------------------------------
 
-Color _iconBgForType(String type) => switch (type) {
-      'achievement' => AppColors.kGold,
-      'reminder' => AppColors.kAccent,
-      'new_material' => const Color(0xFF8B5CF6),
-      _ => AppColors.kPrimary,
-    };
+/// Notification-type → tinted icon background. Achievement = gold,
+/// reminder = teal, new material = purple (decorative type color),
+/// default = primary indigo.
+Color _iconBgForType(BuildContext context, String type) {
+  final brand = context.brand;
+  return switch (type) {
+    'achievement' => brand.gold,
+    'reminder' => brand.accent,
+    'new_material' => const Color(0xFF8B5CF6),
+    _ => brand.primary,
+  };
+}
 
 class _NotificationTile extends StatelessWidget {
   final AppNotification notification;
@@ -290,6 +313,7 @@ class _NotificationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final isUnread = !notification.read;
     return Dismissible(
       key: ValueKey('notif-${notification.id}'),
@@ -298,15 +322,15 @@ class _NotificationTile extends StatelessWidget {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 22),
-        decoration: BoxDecoration(
-          color: const Color(0xFF16A34A),
-          borderRadius: BorderRadius.circular(14),
+        decoration: const BoxDecoration(
+          color: Color(0xFF16A34A), // semantic "confirm" green
+          borderRadius: AppRadius.lgBorder,
         ),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             Icon(Icons.check_rounded, color: Colors.white),
-            SizedBox(width: 8),
+            SizedBox(width: AppSpacing.sm),
             Text(
               'Dismiss',
               style: TextStyle(
@@ -319,11 +343,12 @@ class _NotificationTile extends StatelessWidget {
         ),
       ),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         decoration: BoxDecoration(
-          color:
-              isUnread ? const Color(0xFFF0F4FF) : AppColors.kSurface,
-          borderRadius: BorderRadius.circular(14),
+          color: isUnread
+              ? brand.primary.withValues(alpha: 0.06)
+              : brand.surface,
+          borderRadius: AppRadius.lgBorder,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.035),
@@ -334,14 +359,15 @@ class _NotificationTile extends StatelessWidget {
         ),
         child: Material(
           color: Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadius.lgBorder,
           child: InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: AppRadius.lgBorder,
             onTap: onTap,
             onLongPress: onLongPress,
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md, vertical: AppSpacing.md,
+              ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -349,7 +375,7 @@ class _NotificationTile extends StatelessWidget {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: _iconBgForType(notification.type),
+                      color: _iconBgForType(context, notification.type),
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
@@ -358,7 +384,7 @@ class _NotificationTile extends StatelessWidget {
                       style: const TextStyle(fontSize: 22),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,7 +399,7 @@ class _NotificationTile extends StatelessWidget {
                             fontWeight: isUnread
                                 ? FontWeight.w700
                                 : FontWeight.w500,
-                            color: AppColors.kTextDark,
+                            color: brand.textDark,
                           ),
                         ),
                         if (notification.body.isNotEmpty) ...[
@@ -382,10 +408,10 @@ class _NotificationTile extends StatelessWidget {
                             notification.body,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 13,
-                              color: AppColors.kTextMuted,
+                              color: brand.textMuted,
                               height: 1.4,
                             ),
                           ),
@@ -393,25 +419,25 @@ class _NotificationTile extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: AppSpacing.sm + 2),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
                         _formatWhen(notification.timestamp),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 11,
-                          color: AppColors.kTextMuted,
+                          color: brand.textMuted,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: AppSpacing.xs + 2),
                       if (isUnread)
                         Container(
                           width: 8,
                           height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.kPrimary,
+                          decoration: BoxDecoration(
+                            color: brand.primary,
                             shape: BoxShape.circle,
                           ),
                         )
@@ -442,7 +468,7 @@ String _formatWhen(DateTime? dt) {
 }
 
 // ---------------------------------------------------------------------------
-// Empty state
+// Empty state — shared EmptyState
 // ---------------------------------------------------------------------------
 
 class _EmptyState extends StatelessWidget {
@@ -450,39 +476,11 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 92,
-              height: 92,
-              decoration: BoxDecoration(
-                color: AppColors.kPrimary.withValues(alpha: 0.10),
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.notifications_none_rounded,
-                size: 48,
-                color: AppColors.kPrimary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              "You're all caught up!",
-              style: AppTextStyles.headingMedium,
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              "We'll let you know when there's something new.",
-              style: AppTextStyles.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+    return const Center(
+      child: EmptyState(
+        title: "You're all caught up!",
+        message: "We'll let you know when there's something new.",
+        icon: Icons.notifications_none_rounded,
       ),
     );
   }
@@ -497,53 +495,69 @@ void _openLongPressMenu(
   AppNotification notif,
   WidgetRef ref,
 ) {
+  final brand = context.brand;
   showModalBottomSheet(
     context: context,
-    backgroundColor: AppColors.kSurface,
+    backgroundColor: brand.surface,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      borderRadius: BorderRadius.vertical(top: AppRadius.xxlRadius),
     ),
-    builder: (sheetCtx) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 44,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.kTextMuted.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
+    builder: (sheetCtx) {
+      final sheetBrand = sheetCtx.brand;
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: sheetBrand.textMuted.withValues(alpha: 0.3),
+                borderRadius: AppRadius.xsBorder,
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          if (!notif.read)
+            const SizedBox(height: AppSpacing.sm + 2),
+            if (!notif.read)
+              ListTile(
+                leading: Icon(
+                  Icons.mark_email_read_rounded, color: sheetBrand.primary,
+                ),
+                title: Text(
+                  'Mark as read',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: sheetBrand.textDark,
+                  ),
+                ),
+                onTap: () {
+                  ref
+                      .read(notificationsViewModelProvider.notifier)
+                      .markAsRead(notif.id);
+                  Navigator.of(sheetCtx).pop();
+                },
+              ),
             ListTile(
-              leading: const Icon(Icons.mark_email_read_rounded,
-                  color: AppColors.kPrimary),
-              title: const Text('Mark as read'),
+              leading: Icon(
+                Icons.delete_outline_rounded, color: sheetBrand.error,
+              ),
+              title: Text(
+                'Delete',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: sheetBrand.textDark,
+                ),
+              ),
               onTap: () {
                 ref
                     .read(notificationsViewModelProvider.notifier)
-                    .markAsRead(notif.id);
+                    .deleteNotification(notif.id);
                 Navigator.of(sheetCtx).pop();
               },
             ),
-          ListTile(
-            leading:
-                const Icon(Icons.delete_outline_rounded, color: AppColors.kError),
-            title: const Text('Delete'),
-            onTap: () {
-              ref
-                  .read(notificationsViewModelProvider.notifier)
-                  .deleteNotification(notif.id);
-              Navigator.of(sheetCtx).pop();
-            },
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+        ),
+      );
+    },
   );
 }
 
@@ -552,123 +566,151 @@ void _openLongPressMenu(
 // ---------------------------------------------------------------------------
 
 void _openDetail(BuildContext context, AppNotification notif) {
+  final brand = context.brand;
   showModalBottomSheet(
     context: context,
-    backgroundColor: AppColors.kSurface,
+    backgroundColor: brand.surface,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      borderRadius: BorderRadius.vertical(top: AppRadius.xxlRadius),
     ),
-    builder: (sheetCtx) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 44,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.kTextMuted.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
+    builder: (sheetCtx) {
+      final sheetBrand = sheetCtx.brand;
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl, AppSpacing.md + 2, AppSpacing.xl, AppSpacing.xl,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: sheetBrand.textMuted.withValues(alpha: 0.3),
+                    borderRadius: AppRadius.xsBorder,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: _iconBgForType(notif.type),
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    notif.icon,
-                    style: const TextStyle(fontSize: 20),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    notif.title,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.kTextDark,
+              const SizedBox(height: AppSpacing.lg + 2),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: _iconBgForType(sheetCtx, notif.type),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      notif.icon,
+                      style: const TextStyle(fontSize: 20),
                     ),
                   ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Text(
+                      notif.title,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: sheetBrand.textDark,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md + 2),
+              if (notif.body.isNotEmpty)
+                Text(
+                  notif.body,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: sheetBrand.textDark,
+                  ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            if (notif.body.isNotEmpty)
-              Text(
-                notif.body,
-                style: AppTextStyles.bodyMedium,
-              ),
-            const SizedBox(height: 10),
-            if (notif.timestamp != null)
-              Text(
-                DateFormat('MMM d, y · h:mm a').format(notif.timestamp!),
-                style: AppTextStyles.bodySmall,
-              ),
-            const SizedBox(height: 18),
-            if (notif.type == 'new_material')
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
+              const SizedBox(height: AppSpacing.sm + 2),
+              if (notif.timestamp != null)
+                Text(
+                  DateFormat('MMM d, y · h:mm a').format(notif.timestamp!),
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: sheetBrand.textMuted,
+                  ),
+                ),
+              const SizedBox(height: AppSpacing.lg + 2),
+              if (notif.type == 'new_material')
+                PillButton(
+                  label: 'Open Material',
+                  icon: Icons.menu_book_rounded,
                   onPressed: () {
                     Navigator.of(sheetCtx).pop();
                     context.goNamed(AppRoutes.materials);
                   },
-                  icon: const Icon(Icons.menu_book_rounded),
-                  label: const Text('Open Material'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.kPrimary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
                 ),
-              ),
-            if (notif.type == 'achievement')
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
+              if (notif.type == 'achievement')
+                _GoldPillButton(
+                  label: 'View Rewards',
+                  icon: Icons.emoji_events_rounded,
                   onPressed: () {
                     Navigator.of(sheetCtx).pop();
                     context.goNamed(AppRoutes.rewards);
                   },
-                  icon: const Icon(Icons.emoji_events_rounded),
-                  label: const Text('View Rewards'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.kGold,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
-      ),
-    ),
+      );
+    },
   );
 }
 
+/// Gold-colored PillButton-shaped CTA for the "achievement" notification type.
+/// Mirrors the gold premium upsell from search; gold stays full color in
+/// both themes (intentional reward identity moment).
+class _GoldPillButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+  const _GoldPillButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, color: Colors.white),
+        label: Text(label),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.kGold,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md + 2),
+          shape: const RoundedRectangleBorder(
+            borderRadius: AppRadius.pillBorder,
+          ),
+          textStyle: const TextStyle(
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
-// Shimmer
+// Shimmer skeleton
 // ---------------------------------------------------------------------------
 
 class _ListShimmer extends StatelessWidget {
@@ -676,18 +718,39 @@ class _ListShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Shimmer.fromColors(
-      baseColor: const Color(0xFFE6E9F2),
-      highlightColor: const Color(0xFFF7F9FD),
+    final brand = context.brand;
+    return SkeletonGroup(
       child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.xl,
+        ),
         itemCount: 6,
         itemBuilder: (_, __) => Container(
           height: 74,
-          margin: const EdgeInsets.only(bottom: 10),
+          margin: const EdgeInsets.only(bottom: AppSpacing.sm + 2),
           decoration: BoxDecoration(
-            color: AppColors.kSurface,
-            borderRadius: BorderRadius.circular(14),
+            color: brand.surface,
+            borderRadius: AppRadius.lgBorder,
+          ),
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: const Row(
+            children: [
+              SkeletonBlock(
+                width: 48, height: 48, radius: Radius.circular(24),
+              ),
+              SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SkeletonBlock(height: 10),
+                    SizedBox(height: AppSpacing.xs + 2),
+                    SkeletonBlock(width: 160, height: 10),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

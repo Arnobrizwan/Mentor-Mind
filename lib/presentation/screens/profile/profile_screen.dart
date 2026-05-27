@@ -4,22 +4,26 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shimmer/shimmer.dart';
 
 import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
 import 'package:mentor_minds/application/viewmodels/profile/profile_viewmodel.dart';
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
+import 'package:mentor_minds/core/theme/app_radius.dart';
+import 'package:mentor_minds/core/theme/app_spacing.dart';
+import 'package:mentor_minds/core/theme/brand_colors.dart';
 import 'package:mentor_minds/data/models/profile_stats.dart';
 import 'package:mentor_minds/data/models/profile_user.dart';
+import 'package:mentor_minds/shared/widgets/pill_button.dart';
+import 'package:mentor_minds/shared/widgets/skeleton_block.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final brand = context.brand;
     final state = ref.watch(profileViewModelProvider);
 
     ref.listen<ProfileState>(profileViewModelProvider, (prev, next) {
@@ -30,11 +34,10 @@ class ProfileScreen extends ConsumerWidget {
       }
     });
 
-    final allSubjects =
-        ref.watch(currentCurriculumConfigProvider).subjects;
+    final allSubjects = ref.watch(currentCurriculumConfigProvider).subjects;
 
     return Scaffold(
-      backgroundColor: AppColors.kBackground,
+      backgroundColor: brand.background,
       body: SafeArea(
         child: state.isLoading || state.user == null
             ? const _ProfileShimmer()
@@ -55,9 +58,10 @@ class _ProfileBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final brand = context.brand;
     final user = state.user!;
     return RefreshIndicator(
-      color: AppColors.kAccent,
+      color: brand.accent,
       onRefresh: () =>
           ref.read(profileViewModelProvider.notifier).fetchStats(user.uid),
       child: CustomScrollView(
@@ -66,13 +70,17 @@ class _ProfileBody extends ConsumerWidget {
           SliverToBoxAdapter(child: _Header(user: user)),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm,
+              ),
               child: _StatsRow(stats: state.stats),
             ),
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.sm,
+              ),
               child:
                   user.isPremium ? const _PremiumCard() : const _UpgradeCard(),
             ),
@@ -80,13 +88,17 @@ class _ProfileBody extends ConsumerWidget {
           SliverToBoxAdapter(
             child: _SettingsList(user: user, allSubjects: allSubjects),
           ),
-          const SliverToBoxAdapter(
+          SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.fromLTRB(16, 24, 16, 32),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.xxl,
+              ),
               child: Center(
                 child: Text(
                   'MentorMinds · v1.0',
-                  style: AppTextStyles.bodySmall,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: brand.textMuted,
+                  ),
                 ),
               ),
             ),
@@ -98,7 +110,7 @@ class _ProfileBody extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Header
+// Header — always-indigo brand hero (both themes).
 // ---------------------------------------------------------------------------
 
 class _Header extends ConsumerWidget {
@@ -123,8 +135,8 @@ class _Header extends ConsumerWidget {
       child: Stack(
         children: [
           Positioned(
-            top: 8,
-            left: 4,
+            top: AppSpacing.sm,
+            left: AppSpacing.xs,
             child: IconButton(
               icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
               onPressed: () => context.canPop()
@@ -133,8 +145,8 @@ class _Header extends ConsumerWidget {
             ),
           ),
           Positioned(
-            top: 8,
-            right: 4,
+            top: AppSpacing.sm,
+            right: AppSpacing.xs,
             child: IconButton(
               icon: const Icon(Icons.edit_rounded, color: Colors.white),
               tooltip: 'Edit profile',
@@ -142,17 +154,16 @@ class _Header extends ConsumerWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(top: 48),
+            padding: const EdgeInsets.only(top: AppSpacing.xxxl),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _Avatar(user: user, uploading: uploading),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.sm + 2),
                 Text(
                   user.name,
                   style: AppTextStyles.headingMedium.copyWith(
-                    color: Colors.white,
-                    fontSize: 18,
+                    color: Colors.white, fontSize: 18,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -163,7 +174,7 @@ class _Header extends ConsumerWidget {
                     fontSize: 13,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 _RoleChip(user: user),
               ],
             ),
@@ -192,8 +203,9 @@ class _Avatar extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.kAccent,
-              border:
-                  Border.all(color: Colors.white.withValues(alpha: 0.7), width: 2),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.7), width: 2,
+              ),
               image: user.avatarUrl != null
                   ? DecorationImage(
                       image: NetworkImage(user.avatarUrl!),
@@ -216,7 +228,7 @@ class _Avatar extends StatelessWidget {
           ),
           Positioned(
             right: 0,
-            bottom: 8,
+            bottom: AppSpacing.sm,
             child: GestureDetector(
               onTap: uploading ? null : () => _openEditSheet(context, user),
               child: Container(
@@ -258,21 +270,21 @@ class _RoleChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, decoration, textColor, icon) = _chipVariant(user);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md, vertical: AppSpacing.xs + 2,
+      ),
       decoration: decoration,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
             Icon(icon, size: 14, color: textColor),
-            const SizedBox(width: 6),
+            const SizedBox(width: AppSpacing.xs + 2),
           ],
           Text(
             label,
             style: AppTextStyles.labelMedium.copyWith(
-              color: textColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+              color: textColor, fontSize: 12, fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -285,7 +297,7 @@ class _RoleChip extends StatelessWidget {
       return (
         'Premium',
         BoxDecoration(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: AppRadius.pillBorder,
           gradient: const LinearGradient(
             colors: [AppColors.kGold, Color(0xFFE08D0B)],
           ),
@@ -293,7 +305,6 @@ class _RoleChip extends StatelessWidget {
             BoxShadow(
               color: AppColors.kGold.withValues(alpha: 0.45),
               blurRadius: 10,
-              spreadRadius: 0,
             ),
           ],
         ),
@@ -306,7 +317,7 @@ class _RoleChip extends StatelessWidget {
         return (
           'Teacher',
           BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: AppRadius.pillBorder,
             color: Colors.white.withValues(alpha: 0.18),
             border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
           ),
@@ -317,7 +328,7 @@ class _RoleChip extends StatelessWidget {
         return (
           'Admin',
           BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: AppRadius.pillBorder,
             color: Colors.white.withValues(alpha: 0.18),
             border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
           ),
@@ -328,7 +339,7 @@ class _RoleChip extends StatelessWidget {
         return (
           'Student',
           BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: AppRadius.pillBorder,
             color: Colors.white.withValues(alpha: 0.18),
             border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
           ),
@@ -340,7 +351,7 @@ class _RoleChip extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Stats
+// Stats — 3 numeric tiles
 // ---------------------------------------------------------------------------
 
 class _StatsRow extends StatelessWidget {
@@ -352,23 +363,23 @@ class _StatsRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _StatCard(
+          child: _StatTile(
             icon: '📚',
             value: stats.sessionCount.toString(),
             label: 'Sessions',
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: AppSpacing.sm + 2),
         Expanded(
-          child: _StatCard(
+          child: _StatTile(
             icon: '⭐',
             value: stats.points.toString(),
             label: 'Points',
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: AppSpacing.sm + 2),
         Expanded(
-          child: _StatCard(
+          child: _StatTile(
             icon: '🔥',
             value: '${stats.streakDays}d',
             label: 'Streak',
@@ -379,11 +390,11 @@ class _StatsRow extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
+class _StatTile extends StatelessWidget {
   final String icon;
   final String value;
   final String label;
-  const _StatCard({
+  const _StatTile({
     required this.icon,
     required this.value,
     required this.label,
@@ -391,11 +402,14 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.md + 2, horizontal: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
-        color: AppColors.kSurface,
-        borderRadius: BorderRadius.circular(14),
+        color: brand.surface,
+        borderRadius: AppRadius.lgBorder,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -407,19 +421,22 @@ class _StatCard extends StatelessWidget {
       child: Column(
         children: [
           Text(icon, style: const TextStyle(fontSize: 18)),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: AppColors.kPrimary,
+              color: brand.primary,
               height: 1.1,
             ),
           ),
           const SizedBox(height: 2),
-          Text(label, style: AppTextStyles.bodySmall),
+          Text(
+            label,
+            style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
+          ),
         ],
       ),
     );
@@ -427,7 +444,7 @@ class _StatCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Subscription cards
+// Subscription cards — teal upgrade + gold premium (brand identity moments).
 // ---------------------------------------------------------------------------
 
 class _UpgradeCard extends ConsumerWidget {
@@ -442,9 +459,9 @@ class _UpgradeCard extends ConsumerWidget {
       'Advanced analytics',
     ];
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(AppSpacing.lg + 2),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: AppRadius.xlBorder,
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -465,24 +482,25 @@ class _UpgradeCard extends ConsumerWidget {
             'Upgrade to Premium 🚀',
             style: AppTextStyles.headingMedium.copyWith(color: Colors.white),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           for (final f in features) ...[
             Row(
               children: [
                 const Icon(Icons.check_rounded, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     f,
-                    style:
-                        AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: AppSpacing.xs + 2),
           ],
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.sm + 2),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -499,14 +517,15 @@ class _UpgradeCard extends ConsumerWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: AppColors.kPrimary,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(vertical: AppSpacing.md + 2),
                 textStyle: const TextStyle(
                   fontFamily: 'Poppins',
                   fontWeight: FontWeight.w600,
                   fontSize: 15,
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: AppRadius.mdBorder,
                 ),
               ),
             ),
@@ -523,9 +542,9 @@ class _PremiumCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(AppSpacing.lg + 2),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: AppRadius.xlBorder,
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -545,20 +564,21 @@ class _PremiumCard extends ConsumerWidget {
           Row(
             children: [
               const Icon(Icons.star_rounded, color: Colors.white, size: 22),
-              const SizedBox(width: 6),
+              const SizedBox(width: AppSpacing.xs + 2),
               Text(
                 'Premium Member',
-                style:
-                    AppTextStyles.headingMedium.copyWith(color: Colors.white),
+                style: AppTextStyles.headingMedium.copyWith(
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.xs + 2),
           Text(
             'All features unlocked. Thanks for supporting MentorMinds.',
             style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.md + 2),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
@@ -573,9 +593,10 @@ class _PremiumCard extends ConsumerWidget {
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.white,
                 side: const BorderSide(color: Colors.white, width: 1.4),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                padding:
+                    const EdgeInsets.symmetric(vertical: AppSpacing.md + 2),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: AppRadius.mdBorder,
                 ),
                 textStyle: const TextStyle(
                   fontFamily: 'Poppins',
@@ -603,8 +624,11 @@ class _SettingsList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final brand = context.brand;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg, AppSpacing.md + 2, AppSpacing.lg, 0,
+      ),
       child: Column(
         children: [
           _Group(
@@ -638,7 +662,7 @@ class _SettingsList extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.md + 2),
           _Group(
             title: 'Preferences',
             children: [
@@ -650,13 +674,13 @@ class _SettingsList extends ConsumerWidget {
                     .read(profileViewModelProvider.notifier)
                     .toggleNotifications(v),
               ),
-              _SwitchTile(
+              _Tile(
                 icon: Icons.dark_mode_rounded,
                 title: 'Dark Mode',
-                value: false,
-                onChanged: (_) => _showSnack(
+                subtitle: 'Follows your iOS Display setting',
+                onTap: () => _showSnack(
                   context,
-                  'Dark Mode is coming soon.',
+                  'Toggle Dark Mode from iOS Control Center.',
                 ),
               ),
               _Tile(
@@ -668,7 +692,7 @@ class _SettingsList extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.md + 2),
           _Group(
             title: 'Support',
             children: [
@@ -697,22 +721,22 @@ class _SettingsList extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.md + 2),
           _Group(
             title: 'Danger Zone',
             children: [
               _Tile(
                 icon: Icons.logout_rounded,
                 title: 'Log Out',
-                titleColor: AppColors.kError,
-                iconColor: AppColors.kError,
+                titleColor: brand.error,
+                iconColor: brand.error,
                 onTap: () => _logOut(context, ref),
               ),
               _Tile(
                 icon: Icons.delete_forever_rounded,
                 title: 'Delete Account',
-                titleColor: AppColors.kError,
-                iconColor: AppColors.kError,
+                titleColor: brand.error,
+                iconColor: brand.error,
                 onTap: () => _confirmDelete(context, ref),
               ),
             ],
@@ -730,20 +754,25 @@ class _Group extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, 0, 0, 8),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xs, 0, 0, AppSpacing.sm,
+          ),
           child: Text(
             title.toUpperCase(),
-            style: AppTextStyles.labelSmall.copyWith(letterSpacing: 1.2),
+            style: AppTextStyles.labelSmall.copyWith(
+              color: brand.textMuted, letterSpacing: 1.2,
+            ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.kSurface,
-            borderRadius: BorderRadius.circular(14),
+            color: brand.surface,
+            borderRadius: AppRadius.lgBorder,
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
@@ -757,11 +786,8 @@ class _Group extends StatelessWidget {
               for (var i = 0; i < children.length; i++) ...[
                 children[i],
                 if (i != children.length - 1)
-                  const Divider(
-                    height: 1,
-                    thickness: 1,
-                    indent: 56,
-                    color: Color(0xFFEDEFF4),
+                  Divider(
+                    height: 1, thickness: 1, indent: 56, color: brand.border,
                   ),
               ],
             ],
@@ -790,28 +816,25 @@ class _Tile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return ListTile(
       onTap: onTap,
-      leading: Icon(icon, color: iconColor ?? AppColors.kPrimary),
+      leading: Icon(icon, color: iconColor ?? brand.primary),
       title: Text(
         title,
         style: AppTextStyles.labelLarge.copyWith(
-          color: titleColor ?? AppColors.kTextDark,
-          fontSize: 15,
+          color: titleColor ?? brand.textDark, fontSize: 15,
         ),
       ),
       subtitle: subtitle == null
           ? null
           : Text(
               subtitle!,
-              style: AppTextStyles.bodySmall,
+              style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-      trailing: const Icon(
-        Icons.chevron_right_rounded,
-        color: AppColors.kTextMuted,
-      ),
+      trailing: Icon(Icons.chevron_right_rounded, color: brand.textMuted),
     );
   }
 }
@@ -830,31 +853,33 @@ class _SwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return SwitchListTile.adaptive(
-      secondary: Icon(icon, color: AppColors.kPrimary),
+      secondary: Icon(icon, color: brand.primary),
       title: Text(
         title,
-        style: AppTextStyles.labelLarge.copyWith(fontSize: 15),
+        style: AppTextStyles.labelLarge.copyWith(
+          color: brand.textDark, fontSize: 15,
+        ),
       ),
       value: value,
       onChanged: onChanged,
-      activeThumbColor: AppColors.kAccent,
+      activeThumbColor: brand.accent,
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Edit-profile bottom sheet — holds name + optional picked avatar, saves both
-// in one updateProfile call.
+// Edit-profile bottom sheet
 // ---------------------------------------------------------------------------
 
 void _openEditSheet(BuildContext context, ProfileUser user) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppColors.kSurface,
+    backgroundColor: context.brand.surface,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      borderRadius: BorderRadius.vertical(top: AppRadius.xxlRadius),
     ),
     builder: (_) => _EditProfileSheet(user: user),
   );
@@ -914,14 +939,19 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final state = ref.watch(profileViewModelProvider);
     final busy = state.isBusy;
     final inset = MediaQuery.of(context).viewInsets.bottom;
     final currentAvatarUrl = widget.user.avatarUrl;
 
     return Padding(
-      padding:
-          EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 20 + inset),
+      padding: EdgeInsets.only(
+        left: AppSpacing.xl,
+        right: AppSpacing.xl,
+        top: AppSpacing.xl,
+        bottom: AppSpacing.xl + inset,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -931,14 +961,17 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
               width: 44,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.kTextMuted.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
+                color: brand.textMuted.withValues(alpha: 0.3),
+                borderRadius: AppRadius.xsBorder,
               ),
             ),
           ),
-          const SizedBox(height: 18),
-          const Text('Edit Profile', style: AppTextStyles.headingMedium),
-          const SizedBox(height: 18),
+          const SizedBox(height: AppSpacing.lg + 2),
+          Text(
+            'Edit Profile',
+            style: AppTextStyles.headingMedium.copyWith(color: brand.textDark),
+          ),
+          const SizedBox(height: AppSpacing.lg + 2),
 
           // Avatar preview
           Center(
@@ -949,7 +982,7 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                   height: 88,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.kAccent,
+                    color: brand.accent,
                     image: _pickedAvatar != null
                         ? DecorationImage(
                             image: FileImage(File(_pickedAvatar!.path)),
@@ -987,7 +1020,7 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                         width: 26,
                         height: 26,
                         decoration: BoxDecoration(
-                          color: AppColors.kError,
+                          color: brand.error,
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
                         ),
@@ -1002,74 +1035,49 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.md + 2),
           Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: busy ? null : () => _pick(ImageSource.gallery),
-                  icon: const Icon(Icons.photo_library_rounded),
-                  label: const Text('Gallery'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
+                child: PillButton(
+                  label: 'Gallery',
+                  icon: Icons.photo_library_rounded,
+                  variant: PillVariant.secondary,
+                  dense: true,
+                  onPressed:
+                      busy ? null : () => _pick(ImageSource.gallery),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: AppSpacing.sm + 2),
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: busy ? null : () => _pick(ImageSource.camera),
-                  icon: const Icon(Icons.camera_alt_rounded),
-                  label: const Text('Camera'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
+                child: PillButton(
+                  label: 'Camera',
+                  icon: Icons.camera_alt_rounded,
+                  variant: PillVariant.secondary,
+                  dense: true,
+                  onPressed:
+                      busy ? null : () => _pick(ImageSource.camera),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: AppSpacing.lg + 2),
           TextField(
             controller: _nameCtrl,
             enabled: !busy,
             textCapitalization: TextCapitalization.words,
-            decoration: InputDecoration(
+            style: AppTextStyles.bodyMedium.copyWith(color: brand.textDark),
+            decoration: const InputDecoration(
               labelText: 'Name',
-              prefixIcon: const Icon(Icons.person_outline_rounded),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              prefixIcon: Icon(Icons.person_outline_rounded),
+              border: OutlineInputBorder(borderRadius: AppRadius.mdBorder),
             ),
           ),
-          const SizedBox(height: 18),
-          SizedBox(
-            height: 48,
-            child: ElevatedButton(
-              onPressed: busy ? null : _save,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.kPrimary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                textStyle: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                ),
-              ),
-              child: busy
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Text('Save Changes'),
-            ),
+          const SizedBox(height: AppSpacing.lg + 2),
+          PillButton(
+            label: 'Save Changes',
+            onPressed: busy ? null : _save,
+            loading: busy,
           ),
         ],
       ),
@@ -1089,9 +1097,9 @@ void _openSubjectsSheet(
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppColors.kSurface,
+    backgroundColor: context.brand.surface,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      borderRadius: BorderRadius.vertical(top: AppRadius.xxlRadius),
     ),
     builder: (_) =>
         _SubjectsSheet(initial: user.subjects, allSubjects: allSubjects),
@@ -1118,10 +1126,13 @@ class _SubjectsSheetState extends ConsumerState<_SubjectsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final busy =
         ref.watch(profileViewModelProvider.select((s) => s.isEditing));
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl, AppSpacing.xl, AppSpacing.xl, AppSpacing.xxl - 4,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1131,22 +1142,25 @@ class _SubjectsSheetState extends ConsumerState<_SubjectsSheet> {
               width: 44,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.kTextMuted.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
+                color: brand.textMuted.withValues(alpha: 0.3),
+                borderRadius: AppRadius.xsBorder,
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          const Text('My Subjects', style: AppTextStyles.headingMedium),
-          const SizedBox(height: 4),
-          const Text(
-            'Pick what you study. We tailor materials and tutor answers to this.',
-            style: AppTextStyles.bodySmall,
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            'My Subjects',
+            style: AppTextStyles.headingMedium.copyWith(color: brand.textDark),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Pick what you study. We tailor materials and tutor answers to this.',
+            style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
+          ),
+          const SizedBox(height: AppSpacing.lg),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
             children: [
               for (final s in widget.allSubjects)
                 FilterChip(
@@ -1159,55 +1173,31 @@ class _SubjectsSheetState extends ConsumerState<_SubjectsSheet> {
                       _selected.remove(s);
                     }
                   }),
-                  selectedColor: AppColors.kAccent.withValues(alpha: 0.18),
-                  checkmarkColor: AppColors.kAccent,
+                  selectedColor: brand.accent.withValues(alpha: 0.18),
+                  checkmarkColor: brand.accent,
                 ),
             ],
           ),
-          const SizedBox(height: 18),
-          SizedBox(
-            height: 48,
-            child: ElevatedButton(
-              onPressed: busy
-                  ? null
-                  : () async {
-                      final navigator = Navigator.of(context);
-                      final messenger = ScaffoldMessenger.of(context);
-                      final ok = await ref
-                          .read(profileViewModelProvider.notifier)
-                          .updateSubjects(_selected.toList()..sort());
-                      if (!mounted) return;
-                      if (ok) {
-                        navigator.pop();
-                        messenger.showSnackBar(
-                          const SnackBar(content: Text('Subjects updated')),
-                        );
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.kPrimary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                textStyle: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                ),
-              ),
-              child: busy
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Text('Save'),
-            ),
+          const SizedBox(height: AppSpacing.lg + 2),
+          PillButton(
+            label: 'Save',
+            onPressed: busy
+                ? null
+                : () async {
+                    final navigator = Navigator.of(context);
+                    final messenger = ScaffoldMessenger.of(context);
+                    final ok = await ref
+                        .read(profileViewModelProvider.notifier)
+                        .updateSubjects(_selected.toList()..sort());
+                    if (!mounted) return;
+                    if (ok) {
+                      navigator.pop();
+                      messenger.showSnackBar(
+                        const SnackBar(content: Text('Subjects updated')),
+                      );
+                    }
+                  },
+            loading: busy,
           ),
         ],
       ),
@@ -1222,9 +1212,9 @@ class _SubjectsSheetState extends ConsumerState<_SubjectsSheet> {
 void _openLevelSheet(BuildContext context, ProfileUser user) {
   showModalBottomSheet(
     context: context,
-    backgroundColor: AppColors.kSurface,
+    backgroundColor: context.brand.surface,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      borderRadius: BorderRadius.vertical(top: AppRadius.xxlRadius),
     ),
     builder: (_) => _LevelSheet(initial: user.level),
   );
@@ -1245,8 +1235,11 @@ class _LevelSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final brand = context.brand;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.xxl - 4,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1256,14 +1249,17 @@ class _LevelSheet extends ConsumerWidget {
               width: 44,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.kTextMuted.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
+                color: brand.textMuted.withValues(alpha: 0.3),
+                borderRadius: AppRadius.xsBorder,
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          const Text('My Level', style: AppTextStyles.headingMedium),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            'My Level',
+            style: AppTextStyles.headingMedium.copyWith(color: brand.textDark),
+          ),
+          const SizedBox(height: AppSpacing.md),
           for (final l in const ['O Level', 'A Level'])
             ListTile(
               onTap: () => _pick(context, ref, l),
@@ -1271,10 +1267,12 @@ class _LevelSheet extends ConsumerWidget {
                 initial == l
                     ? Icons.radio_button_checked_rounded
                     : Icons.radio_button_off_rounded,
-                color:
-                    initial == l ? AppColors.kAccent : AppColors.kTextMuted,
+                color: initial == l ? brand.accent : brand.textMuted,
               ),
-              title: Text(l, style: AppTextStyles.labelLarge),
+              title: Text(
+                l,
+                style: AppTextStyles.labelLarge.copyWith(color: brand.textDark),
+              ),
             ),
         ],
       ),
@@ -1283,7 +1281,7 @@ class _LevelSheet extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Change-password dialog (current + new)
+// Change-password dialog
 // ---------------------------------------------------------------------------
 
 Future<void> _openChangePasswordDialog(
@@ -1336,10 +1334,16 @@ class _ChangePasswordDialogState
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final busy =
         ref.watch(profileViewModelProvider.select((s) => s.isEditing));
     return AlertDialog(
-      title: const Text('Change Password'),
+      backgroundColor: brand.surface,
+      shape: const RoundedRectangleBorder(borderRadius: AppRadius.lgBorder),
+      title: Text(
+        'Change Password',
+        style: AppTextStyles.headingMedium.copyWith(color: brand.textDark),
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1347,6 +1351,7 @@ class _ChangePasswordDialogState
             controller: _currentCtrl,
             obscureText: _obscureCurrent,
             enabled: !busy,
+            style: AppTextStyles.bodyMedium.copyWith(color: brand.textDark),
             decoration: InputDecoration(
               labelText: 'Current password',
               suffixIcon: IconButton(
@@ -1358,11 +1363,12 @@ class _ChangePasswordDialogState
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.sm + 2),
           TextField(
             controller: _newCtrl,
             obscureText: _obscureNew,
             enabled: !busy,
+            style: AppTextStyles.bodyMedium.copyWith(color: brand.textDark),
             decoration: InputDecoration(
               labelText: 'New password (min 8 chars)',
               suffixIcon: IconButton(
@@ -1375,20 +1381,24 @@ class _ChangePasswordDialogState
           ),
         ],
       ),
+      actionsPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.md,
+      ),
       actions: [
-        TextButton(
+        PillButton(
+          label: 'Cancel',
+          variant: PillVariant.ghost,
+          fullWidth: false,
+          dense: true,
           onPressed: busy ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
         ),
-        ElevatedButton(
+        const SizedBox(width: AppSpacing.sm),
+        PillButton(
+          label: 'Update',
+          fullWidth: false,
+          dense: true,
           onPressed: busy ? null : _submit,
-          child: busy
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Update'),
+          loading: busy,
         ),
       ],
     );
@@ -1402,21 +1412,38 @@ class _ChangePasswordDialogState
 Future<void> _logOut(BuildContext context, WidgetRef ref) async {
   final confirm = await showDialog<bool>(
     context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Log out?'),
-      content: const Text('You will need to sign in again to continue.'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+    builder: (ctx) {
+      final brand = ctx.brand;
+      return AlertDialog(
+        backgroundColor: brand.surface,
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.lgBorder),
+        title: Text(
+          'Log out?',
+          style: AppTextStyles.headingMedium.copyWith(color: brand.textDark),
         ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: AppColors.kError),
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Log out'),
+        content: Text(
+          'You will need to sign in again to continue.',
+          style: AppTextStyles.bodyMedium.copyWith(color: brand.textMuted),
         ),
-      ],
-    ),
+        actionsPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.md,
+        ),
+        actions: [
+          PillButton(
+            label: 'Cancel',
+            variant: PillVariant.ghost,
+            fullWidth: false,
+            dense: true,
+            onPressed: () => Navigator.of(ctx).pop(false),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          _DangerButton(
+            label: 'Log out',
+            onPressed: () => Navigator.of(ctx).pop(true),
+          ),
+        ],
+      );
+    },
   );
   if (confirm != true) return;
   await ref.read(profileViewModelProvider.notifier).logout();
@@ -1433,7 +1460,8 @@ Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     builder: (_) => const _DeleteAccountDialog(),
   );
   if (confirmed != true) return;
-  final err = await ref.read(profileViewModelProvider.notifier).deleteAccount();
+  final err =
+      await ref.read(profileViewModelProvider.notifier).deleteAccount();
   if (!context.mounted) return;
   if (err != null) {
     _showSnack(context, err, isError: true);
@@ -1473,29 +1501,37 @@ class _DeleteAccountDialogState
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final busy =
         ref.watch(profileViewModelProvider.select((s) => s.isEditing));
     return AlertDialog(
-      title: const Text('Delete Account'),
+      backgroundColor: brand.surface,
+      shape: const RoundedRectangleBorder(borderRadius: AppRadius.lgBorder),
+      title: Text(
+        'Delete Account',
+        style: AppTextStyles.headingMedium.copyWith(color: brand.textDark),
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'This permanently deletes your profile, sessions, and rewards. '
             'This cannot be undone.',
+            style: AppTextStyles.bodyMedium.copyWith(color: brand.textMuted),
           ),
-          const SizedBox(height: 12),
-          const Text(
+          const SizedBox(height: AppSpacing.md),
+          Text(
             'Type $_phrase to confirm:',
-            style: AppTextStyles.bodySmall,
+            style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.xs + 2),
           TextField(
             controller: _ctrl,
             enabled: !busy,
             autofocus: true,
             textCapitalization: TextCapitalization.characters,
+            style: AppTextStyles.bodyMedium.copyWith(color: brand.textDark),
             decoration: const InputDecoration(
               hintText: 'DELETE',
               border: OutlineInputBorder(),
@@ -1504,29 +1540,77 @@ class _DeleteAccountDialogState
           ),
         ],
       ),
+      actionsPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.md,
+      ),
       actions: [
-        TextButton(
+        PillButton(
+          label: 'Cancel',
+          variant: PillVariant.ghost,
+          fullWidth: false,
+          dense: true,
           onPressed: busy ? null : () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
         ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: AppColors.kError),
+        const SizedBox(width: AppSpacing.sm),
+        _DangerButton(
+          label: 'Delete',
+          loading: busy,
           onPressed: (busy || !_canDelete)
               ? null
               : () => Navigator.of(context).pop(true),
-          child: busy
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-              : const Text('Delete'),
         ),
       ],
+    );
+  }
+}
+
+/// Red destructive CTA shaped like PillButton primary. Kept separate from
+/// PillButton so the danger color stays semantic (brand.error) regardless
+/// of mode and doesn't get confused with the standard primary.
+class _DangerButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+  final bool loading;
+  const _DangerButton({
+    required this.label,
+    required this.onPressed,
+    this.loading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final brand = context.brand;
+    final enabled = onPressed != null && !loading;
+    return SizedBox(
+      height: 40,
+      child: ElevatedButton(
+        onPressed: enabled ? onPressed : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: brand.error,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: brand.error.withValues(alpha: 0.4),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          minimumSize: Size.zero,
+          shape: const RoundedRectangleBorder(
+            borderRadius: AppRadius.pillBorder,
+          ),
+          textStyle: const TextStyle(
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+        child: loading
+            ? const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Text(label),
+      ),
     );
   }
 }
@@ -1536,13 +1620,17 @@ class _DeleteAccountDialogState
 // ---------------------------------------------------------------------------
 
 void _showSnack(BuildContext context, String msg, {bool isError = false}) {
+  final brand = context.brand;
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text(msg),
-      backgroundColor: isError ? AppColors.kError : AppColors.kPrimary,
+      content: Text(
+        msg,
+        style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+      ),
+      backgroundColor: isError ? brand.error : brand.primary,
       behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.all(16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.all(AppSpacing.lg),
+      shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdBorder),
       duration: const Duration(milliseconds: 1800),
     ),
   );
@@ -1557,26 +1645,25 @@ class _ProfileShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Shimmer.fromColors(
-      baseColor: const Color(0xFFE6E9F2),
-      highlightColor: const Color(0xFFF7F9FD),
+    final brand = context.brand;
+    return SkeletonGroup(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(height: 220, color: const Color(0xFFE6E9F2)),
-          const SizedBox(height: 16),
+          Container(height: 220, color: brand.border),
+          const SizedBox(height: AppSpacing.lg),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: Row(
               children: [
                 for (var i = 0; i < 3; i++) ...[
-                  if (i > 0) const SizedBox(width: 10),
+                  if (i > 0) const SizedBox(width: AppSpacing.sm + 2),
                   Expanded(
                     child: Container(
                       height: 86,
                       decoration: BoxDecoration(
-                        color: AppColors.kSurface,
-                        borderRadius: BorderRadius.circular(14),
+                        color: brand.surface,
+                        borderRadius: AppRadius.lgBorder,
                       ),
                     ),
                   ),
@@ -1584,26 +1671,28 @@ class _ProfileShimmer extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: Container(
               height: 180,
               decoration: BoxDecoration(
-                color: AppColors.kSurface,
-                borderRadius: BorderRadius.circular(18),
+                color: brand.surface,
+                borderRadius: AppRadius.xlBorder,
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           for (var i = 0; i < 3; i++)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.md + 2,
+              ),
               child: Container(
                 height: 200,
                 decoration: BoxDecoration(
-                  color: AppColors.kSurface,
-                  borderRadius: BorderRadius.circular(14),
+                  color: brand.surface,
+                  borderRadius: AppRadius.lgBorder,
                 ),
               ),
             ),
