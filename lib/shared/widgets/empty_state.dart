@@ -29,6 +29,7 @@ class EmptyState extends StatelessWidget {
     required this.message,
     this.variant = EmptyStateVariant.info,
     this.icon,
+    this.illustrationAsset,
     this.actionLabel,
     this.onAction,
     this.padding = const EdgeInsets.all(AppSpacing.xl),
@@ -38,6 +39,10 @@ class EmptyState extends StatelessWidget {
   final String message;
   final EmptyStateVariant variant;
   final IconData? icon;
+
+  /// Optional asset path (e.g. 'assets/images/illustrations/empty_search.png').
+  /// When supplied, takes precedence over the tinted-icon circle.
+  final String? illustrationAsset;
   final String? actionLabel;
   final VoidCallback? onAction;
   final EdgeInsetsGeometry padding;
@@ -56,13 +61,14 @@ class EmptyState extends StatelessWidget {
       EmptyStateVariant.error => Icons.error_outline_rounded,
     };
 
-    return Padding(
-      padding: padding,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
+    final hero = illustrationAsset != null
+        ? Image.asset(
+            illustrationAsset!,
+            width: 160,
+            height: 160,
+            fit: BoxFit.contain,
+          )
+        : Container(
             width: 72,
             height: 72,
             decoration: BoxDecoration(
@@ -70,12 +76,15 @@ class EmptyState extends StatelessWidget {
               borderRadius: AppRadius.pillBorder,
             ),
             alignment: Alignment.center,
-            child: Icon(
-              icon ?? defaultIcon,
-              size: 32,
-              color: tint,
-            ),
-          ),
+            child: Icon(icon ?? defaultIcon, size: 32, color: tint),
+          );
+    return Padding(
+      padding: padding,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          hero,
           const SizedBox(height: AppSpacing.lg),
           Text(
             title,

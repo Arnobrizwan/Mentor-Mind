@@ -480,7 +480,8 @@ class _EmptyState extends StatelessWidget {
       child: EmptyState(
         title: "You're all caught up!",
         message: "We'll let you know when there's something new.",
-        icon: Icons.notifications_none_rounded,
+        illustrationAsset:
+            'assets/images/illustrations/empty_notifications.png',
       ),
     );
   }

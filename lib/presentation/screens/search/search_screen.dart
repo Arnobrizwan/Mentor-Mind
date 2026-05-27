@@ -853,6 +853,7 @@ class _NoResults extends StatelessWidget {
         title: "No results for '$query'",
         message: 'Try different keywords or browse all materials.',
         variant: EmptyStateVariant.search,
+        illustrationAsset: 'assets/images/illustrations/empty_search.png',
         actionLabel: 'Browse Materials',
         onAction: () => context.goNamed(AppRoutes.materials),
       ),

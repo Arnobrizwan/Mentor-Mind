@@ -1133,7 +1133,7 @@ class _MaterialsEmptyState extends StatelessWidget {
         message: hasActiveFilters
             ? 'Try adjusting your filters.'
             : 'Materials will appear here as teachers publish them.',
-        icon: Icons.menu_book_outlined,
+        illustrationAsset: 'assets/images/illustrations/empty_materials.png',
         actionLabel: hasActiveFilters ? 'Clear filters' : null,
         onAction: hasActiveFilters ? onClearFilters : null,
       ),

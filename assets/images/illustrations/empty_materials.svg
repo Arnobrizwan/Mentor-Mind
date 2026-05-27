@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none" role="img" aria-label="No materials">
+  <!-- Soft tinted circle backdrop -->
+  <circle cx="120" cy="120" r="100" fill="#1A3C8F" fill-opacity="0.08"/>
+
+  <!-- Bottom book (indigo) -->
+  <rect x="60" y="148" width="120" height="22" rx="3" fill="#1A3C8F"/>
+  <rect x="60" y="148" width="120" height="6" rx="3" fill="#0E2C6F"/>
+  <line x1="70" y1="162" x2="120" y2="162" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Middle book (teal) -->
+  <rect x="72" y="120" width="106" height="22" rx="3" fill="#00C9A7"/>
+  <rect x="72" y="120" width="106" height="6" rx="3" fill="#00A98C"/>
+  <line x1="82" y1="134" x2="142" y2="134" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Top book (light surface, indigo accent) -->
+  <rect x="64" y="92" width="98" height="22" rx="3" fill="#F4F6FB"/>
+  <rect x="64" y="92" width="98" height="6" rx="3" fill="#1A3C8F"/>
+  <line x1="74" y1="106" x2="124" y2="106" stroke="#1A3C8F" stroke-opacity="0.45" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Gold bookmark hanging from top book -->
+  <path d="M150 92 L150 124 L156 118 L162 124 L162 92 Z" fill="#F5A623"/>
+
+  <!-- Sparkle decorations -->
+  <path d="M40 70 L43 76 L49 79 L43 82 L40 88 L37 82 L31 79 L37 76 Z" fill="#F5A623" fill-opacity="0.7"/>
+  <path d="M196 76 L198 80 L202 82 L198 84 L196 88 L194 84 L190 82 L194 80 Z" fill="#00C9A7" fill-opacity="0.7"/>
+</svg>

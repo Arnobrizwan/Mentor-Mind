@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none" role="img" aria-label="No notifications">
+  <circle cx="120" cy="120" r="100" fill="#00C9A7" fill-opacity="0.10"/>
+  <!-- Bell body -->
+  <path d="M120 60 C 92 60 80 80 80 108 L 80 144 L 72 156 L 168 156 L 160 144 L 160 108 C 160 80 148 60 120 60 Z" fill="#1A3C8F"/>
+  <!-- Bell highlight -->
+  <path d="M96 78 Q 104 70 116 70" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <!-- Bell clapper -->
+  <circle cx="120" cy="172" r="9" fill="#1A3C8F"/>
+  <!-- Sparkle/z's around bell -->
+  <text x="184" y="86" font-family="Poppins, sans-serif" font-size="22" font-weight="700" fill="#00C9A7">z</text>
+  <text x="198" y="68" font-family="Poppins, sans-serif" font-size="16" font-weight="700" fill="#00C9A7" fill-opacity="0.7">z</text>
+  <path d="M50 92 L53 98 L59 100 L53 102 L50 108 L47 102 L41 100 L47 98 Z" fill="#F5A623" fill-opacity="0.75"/>
+</svg>
