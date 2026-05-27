@@ -7,6 +7,12 @@ import 'package:mentor_minds/application/viewmodels/onboarding/onboarding_viewmo
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
+import 'package:mentor_minds/core/theme/app_motion.dart';
+import 'package:mentor_minds/core/theme/app_radius.dart';
+import 'package:mentor_minds/core/theme/app_spacing.dart';
+import 'package:mentor_minds/core/theme/brand_colors.dart';
+import 'package:mentor_minds/shared/widgets/pill_button.dart';
+import 'package:mentor_minds/shared/widgets/subject_chip.dart';
 
 // ---------------------------------------------------------------------------
 // Root screen — owns PageController
@@ -23,13 +29,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _pageController = PageController();
 
   void _next() => _pageController.nextPage(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
+        duration: AppMotion.medium,
+        curve: AppMotion.standard,
       );
 
   void _back() => _pageController.previousPage(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
+        duration: AppMotion.medium,
+        curve: AppMotion.standard,
       );
 
   @override
@@ -67,65 +73,82 @@ class _WelcomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final brand = context.brand;
     final currentPage = ref.watch(onboardingViewModelProvider).currentPage;
 
     return Scaffold(
+      // Welcome hero is always indigo (brand identity), in both themes.
       backgroundColor: AppColors.kPrimary,
       body: Column(
         children: [
-          // Illustration — top 55%
-          const Expanded(
-            flex: 55,
-            child: _IllustrationPlaceholder(),
-          ),
+          // Illustration hero — top 55%
+          const Expanded(flex: 55, child: _IllustrationPlaceholder()),
 
-          // Bottom card — top corners 28dp
+          // Bottom card — top corners 28dp; surface follows the theme.
           Container(
-            decoration: const BoxDecoration(
-              color: AppColors.kSurface,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            decoration: BoxDecoration(
+              color: brand.surface,
+              borderRadius: const BorderRadius.vertical(top: AppRadius.xxlRadius),
             ),
-            padding: const EdgeInsets.fromLTRB(24, 28, 24, 40),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.xl + 4,
+              AppSpacing.xl,
+              AppSpacing.xxxl - 8,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Learn Smarter with AI',
-                  style: AppTextStyles.displayMedium.copyWith(fontSize: 26),
+                  style: AppTextStyles.displayMedium.copyWith(
+                    color: brand.textDark,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                  ),
                 )
                     .animate()
                     .fade(duration: 500.ms)
-                    .slideY(begin: 0.1, end: 0, duration: 500.ms),
-
-                const SizedBox(height: 10),
-
+                    .slideY(
+                      begin: 0.1,
+                      end: 0,
+                      duration: 500.ms,
+                      curve: AppMotion.standard,
+                    ),
+                const SizedBox(height: AppSpacing.sm + 2),
                 Text(
                   'Your personal O/A Level tutor available 24/7, right in your pocket.',
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.kTextMuted,
+                    color: brand.textMuted,
                     fontSize: 15,
                     height: 1.6,
                   ),
                 )
                     .animate(delay: 80.ms)
                     .fade(duration: 500.ms)
-                    .slideY(begin: 0.1, end: 0, duration: 500.ms),
-
-                const SizedBox(height: 24),
-
+                    .slideY(
+                      begin: 0.1,
+                      end: 0,
+                      duration: 500.ms,
+                      curve: AppMotion.standard,
+                    ),
+                const SizedBox(height: AppSpacing.xl),
                 _PageDots(currentPage: currentPage)
                     .animate(delay: 160.ms)
                     .fade(duration: 400.ms),
-
-                const SizedBox(height: 24),
-
-                _OnboardingButton(
+                const SizedBox(height: AppSpacing.xl),
+                PillButton(
                   label: 'Get Started',
                   onPressed: onNext,
                 )
                     .animate(delay: 200.ms)
                     .fade(duration: 400.ms)
-                    .slideY(begin: 0.1, end: 0, duration: 400.ms),
+                    .slideY(
+                      begin: 0.1,
+                      end: 0,
+                      duration: 400.ms,
+                      curve: AppMotion.standard,
+                    ),
               ],
             ),
           ),
@@ -146,49 +169,52 @@ class _SelectLevelPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final brand = context.brand;
     final state = ref.watch(onboardingViewModelProvider);
     final vm = ref.read(onboardingViewModelProvider.notifier);
 
     return Scaffold(
-      backgroundColor: AppColors.kSurface,
+      backgroundColor: brand.surface,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _OnboardingTopBar(onBack: onBack),
-
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl, AppSpacing.xs, AppSpacing.xl, 0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Choose Your Level',
                       style: AppTextStyles.headingLarge.copyWith(
+                        color: brand.textDark,
                         fontWeight: FontWeight.w600,
                         fontSize: 22,
                       ),
                     )
                         .animate()
                         .fade(duration: 400.ms)
-                        .slideY(begin: 0.08, end: 0, duration: 400.ms),
-
-                    const SizedBox(height: 6),
-
+                        .slideY(
+                          begin: 0.08,
+                          end: 0,
+                          duration: 400.ms,
+                          curve: AppMotion.standard,
+                        ),
+                    const SizedBox(height: AppSpacing.xs + 2),
                     Text(
                       "Select the qualification you're preparing for",
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.kTextMuted,
+                        color: brand.textMuted,
                         height: 1.5,
                       ),
                     )
                         .animate(delay: 60.ms)
                         .fade(duration: 400.ms),
-
-                    const SizedBox(height: 28),
-
-                    // Level cards row
+                    const SizedBox(height: AppSpacing.xxl - 4),
                     Row(
                       children: [
                         Expanded(
@@ -201,7 +227,7 @@ class _SelectLevelPage extends ConsumerWidget {
                             onTap: () => vm.setLevel('o_level'),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: AppSpacing.md),
                         Expanded(
                           child: _LevelCard(
                             emoji: '📗',
@@ -216,15 +242,21 @@ class _SelectLevelPage extends ConsumerWidget {
                     )
                         .animate(delay: 120.ms)
                         .fade(duration: 500.ms)
-                        .slideY(begin: 0.1, end: 0, duration: 500.ms),
+                        .slideY(
+                          begin: 0.1,
+                          end: 0,
+                          duration: 500.ms,
+                          curve: AppMotion.standard,
+                        ),
                   ],
                 ),
               ),
             ),
-
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 36),
-              child: _OnboardingButton(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.xxxl - 12,
+              ),
+              child: PillButton(
                 label: 'Continue',
                 onPressed: state.canContinueFromLevel ? onNext : null,
               ),
@@ -246,95 +278,92 @@ class _SelectSubjectsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final brand = context.brand;
     final state = ref.watch(onboardingViewModelProvider);
     final vm = ref.read(onboardingViewModelProvider.notifier);
-    final subjects =
-        ref.watch(currentCurriculumConfigProvider).subjects;
+    final subjects = ref.watch(currentCurriculumConfigProvider).subjects;
     final count = state.selectedSubjects.length;
 
     return Scaffold(
-      backgroundColor: AppColors.kSurface,
+      backgroundColor: brand.surface,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _OnboardingTopBar(onBack: onBack),
-
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl, AppSpacing.xs, AppSpacing.xl, AppSpacing.xl,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'What do you study?',
                       style: AppTextStyles.headingLarge.copyWith(
+                        color: brand.textDark,
                         fontWeight: FontWeight.w600,
                         fontSize: 22,
                       ),
                     )
                         .animate()
                         .fade(duration: 400.ms)
-                        .slideY(begin: 0.08, end: 0, duration: 400.ms),
-
-                    const SizedBox(height: 6),
-
+                        .slideY(
+                          begin: 0.08,
+                          end: 0,
+                          duration: 400.ms,
+                          curve: AppMotion.standard,
+                        ),
+                    const SizedBox(height: AppSpacing.xs + 2),
                     Text(
                       'Select at least one subject to personalise your experience',
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.kTextMuted,
+                        color: brand.textMuted,
                         height: 1.5,
                       ),
                     )
                         .animate(delay: 60.ms)
                         .fade(duration: 400.ms),
+                    const SizedBox(height: AppSpacing.xl),
 
-                    const SizedBox(height: 24),
-
-                    // Subject chip grid — 2 per row
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        mainAxisExtent: 44,
-                      ),
-                      itemCount: subjects.length,
-                      itemBuilder: (context, i) {
-                        final subject = subjects[i];
-                        final selected =
-                            state.selectedSubjects.contains(subject);
-                        return _SubjectChip(
-                          subject: subject,
-                          isSelected: selected,
-                          onTap: () => vm.toggleSubject(subject),
-                        )
-                            .animate(delay: Duration(milliseconds: 80 + i * 30))
-                            .fade(duration: 300.ms)
-                            .scale(
-                              begin: const Offset(0.92, 0.92),
-                              end: const Offset(1.0, 1.0),
-                              duration: 300.ms,
-                              curve: Curves.easeOut,
-                            );
-                      },
+                    // Subject chip grid — uses shared SubjectChip widget.
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: [
+                        for (var i = 0; i < subjects.length; i++)
+                          SubjectChip(
+                            label: subjects[i],
+                            selected:
+                                state.selectedSubjects.contains(subjects[i]),
+                            onTap: () => vm.toggleSubject(subjects[i]),
+                          )
+                              .animate(
+                                delay: Duration(milliseconds: 80 + i * 30),
+                              )
+                              .fade(duration: 300.ms)
+                              .scale(
+                                begin: const Offset(0.92, 0.92),
+                                end: const Offset(1.0, 1.0),
+                                duration: 300.ms,
+                                curve: AppMotion.standard,
+                              ),
+                      ],
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.lg),
 
-                    // Selection counter
+                    // Selection counter — Duolingo-Brave moment, accent color.
                     AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
+                      duration: AppMotion.short,
                       child: count > 0
                           ? Text(
                               '$count ${count == 1 ? 'subject' : 'subjects'} selected',
                               key: ValueKey(count),
                               style: AppTextStyles.labelMedium.copyWith(
-                                color: AppColors.kAccent,
-                                fontFamily: 'Inter',
+                                color: brand.accent,
+                                fontWeight: FontWeight.w600,
                               ),
                             )
                           : const SizedBox(height: 20, key: ValueKey(0)),
@@ -343,10 +372,11 @@ class _SelectSubjectsPage extends ConsumerWidget {
                 ),
               ),
             ),
-
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 36),
-              child: _OnboardingButton(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.xxxl - 12,
+              ),
+              child: PillButton(
                 label: 'Start Learning →',
                 onPressed: state.canStartLearning
                     ? () async {
@@ -364,7 +394,7 @@ class _SelectSubjectsPage extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Illustration placeholder (Page 1 top area)
+// Illustration hero (Page 1 top area) — always on the indigo brand color.
 // ---------------------------------------------------------------------------
 
 class _IllustrationPlaceholder extends StatelessWidget {
@@ -412,7 +442,7 @@ class _IllustrationPlaceholder extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // MentorBot floating card
+                // MentorBot floating card — the mascot peek (B moment).
                 _FloatingCard(
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -420,9 +450,9 @@ class _IllustrationPlaceholder extends StatelessWidget {
                       Container(
                         width: 36,
                         height: 36,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: AppColors.kAccent,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: AppRadius.smBorder,
                         ),
                         child: const Center(
                           child: Text(
@@ -436,7 +466,7 @@ class _IllustrationPlaceholder extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: AppSpacing.sm + 2),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
@@ -464,7 +494,7 @@ class _IllustrationPlaceholder extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 22),
+                const SizedBox(height: AppSpacing.xl - 2),
 
                 // Student avatar
                 Container(
@@ -485,7 +515,7 @@ class _IllustrationPlaceholder extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 22),
+                const SizedBox(height: AppSpacing.xl - 2),
 
                 // Floating subject chips
                 Row(
@@ -493,12 +523,16 @@ class _IllustrationPlaceholder extends StatelessWidget {
                   children: ['Maths', 'Physics', 'Chemistry']
                       .map(
                         (s) => Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.xs,
+                          ),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.xs + 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: AppRadius.pillBorder,
                             border: Border.all(
                               color: Colors.white.withValues(alpha: 0.18),
                               width: 1,
@@ -524,7 +558,7 @@ class _IllustrationPlaceholder extends StatelessWidget {
                 begin: const Offset(0.92, 0.92),
                 end: const Offset(1.0, 1.0),
                 duration: 700.ms,
-                curve: Curves.easeOut,
+                curve: AppMotion.standard,
               )
               .fade(duration: 600.ms),
         ],
@@ -537,8 +571,11 @@ class _GlowCircle extends StatelessWidget {
   final double size;
   final Color color;
   final double opacity;
-  const _GlowCircle(
-      {required this.size, required this.color, required this.opacity});
+  const _GlowCircle({
+    required this.size,
+    required this.color,
+    required this.opacity,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -560,12 +597,17 @@ class _FloatingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(16),
-        border:
-            Border.all(color: AppColors.kAccent.withValues(alpha: 0.35), width: 1),
+        borderRadius: AppRadius.lgBorder,
+        border: Border.all(
+          color: AppColors.kAccent.withValues(alpha: 0.35),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: AppColors.kAccent.withValues(alpha: 0.18),
@@ -579,7 +621,7 @@ class _FloatingCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Level card (Page 2)
+// Level card (Page 2) — themed for light/dark.
 // ---------------------------------------------------------------------------
 
 class _LevelCard extends StatelessWidget {
@@ -601,19 +643,20 @@ class _LevelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        padding: const EdgeInsets.all(16),
+        duration: AppMotion.short,
+        curve: AppMotion.standard,
+        padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.kPrimary.withValues(alpha: 0.08)
-              : AppColors.kSurface,
-          borderRadius: BorderRadius.circular(16),
+              ? brand.primary.withValues(alpha: 0.08)
+              : brand.surface,
+          borderRadius: AppRadius.lgBorder,
           border: Border.all(
-            color: isSelected ? AppColors.kPrimary : const Color(0xFFE5E7EB),
+            color: isSelected ? brand.primary : brand.border,
             width: 2,
           ),
         ),
@@ -622,96 +665,39 @@ class _LevelCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(emoji, style: const TextStyle(fontSize: 44)),
-
-            const SizedBox(height: 10),
-
+            const SizedBox(height: AppSpacing.sm + 2),
             Text(
               title,
-              style: AppTextStyles.headingMedium.copyWith(fontSize: 18),
+              style: AppTextStyles.headingMedium.copyWith(
+                color: brand.textDark,
+                fontSize: 18,
+              ),
             ),
-
             const SizedBox(height: 3),
-
             Text(
               subtitle,
-              style: AppTextStyles.bodySmall.copyWith(fontSize: 13),
+              style: AppTextStyles.bodySmall.copyWith(
+                color: brand.textMuted,
+                fontSize: 13,
+              ),
             ),
-
-            const SizedBox(height: 12),
-
+            const SizedBox(height: AppSpacing.md),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.kPrimary.withValues(alpha: 0.10)
-                    : AppColors.kBackground,
-                borderRadius: BorderRadius.circular(6),
+                    ? brand.primary.withValues(alpha: 0.10)
+                    : brand.background,
+                borderRadius: AppRadius.smBorder,
               ),
               child: Text(
                 badge,
                 style: AppTextStyles.labelSmall.copyWith(
-                  color: isSelected ? AppColors.kPrimary : AppColors.kTextMuted,
+                  color: isSelected ? brand.primary : brand.textMuted,
                   fontSize: 11,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Subject chip (Page 3)
-// ---------------------------------------------------------------------------
-
-class _SubjectChip extends StatelessWidget {
-  final String subject;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _SubjectChip({
-    required this.subject,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeInOut,
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.kPrimary : AppColors.kSurface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppColors.kPrimary,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isSelected) ...[
-              const Icon(Icons.check_rounded, size: 14, color: Colors.white),
-              const SizedBox(width: 6),
-            ],
-            Flexible(
-              child: Text(
-                subject,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: isSelected ? Colors.white : AppColors.kPrimary,
                 ),
               ),
             ),
@@ -732,18 +718,19 @@ class _PageDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Row(
       children: List.generate(3, (i) {
         final active = i == currentPage;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOut,
-          margin: const EdgeInsets.only(right: 6),
+          curve: AppMotion.standard,
+          margin: const EdgeInsets.only(right: AppSpacing.xs + 2),
           width: active ? 16 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: active ? AppColors.kAccent : const Color(0xFFD1D5DB),
-            borderRadius: BorderRadius.circular(4),
+            color: active ? brand.accent : brand.border,
+            borderRadius: AppRadius.xsBorder,
           ),
         );
       }),
@@ -761,8 +748,11 @@ class _OnboardingTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.sm, AppSpacing.sm, AppSpacing.sm, 0,
+      ),
       child: SafeArea(
         bottom: false,
         child: SizedBox(
@@ -770,97 +760,9 @@ class _OnboardingTopBar extends StatelessWidget {
           child: IconButton(
             onPressed: onBack,
             icon: const Icon(Icons.arrow_back_ios_new_rounded),
-            color: AppColors.kTextDark,
+            color: brand.textDark,
             iconSize: 20,
             splashRadius: 24,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Shared: primary CTA button — shakes horizontally when tapped while disabled
-// ---------------------------------------------------------------------------
-
-class _OnboardingButton extends StatefulWidget {
-  final String label;
-  final VoidCallback? onPressed;
-
-  const _OnboardingButton({required this.label, this.onPressed});
-
-  @override
-  State<_OnboardingButton> createState() => _OnboardingButtonState();
-}
-
-class _OnboardingButtonState extends State<_OnboardingButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _shakeController;
-  late final Animation<double> _shakeOffset;
-
-  @override
-  void initState() {
-    super.initState();
-    _shakeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 480),
-    );
-    _shakeOffset = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: -7.0), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -7.0, end: 7.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 7.0, end: -5.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -5.0, end: 5.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 5.0, end: 0.0), weight: 1),
-    ]).animate(CurvedAnimation(
-      parent: _shakeController,
-      curve: Curves.linear,
-    ));
-  }
-
-  @override
-  void dispose() {
-    _shakeController.dispose();
-    super.dispose();
-  }
-
-  void _handleTap() {
-    if (widget.onPressed != null) {
-      widget.onPressed!();
-    } else {
-      _shakeController.forward(from: 0);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = widget.onPressed != null;
-    return AnimatedBuilder(
-      animation: _shakeOffset,
-      builder: (context, child) => Transform.translate(
-        offset: Offset(_shakeOffset.value, 0),
-        child: child,
-      ),
-      child: GestureDetector(
-        onTap: _handleTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeInOut,
-          height: 52,
-          decoration: BoxDecoration(
-            color: enabled ? AppColors.kPrimary : const Color(0xFFE5E7EB),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Text(
-              widget.label,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: enabled ? Colors.white : AppColors.kTextMuted,
-              ),
-            ),
           ),
         ),
       ),

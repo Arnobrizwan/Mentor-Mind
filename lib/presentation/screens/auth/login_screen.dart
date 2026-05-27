@@ -7,7 +7,12 @@ import 'package:mentor_minds/application/viewmodels/auth/auth_viewmodel.dart';
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
+import 'package:mentor_minds/core/theme/app_motion.dart';
+import 'package:mentor_minds/core/theme/app_radius.dart';
+import 'package:mentor_minds/core/theme/app_spacing.dart';
+import 'package:mentor_minds/core/theme/brand_colors.dart';
 import 'package:mentor_minds/shared/widgets/mentor_minds_logo.dart';
+import 'package:mentor_minds/shared/widgets/pill_button.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -32,7 +37,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ) {
       final err = next.error;
       if (err != null && err != previous?.error && mounted) {
-        _showSnack(err, background: AppColors.kError);
+        _showSnack(err, background: context.brand.error);
       }
     });
   }
@@ -88,10 +93,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         await ref.read(authViewModelProvider.notifier).resetPassword(email);
     if (!mounted || !ok) return;
 
-    _showSnack(
-      'Reset email sent!',
-      background: AppColors.kAccent,
-    );
+    _showSnack('Reset email sent!', background: context.brand.accent);
   }
 
   Future<String?> _showResetDialog({required String initial}) {
@@ -99,12 +101,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return showDialog<String>(
       context: context,
       builder: (ctx) {
+        final brand = ctx.brand;
         return AlertDialog(
-          backgroundColor: AppColors.kSurface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+          backgroundColor: brand.surface,
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.lgBorder),
+          title: Text(
+            'Reset password',
+            style: AppTextStyles.headingMedium.copyWith(color: brand.textDark),
           ),
-          title: const Text('Reset password', style: AppTextStyles.headingMedium),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -112,34 +116,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               Text(
                 "Enter your email and we'll send you a reset link.",
                 style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.kTextMuted,
+                  color: brand.textMuted,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.lg),
               TextField(
                 controller: controller,
                 keyboardType: TextInputType.emailAddress,
                 autofocus: true,
-                style: AppTextStyles.bodyMedium,
-                decoration: const InputDecoration(
-                  hintText: 'you@example.com',
-                ),
+                style: AppTextStyles.bodyMedium.copyWith(color: brand.textDark),
+                decoration: const InputDecoration(hintText: 'you@example.com'),
               ),
             ],
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.md,
+          ),
           actions: [
-            TextButton(
+            PillButton(
+              label: 'Cancel',
+              variant: PillVariant.ghost,
+              fullWidth: false,
+              dense: true,
               onPressed: () => Navigator.of(ctx).pop(null),
-              style:
-                  TextButton.styleFrom(foregroundColor: AppColors.kTextMuted),
-              child: const Text('Cancel'),
             ),
-            ElevatedButton(
+            const SizedBox(width: AppSpacing.sm),
+            PillButton(
+              label: 'Send',
+              fullWidth: false,
+              dense: true,
               onPressed: () => Navigator.of(ctx).pop(controller.text),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(96, 44),
-              ),
-              child: const Text('Send'),
             ),
           ],
         );
@@ -158,10 +164,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
           backgroundColor: background,
           behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          margin: const EdgeInsets.all(AppSpacing.lg),
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdBorder),
           duration: const Duration(milliseconds: 2400),
         ),
       );
@@ -169,17 +173,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final isLoading = ref.watch(
       authViewModelProvider.select((s) => s.isLoading),
     );
 
     return Scaffold(
-      backgroundColor: AppColors.kBackground,
+      backgroundColor: brand.background,
       body: SafeArea(
         child: AbsorbPointer(
           absorbing: isLoading,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 minHeight: MediaQuery.of(context).size.height -
@@ -192,19 +197,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(height: 40),
+                      const SizedBox(height: AppSpacing.xxxl - 8),
                       const _Header(),
-                      const SizedBox(height: 36),
-                      _TitleBlock()
+                      const SizedBox(height: AppSpacing.xxl + 4),
+                      const _TitleBlock()
                           .animate(delay: 220.ms)
                           .fade(duration: 500.ms)
                           .slideY(
                             begin: 0.12,
                             end: 0,
                             duration: 500.ms,
-                            curve: Curves.easeOut,
+                            curve: AppMotion.standard,
                           ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: AppSpacing.xxl - 4),
                       _FormFields(
                         emailCtrl: _emailCtrl,
                         passCtrl: _passCtrl,
@@ -217,28 +222,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             begin: 0.1,
                             end: 0,
                             duration: 500.ms,
-                            curve: Curves.easeOut,
+                            curve: AppMotion.standard,
                           ),
-                      const SizedBox(height: 24),
-                      _PrimaryButton(
-                        isLoading: isLoading,
-                        onPressed: _submit,
+                      const SizedBox(height: AppSpacing.xl),
+                      PillButton(
+                        label: 'Sign In',
+                        onPressed: isLoading ? null : _submit,
+                        loading: isLoading,
                       ).animate(delay: 440.ms).fade(duration: 450.ms),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: AppSpacing.xl),
                       const _OrDivider()
                           .animate(delay: 520.ms)
                           .fade(duration: 400.ms),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: AppSpacing.lg + 4),
                       _GoogleButton(
                         isDisabled: isLoading,
                         onPressed: _googleSignIn,
                       ).animate(delay: 580.ms).fade(duration: 450.ms),
                       const Spacer(),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: AppSpacing.xl),
                       const _RegisterPrompt()
                           .animate(delay: 680.ms)
                           .fade(duration: 400.ms),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppSpacing.lg),
                     ],
                   ),
                 ),
@@ -260,6 +266,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Column(
       children: [
         const _LogoBadge()
@@ -268,14 +275,14 @@ class _Header extends StatelessWidget {
               begin: const Offset(0.7, 0.7),
               end: const Offset(1.0, 1.0),
               duration: 550.ms,
-              curve: Curves.easeOutBack,
+              curve: AppMotion.celebrate,
             )
             .fade(duration: 550.ms),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         Text(
           'MentorMinds',
           style: AppTextStyles.headingMedium.copyWith(
-            color: AppColors.kPrimary,
+            color: brand.primary,
             letterSpacing: 0.1,
           ),
         ).animate(delay: 120.ms).fade(duration: 500.ms),
@@ -289,27 +296,26 @@ class _LogoBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Indigo→deep-indigo gradient pill with the Option B mark in onDark
-    // mode (white M, teal bubble, gold dots) sitting inside.
+    final brand = context.brand;
     return Container(
       width: 76,
       height: 76,
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [AppColors.kSplashTop, AppColors.kSplashBottom],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: AppRadius.xlBorder,
         boxShadow: [
           BoxShadow(
-            color: AppColors.kPrimary.withValues(alpha: 0.28),
+            color: brand.primary.withValues(alpha: 0.28),
             blurRadius: 22,
             offset: const Offset(0, 10),
           ),
           BoxShadow(
-            color: AppColors.kAccent.withValues(alpha: 0.22),
+            color: brand.accent.withValues(alpha: 0.22),
             blurRadius: 36,
             spreadRadius: 2,
           ),
@@ -328,18 +334,22 @@ class _LogoBadge extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _TitleBlock extends StatelessWidget {
+  const _TitleBlock();
+
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Welcome back', style: AppTextStyles.displayMedium),
-        const SizedBox(height: 6),
+        Text(
+          'Welcome back',
+          style: AppTextStyles.displayMedium.copyWith(color: brand.textDark),
+        ),
+        const SizedBox(height: AppSpacing.xs + 2),
         Text(
           'Sign in to continue your learning journey.',
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.kTextMuted,
-          ),
+          style: AppTextStyles.bodyMedium.copyWith(color: brand.textMuted),
         ),
       ],
     );
@@ -383,53 +393,50 @@ class _FormFields extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _FieldLabel('Email'),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         TextFormField(
           controller: emailCtrl,
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.next,
           autofillHints: const [AutofillHints.email],
-          style: AppTextStyles.bodyMedium,
+          style: AppTextStyles.bodyMedium.copyWith(color: brand.textDark),
           validator: _validateEmail,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'you@example.com',
             prefixIcon: Icon(
               Icons.mail_outline_rounded,
-              color: AppColors.kTextMuted,
+              color: brand.textMuted,
               size: 20,
             ),
-            prefixIconConstraints: BoxConstraints(
-              minWidth: 44,
-              minHeight: 44,
-            ),
+            prefixIconConstraints:
+                const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.lg),
         const _FieldLabel('Password'),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         TextFormField(
           controller: passCtrl,
           obscureText: obscurePass,
           textInputAction: TextInputAction.done,
           autofillHints: const [AutofillHints.password],
           onFieldSubmitted: (_) => onSubmitEditing(),
-          style: AppTextStyles.bodyMedium,
+          style: AppTextStyles.bodyMedium.copyWith(color: brand.textDark),
           validator: _validatePassword,
           decoration: InputDecoration(
             hintText: 'Enter your password',
-            prefixIcon: const Icon(
+            prefixIcon: Icon(
               Icons.lock_outline_rounded,
-              color: AppColors.kTextMuted,
+              color: brand.textMuted,
               size: 20,
             ),
-            prefixIconConstraints: const BoxConstraints(
-              minWidth: 44,
-              minHeight: 44,
-            ),
+            prefixIconConstraints:
+                const BoxConstraints(minWidth: 44, minHeight: 44),
             suffixIcon: IconButton(
               onPressed: onToggleObscure,
               splashRadius: 20,
@@ -437,28 +444,29 @@ class _FormFields extends StatelessWidget {
                 obscurePass
                     ? Icons.visibility_outlined
                     : Icons.visibility_off_outlined,
-                color: AppColors.kTextMuted,
+                color: brand.textMuted,
                 size: 20,
               ),
             ),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: AppSpacing.xs),
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: onForgotPassword,
             style: TextButton.styleFrom(
-              foregroundColor: AppColors.kPrimary,
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              foregroundColor: brand.primary,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xs,
+                vertical: AppSpacing.xs,
+              ),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             child: Text(
               'Forgot password?',
-              style: AppTextStyles.labelMedium.copyWith(
-                color: AppColors.kPrimary,
-              ),
+              style: AppTextStyles.labelMedium.copyWith(color: brand.primary),
             ),
           ),
         ),
@@ -473,41 +481,10 @@ class _FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Text(
       text,
-      style: AppTextStyles.labelMedium.copyWith(color: AppColors.kTextDark),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Primary CTA — Sign In
-// ---------------------------------------------------------------------------
-
-class _PrimaryButton extends StatelessWidget {
-  final bool isLoading;
-  final VoidCallback onPressed;
-
-  const _PrimaryButton({required this.isLoading, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: isLoading ? null : onPressed,
-      style: ElevatedButton.styleFrom(
-        disabledBackgroundColor: AppColors.kPrimary.withValues(alpha: 0.6),
-        disabledForegroundColor: Colors.white,
-      ),
-      child: isLoading
-          ? const SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.4,
-                valueColor: AlwaysStoppedAnimation(Colors.white),
-              ),
-            )
-          : const Text('Sign In'),
+      style: AppTextStyles.labelMedium.copyWith(color: brand.textDark),
     );
   }
 }
@@ -521,26 +498,25 @@ class _OrDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Row(
       children: [
-        const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
+        Expanded(child: Divider(color: brand.border)),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: Text(
             'or continue with',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.kTextMuted,
-            ),
+            style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
           ),
         ),
-        const Expanded(child: Divider(color: Color(0xFFE5E7EB))),
+        Expanded(child: Divider(color: brand.border)),
       ],
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Google Sign-In button
+// Google Sign-In button — kept custom (G glyph + brand-specific layout).
 // ---------------------------------------------------------------------------
 
 class _GoogleButton extends StatelessWidget {
@@ -551,26 +527,23 @@ class _GoogleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return OutlinedButton(
       onPressed: isDisabled ? null : onPressed,
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(double.infinity, 52),
-        backgroundColor: AppColors.kSurface,
-        side: const BorderSide(color: Color(0xFFE5E7EB)),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        backgroundColor: brand.surface,
+        side: BorderSide(color: brand.border),
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.pillBorder),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const _GoogleGlyph(),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Text(
             'Continue with Google',
-            style: AppTextStyles.labelLarge.copyWith(
-              color: AppColors.kTextDark,
-            ),
+            style: AppTextStyles.labelLarge.copyWith(color: brand.textDark),
           ),
         ],
       ),
@@ -587,9 +560,9 @@ class _GoogleGlyph extends StatelessWidget {
       width: 22,
       height: 22,
       alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: const Color(0xFF4285F4),
-        borderRadius: BorderRadius.circular(4),
+      decoration: const BoxDecoration(
+        color: Color(0xFF4285F4),
+        borderRadius: AppRadius.xsBorder,
       ),
       child: const Text(
         'G',
@@ -614,14 +587,13 @@ class _RegisterPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
           "New to MentorMinds? ",
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.kTextMuted,
-          ),
+          style: AppTextStyles.bodyMedium.copyWith(color: brand.textMuted),
         ),
         GestureDetector(
           onTap: () => context.goNamed(AppRoutes.register),
@@ -629,7 +601,7 @@ class _RegisterPrompt extends StatelessWidget {
           child: Text(
             'Create account',
             style: AppTextStyles.labelMedium.copyWith(
-              color: AppColors.kPrimary,
+              color: brand.primary,
               fontWeight: FontWeight.w600,
             ),
           ),

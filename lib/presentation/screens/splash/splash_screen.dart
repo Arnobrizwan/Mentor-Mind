@@ -8,7 +8,16 @@ import 'package:mentor_minds/application/viewmodels/splash/splash_viewmodel.dart
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
+import 'package:mentor_minds/core/theme/app_motion.dart';
+import 'package:mentor_minds/core/theme/app_radius.dart';
+import 'package:mentor_minds/core/theme/app_spacing.dart';
 import 'package:mentor_minds/shared/widgets/mentor_minds_logo.dart';
+
+// ---------------------------------------------------------------------------
+// SplashScreen — intentionally dark in both light & dark theme. The indigo
+// gradient is part of the brand identity, so we use the light-theme indigo
+// tokens directly (AppColors.kSplashTop/Bottom) regardless of system theme.
+// ---------------------------------------------------------------------------
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -29,10 +38,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _fadeOutController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: AppMotion.medium,
     );
     _screenOpacity = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _fadeOutController, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _fadeOutController, curve: AppMotion.standard),
     );
     _runSequence();
   }
@@ -56,10 +65,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           ),
           backgroundColor: AppColors.kError,
           behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          margin: const EdgeInsets.all(AppSpacing.lg),
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdBorder),
           duration: const Duration(milliseconds: 1800),
         ),
       );
@@ -119,7 +126,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 _LogoSection(),
                 Spacer(flex: 3),
                 _DotsIndicator(),
-                SizedBox(height: 52),
+                SizedBox(height: AppSpacing.xxxl),
               ],
             ),
           ),
@@ -141,26 +148,27 @@ class _LogoSection extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Lettermark — scale from 0.6 + fade over 600ms
+        // Brand mark — scale up + fade, slight overshoot for delight.
         const _Lettermark()
             .animate()
             .scale(
               begin: const Offset(0.6, 0.6),
               end: const Offset(1.0, 1.0),
-              duration: 600.ms,
-              curve: Curves.easeOutBack,
+              duration: AppMotion.long,
+              curve: AppMotion.celebrate,
             )
-            .fade(duration: 600.ms),
+            .fade(duration: AppMotion.long),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: AppSpacing.xl),
 
-        // App name — 150ms after logo starts
+        // App name — staggered 150ms after the mark.
         Text(
           'MentorMinds',
           style: AppTextStyles.displayMedium.copyWith(
             color: Colors.white,
-            fontSize: 28,
-            letterSpacing: 0.2,
+            fontSize: 30,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.2,
           ),
         )
             .animate(delay: 150.ms)
@@ -169,16 +177,16 @@ class _LogoSection extends StatelessWidget {
               begin: 0.15,
               end: 0,
               duration: 500.ms,
-              curve: Curves.easeOut,
+              curve: AppMotion.standard,
             ),
 
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
 
-        // Tagline — 300ms after logo starts
+        // Tagline — staggered 300ms after the mark.
         Text(
           'Learn Smarter. Score Higher.',
           style: AppTextStyles.bodyMedium.copyWith(
-            color: Colors.white.withValues(alpha: 0.70),
+            color: Colors.white.withValues(alpha: 0.75),
             fontSize: 14,
             letterSpacing: 0.1,
           ),
@@ -189,7 +197,7 @@ class _LogoSection extends StatelessWidget {
               begin: 0.15,
               end: 0,
               duration: 500.ms,
-              curve: Curves.easeOut,
+              curve: AppMotion.standard,
             ),
       ],
     );
@@ -199,8 +207,7 @@ class _LogoSection extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Lettermark — Option B brand mark on a frosted card with a teal bloom.
 // The frosted backdrop keeps continuity with the splash gradient; the
-// MentorMindsLogo inside renders the actual M + chat-bubble mark in
-// onDark mode (white M, teal bubble, gold typing dots).
+// MentorMindsLogo inside renders the M + chat-bubble mark in onDark mode.
 // ---------------------------------------------------------------------------
 
 class _Lettermark extends StatelessWidget {
@@ -211,21 +218,19 @@ class _Lettermark extends StatelessWidget {
     return Container(
       width: 96,
       height: 96,
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AppRadius.xxlBorder,
         border: Border.all(
           color: AppColors.kAccent.withValues(alpha: 0.45),
           width: 1.5,
         ),
         boxShadow: [
-          // Inner glow — tight, vibrant
           BoxShadow(
             color: AppColors.kAccent.withValues(alpha: 0.50),
             blurRadius: 28,
           ),
-          // Outer bloom — wide, soft
           BoxShadow(
             color: AppColors.kAccent.withValues(alpha: 0.18),
             blurRadius: 72,
@@ -256,7 +261,7 @@ class _DotsIndicator extends StatelessWidget {
         return Container(
           width: 7,
           height: 7,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
+          margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
           decoration: const BoxDecoration(
             color: AppColors.kAccent,
             shape: BoxShape.circle,
@@ -270,7 +275,7 @@ class _DotsIndicator extends StatelessWidget {
               begin: 0.20,
               end: 1.0,
               duration: 550.ms,
-              curve: Curves.easeInOut,
+              curve: AppMotion.settle,
             );
       }),
     );

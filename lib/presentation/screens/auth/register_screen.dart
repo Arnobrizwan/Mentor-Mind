@@ -4,11 +4,16 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'package:mentor_minds/application/viewmodels/auth/auth_viewmodel.dart';
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
+import 'package:mentor_minds/core/theme/app_motion.dart';
+import 'package:mentor_minds/core/theme/app_radius.dart';
+import 'package:mentor_minds/core/theme/app_spacing.dart';
+import 'package:mentor_minds/core/theme/brand_colors.dart';
 import 'package:mentor_minds/core/utils/validators.dart';
-import 'package:mentor_minds/application/viewmodels/auth/auth_viewmodel.dart';
+import 'package:mentor_minds/shared/widgets/pill_button.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -46,8 +51,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (err == null || err == previous?.error || !mounted) return;
 
       if (next.errorField == AuthErrorField.email) {
-        // Render inline: tag the current email value and re-validate the form
-        // so the field turns red.
         setState(() {
           _duplicateEmail = _emailCtrl.text.trim();
           _duplicateEmailMsg = err;
@@ -56,7 +59,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         return;
       }
 
-      _showSnack(err, background: AppColors.kError);
+      _showSnack(err, background: context.brand.error);
     });
     _nameCtrl.addListener(_onFieldChanged);
     _emailCtrl.addListener(_onFieldChanged);
@@ -142,8 +145,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     if (!mounted || destination == null) return;
 
-    // Spec: after successful registration go to /dashboard. The dashboard is
-    // responsible for rendering the "please verify your email" banner.
     switch (destination) {
       case AuthDestination.studentDashboard:
         context.goNamed(AppRoutes.dashboard);
@@ -158,50 +159,58 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     FocusScope.of(context).unfocus();
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.kSurface,
+      backgroundColor: context.brand.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: AppRadius.xlRadius),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          24,
-          20,
-          24,
-          24 + MediaQuery.of(ctx).viewInsets.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(2),
+      builder: (ctx) {
+        final brand = ctx.brand;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.xl - 4,
+            AppSpacing.xl,
+            AppSpacing.xl + MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: brand.border,
+                    borderRadius: AppRadius.xsBorder,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(title, style: AppTextStyles.headingMedium),
-            const SizedBox(height: 12),
-            Text(
-              'Full document coming soon. By continuing you agree to '
-              'MentorMinds handling your data for learning personalization '
-              'and exam prep services.',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.kTextMuted,
+              const SizedBox(height: AppSpacing.xl - 4),
+              Text(
+                title,
+                style: AppTextStyles.headingMedium.copyWith(
+                  color: brand.textDark,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Got it'),
-            ),
-          ],
-        ),
-      ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Full document coming soon. By continuing you agree to '
+                'MentorMinds handling your data for learning personalization '
+                'and exam prep services.',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: brand.textMuted,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl - 4),
+              PillButton(
+                label: 'Got it',
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -216,10 +225,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           backgroundColor: background,
           behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          margin: const EdgeInsets.all(AppSpacing.lg),
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdBorder),
           duration: const Duration(milliseconds: 2400),
         ),
       );
@@ -231,17 +238,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final isLoading = ref.watch(
       authViewModelProvider.select((s) => s.isLoading),
     );
 
     return Scaffold(
-      backgroundColor: AppColors.kBackground,
+      backgroundColor: brand.background,
       body: _buildFormView(isLoading),
     );
   }
 
   Widget _buildFormView(bool isLoading) {
+    final brand = context.brand;
     return AbsorbPointer(
       absorbing: isLoading,
       child: SingleChildScrollView(
@@ -250,7 +259,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           children: [
             const _CurvedHeader(title: 'Create Your Account'),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl, AppSpacing.xl, AppSpacing.xl, AppSpacing.xl,
+              ),
               child: Form(
                 key: _formKey,
                 autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -258,46 +269,55 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const _FieldLabel('Full Name'),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     TextFormField(
                       controller: _nameCtrl,
                       keyboardType: TextInputType.name,
                       textCapitalization: TextCapitalization.words,
                       textInputAction: TextInputAction.next,
                       autofillHints: const [AutofillHints.name],
-                      style: AppTextStyles.bodyMedium,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: brand.textDark,
+                      ),
                       validator: Validators.name,
                       decoration: _dec(
+                        context: context,
                         hint: 'e.g. Arnob Rizwan',
                         icon: Icons.person_outline_rounded,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.lg),
                     const _FieldLabel('Email Address'),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     TextFormField(
                       controller: _emailCtrl,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
                       autofillHints: const [AutofillHints.email],
-                      style: AppTextStyles.bodyMedium,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: brand.textDark,
+                      ),
                       validator: _emailValidator,
                       decoration: _dec(
+                        context: context,
                         hint: 'you@example.com',
                         icon: Icons.mail_outline_rounded,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.lg),
                     const _FieldLabel('Password'),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     TextFormField(
                       controller: _passCtrl,
                       obscureText: _obscurePass,
                       textInputAction: TextInputAction.next,
                       autofillHints: const [AutofillHints.newPassword],
-                      style: AppTextStyles.bodyMedium,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: brand.textDark,
+                      ),
                       validator: Validators.password,
                       decoration: _dec(
+                        context: context,
                         hint: 'Create a password',
                         icon: Icons.lock_outline_rounded,
                         suffix: IconButton(
@@ -309,32 +329,35 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             _obscurePass
                                 ? Icons.visibility_outlined
                                 : Icons.visibility_off_outlined,
-                            color: AppColors.kTextMuted,
+                            color: brand.textMuted,
                             size: 20,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppSpacing.sm + 2),
                     _PasswordStrengthIndicator(strength: _strength),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.xs + 2),
                     Text(
                       '8+ chars • 1 uppercase • 1 number',
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.kTextMuted,
+                        color: brand.textMuted,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.lg),
                     const _FieldLabel('Confirm Password'),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     TextFormField(
                       controller: _confirmCtrl,
                       obscureText: _obscureConfirm,
                       textInputAction: TextInputAction.done,
-                      style: AppTextStyles.bodyMedium,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: brand.textDark,
+                      ),
                       validator: _confirmValidator,
                       onFieldSubmitted: (_) => _submit(),
                       decoration: _dec(
+                        context: context,
                         hint: 'Re-enter your password',
                         icon: Icons.lock_outline_rounded,
                         suffix: IconButton(
@@ -346,18 +369,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             _obscureConfirm
                                 ? Icons.visibility_outlined
                                 : Icons.visibility_off_outlined,
-                            color: AppColors.kTextMuted,
+                            color: brand.textMuted,
                             size: 20,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppSpacing.xl - 4),
                     _RoleSelector(
                       role: _role,
                       onChanged: (r) => setState(() => _role = r),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppSpacing.xl - 4),
                     _TermsCheckbox(
                       value: _agreedToTerms,
                       onChanged: (v) =>
@@ -365,15 +388,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       onTapTerms: () => _openLegal('Terms of Service'),
                       onTapPrivacy: () => _openLegal('Privacy Policy'),
                     ),
-                    const SizedBox(height: 24),
-                    _CreateAccountButton(
-                      enabled: _isFormValid,
-                      isLoading: isLoading,
-                      onPressed: _submit,
+                    const SizedBox(height: AppSpacing.xl),
+                    PillButton(
+                      label: 'Create Account',
+                      onPressed:
+                          (_isFormValid && !isLoading) ? _submit : null,
+                      loading: isLoading,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSpacing.xl),
                     const _LoginPrompt(),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                   ],
                 ),
               ),
@@ -385,21 +409,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   InputDecoration _dec({
+    required BuildContext context,
     required String hint,
     required IconData icon,
     Widget? suffix,
   }) {
+    final brand = context.brand;
     return InputDecoration(
       hintText: hint,
-      prefixIcon: Icon(icon, color: AppColors.kTextMuted, size: 20),
-      prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+      prefixIcon: Icon(icon, color: brand.textMuted, size: 20),
+      prefixIconConstraints:
+          const BoxConstraints(minWidth: 44, minHeight: 44),
       suffixIcon: suffix,
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Curved gradient header
+// Curved gradient header — always indigo (brand identity).
 // ---------------------------------------------------------------------------
 
 class _CurvedHeader extends StatelessWidget {
@@ -425,11 +452,14 @@ class _CurvedHeader extends StatelessWidget {
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl, AppSpacing.sm,
+                  AppSpacing.xl, AppSpacing.xxl,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 48), // room for back button
+                    const SizedBox(height: AppSpacing.xxxl),
                     Text(
                       title,
                       style: const TextStyle(
@@ -443,9 +473,9 @@ class _CurvedHeader extends StatelessWidget {
                           begin: 0.15,
                           end: 0,
                           duration: 450.ms,
-                          curve: Curves.easeOut,
+                          curve: AppMotion.standard,
                         ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppSpacing.xs + 2),
                     Text(
                       'Join MentorMinds and start learning smarter.',
                       style: AppTextStyles.bodyMedium.copyWith(
@@ -464,7 +494,9 @@ class _CurvedHeader extends StatelessWidget {
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.only(left: 8, top: 4),
+              padding: const EdgeInsets.only(
+                left: AppSpacing.sm, top: AppSpacing.xs,
+              ),
               child: IconButton(
                 onPressed: () {
                   if (Navigator.of(context).canPop()) {
@@ -520,24 +552,25 @@ class _PasswordStrengthIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final (fraction, color, label) = switch (strength) {
-      _PasswordStrength.none => (0.0, const Color(0xFFE5E7EB), ''),
-      _PasswordStrength.weak => (0.33, AppColors.kError, 'Weak'),
-      _PasswordStrength.medium => (0.66, AppColors.kGold, 'Medium'),
-      _PasswordStrength.strong => (1.0, AppColors.kAccent, 'Strong'),
+      _PasswordStrength.none => (0.0, brand.border, ''),
+      _PasswordStrength.weak => (0.33, brand.error, 'Weak'),
+      _PasswordStrength.medium => (0.66, brand.gold, 'Medium'),
+      _PasswordStrength.strong => (1.0, brand.accent, 'Strong'),
     };
 
     return Row(
       children: [
         Expanded(
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(3),
+            borderRadius: const BorderRadius.all(Radius.circular(3)),
             child: Stack(
               children: [
-                Container(height: 6, color: const Color(0xFFE5E7EB)),
+                Container(height: 6, color: brand.border),
                 AnimatedFractionallySizedBox(
                   duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOut,
+                  curve: AppMotion.standard,
                   widthFactor: fraction,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 220),
@@ -552,13 +585,13 @@ class _PasswordStrengthIndicator extends StatelessWidget {
         SizedBox(
           width: 64,
           child: Padding(
-            padding: const EdgeInsets.only(left: 10),
+            padding: const EdgeInsets.only(left: AppSpacing.sm + 2),
             child: Text(
               label,
               textAlign: TextAlign.right,
               style: AppTextStyles.labelSmall.copyWith(
                 color: strength == _PasswordStrength.none
-                    ? AppColors.kTextMuted
+                    ? brand.textMuted
                     : color,
                 fontWeight: FontWeight.w600,
               ),
@@ -582,16 +615,15 @@ class _RoleSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'I am a:',
-          style: AppTextStyles.labelMedium.copyWith(
-            color: AppColors.kTextDark,
-          ),
+          style: AppTextStyles.labelMedium.copyWith(color: brand.textDark),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.sm + 2),
         Row(
           children: [
             Expanded(
@@ -602,7 +634,7 @@ class _RoleSelector extends StatelessWidget {
                 onTap: () => onChanged('student'),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: _RoleChip(
                 label: 'Teacher',
@@ -615,11 +647,11 @@ class _RoleSelector extends StatelessWidget {
         ),
         AnimatedSize(
           duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOut,
+          curve: AppMotion.standard,
           alignment: Alignment.topCenter,
           child: role == 'teacher'
               ? const Padding(
-                  padding: EdgeInsets.only(top: 12),
+                  padding: EdgeInsets.only(top: AppSpacing.md),
                   child: _TeacherNotice(),
                 )
               : const SizedBox(width: double.infinity),
@@ -644,19 +676,20 @@ class _RoleChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Material(
-      color: selected ? AppColors.kPrimary : AppColors.kSurface,
-      borderRadius: BorderRadius.circular(12),
+      color: selected ? brand.primary : brand.surface,
+      borderRadius: AppRadius.mdBorder,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdBorder,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md + 2),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: AppRadius.mdBorder,
             border: Border.all(
-              color: selected ? AppColors.kPrimary : const Color(0xFFE5E7EB),
+              color: selected ? brand.primary : brand.border,
               width: 1.5,
             ),
           ),
@@ -666,13 +699,13 @@ class _RoleChip extends StatelessWidget {
               Icon(
                 icon,
                 size: 18,
-                color: selected ? Colors.white : AppColors.kTextMuted,
+                color: selected ? Colors.white : brand.textMuted,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Text(
                 label,
                 style: AppTextStyles.labelLarge.copyWith(
-                  color: selected ? Colors.white : AppColors.kTextDark,
+                  color: selected ? Colors.white : brand.textDark,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -689,29 +722,28 @@ class _TeacherNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md + 2, vertical: AppSpacing.md,
+      ),
       decoration: BoxDecoration(
-        color: AppColors.kGold.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.kGold.withValues(alpha: 0.35)),
+        color: brand.gold.withValues(alpha: 0.10),
+        borderRadius: AppRadius.smBorder,
+        border: Border.all(color: brand.gold.withValues(alpha: 0.35)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.info_outline_rounded,
-            color: AppColors.kGold,
-            size: 18,
-          ),
-          const SizedBox(width: 10),
+          Icon(Icons.info_outline_rounded, color: brand.gold, size: 18),
+          const SizedBox(width: AppSpacing.sm + 2),
           Expanded(
             child: Text(
               'Teacher accounts require admin approval before you can '
               'publish materials.',
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.kTextDark,
+                color: brand.textDark,
                 fontSize: 12.5,
                 height: 1.45,
               ),
@@ -742,8 +774,9 @@ class _TermsCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final linkStyle = AppTextStyles.bodyMedium.copyWith(
-      color: AppColors.kPrimary,
+      color: brand.primary,
       fontWeight: FontWeight.w600,
     );
     return Row(
@@ -755,13 +788,13 @@ class _TermsCheckbox extends StatelessWidget {
           child: Checkbox(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.kPrimary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(4),
+            activeColor: brand.primary,
+            shape: const RoundedRectangleBorder(
+              borderRadius: AppRadius.xsBorder,
             ),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppSpacing.md),
         Expanded(
           child: GestureDetector(
             onTap: () => onChanged(!value),
@@ -771,7 +804,7 @@ class _TermsCheckbox extends StatelessWidget {
               child: RichText(
                 text: TextSpan(
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.kTextDark,
+                    color: brand.textDark,
                     height: 1.5,
                   ),
                   children: [
@@ -785,7 +818,8 @@ class _TermsCheckbox extends StatelessWidget {
                     TextSpan(
                       text: 'Privacy Policy',
                       style: linkStyle,
-                      recognizer: TapGestureRecognizer()..onTap = onTapPrivacy,
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = onTapPrivacy,
                     ),
                     const TextSpan(text: '.'),
                   ],
@@ -800,44 +834,6 @@ class _TermsCheckbox extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Create Account button — disabled until form is valid
-// ---------------------------------------------------------------------------
-
-class _CreateAccountButton extends StatelessWidget {
-  final bool enabled;
-  final bool isLoading;
-  final VoidCallback onPressed;
-
-  const _CreateAccountButton({
-    required this.enabled,
-    required this.isLoading,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final active = enabled && !isLoading;
-    return ElevatedButton(
-      onPressed: active ? onPressed : null,
-      style: ElevatedButton.styleFrom(
-        disabledBackgroundColor: AppColors.kPrimary.withValues(alpha: 0.35),
-        disabledForegroundColor: Colors.white,
-      ),
-      child: isLoading
-          ? const SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.4,
-                valueColor: AlwaysStoppedAnimation(Colors.white),
-              ),
-            )
-          : const Text('Create Account'),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Login prompt footer
 // ---------------------------------------------------------------------------
 
@@ -846,14 +842,13 @@ class _LoginPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
           'Already have an account? ',
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.kTextMuted,
-          ),
+          style: AppTextStyles.bodyMedium.copyWith(color: brand.textMuted),
         ),
         GestureDetector(
           onTap: () => context.goNamed(AppRoutes.login),
@@ -861,7 +856,7 @@ class _LoginPrompt extends StatelessWidget {
           child: Text(
             'Login',
             style: AppTextStyles.labelMedium.copyWith(
-              color: AppColors.kPrimary,
+              color: brand.primary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -872,7 +867,7 @@ class _LoginPrompt extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Field label — small helper used across all form fields
+// Field label
 // ---------------------------------------------------------------------------
 
 class _FieldLabel extends StatelessWidget {
@@ -881,9 +876,10 @@ class _FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Text(
       text,
-      style: AppTextStyles.labelMedium.copyWith(color: AppColors.kTextDark),
+      style: AppTextStyles.labelMedium.copyWith(color: brand.textDark),
     );
   }
 }
