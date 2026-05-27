@@ -15,7 +15,12 @@ import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/constants/tutor_prompts.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
+import 'package:mentor_minds/core/theme/app_motion.dart';
+import 'package:mentor_minds/core/theme/app_radius.dart';
+import 'package:mentor_minds/core/theme/app_spacing.dart';
+import 'package:mentor_minds/core/theme/brand_colors.dart';
 import 'package:mentor_minds/data/models/chat_message.dart';
+import 'package:mentor_minds/shared/widgets/pill_button.dart';
 import 'package:mentor_minds/shared/widgets/premium_upgrade_modal.dart';
 
 class TutorScreen extends ConsumerStatefulWidget {
@@ -100,33 +105,41 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
 
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.kSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Text('Start a new chat?', style: AppTextStyles.headingMedium),
-        content: Text(
-          'Your current conversation is saved and will appear in your '
-          'recent sessions.',
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.kTextMuted,
+      builder: (ctx) {
+        final brand = ctx.brand;
+        return AlertDialog(
+          backgroundColor: brand.surface,
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.lgBorder),
+          title: Text(
+            'Start a new chat?',
+            style: AppTextStyles.headingMedium.copyWith(color: brand.textDark),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.kTextMuted,
+          content: Text(
+            'Your current conversation is saved and will appear in your '
+            'recent sessions.',
+            style: AppTextStyles.bodyMedium.copyWith(color: brand.textMuted),
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.md,
+          ),
+          actions: [
+            PillButton(
+              label: 'Cancel',
+              variant: PillVariant.ghost,
+              fullWidth: false,
+              dense: true,
+              onPressed: () => Navigator.of(ctx).pop(false),
             ),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('New chat'),
-          ),
-        ],
-      ),
+            const SizedBox(width: AppSpacing.sm),
+            PillButton(
+              label: 'New chat',
+              fullWidth: false,
+              dense: true,
+              onPressed: () => Navigator.of(ctx).pop(true),
+            ),
+          ],
+        );
+      },
     );
     if (confirm == true && mounted) {
       ref.read(chatViewModelProvider.notifier).newChat();
@@ -144,9 +157,9 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
     );
     final picked = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: AppColors.kSurface,
+      backgroundColor: context.brand.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: AppRadius.xlRadius),
       ),
       builder: (ctx) => _SubjectSheet(current: current, subjects: options),
     );
@@ -169,7 +182,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
       ref.read(chatViewModelProvider.notifier).setImagePreview(picked.path);
     } catch (_) {
       if (!mounted) return;
-      _toast("Couldn't open the image picker.", background: AppColors.kError);
+      _toast("Couldn't open the image picker.", background: context.brand.error);
     }
   }
 
@@ -188,10 +201,8 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
           ),
           backgroundColor: background,
           behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          margin: const EdgeInsets.all(AppSpacing.lg),
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdBorder),
           duration: const Duration(milliseconds: 1800),
         ),
       );
@@ -203,16 +214,17 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final state = ref.watch(chatViewModelProvider);
     final hasText = _inputCtrl.text.trim().isNotEmpty;
     final hasImage = state.imagePreviewPath != null;
     final canSend = (hasText || hasImage) && !state.isStreaming;
 
     return Scaffold(
-      backgroundColor: AppColors.kBackground,
+      backgroundColor: brand.background,
       appBar: AppBar(
-        backgroundColor: AppColors.kSurface,
-        foregroundColor: AppColors.kTextDark,
+        backgroundColor: brand.surface,
+        foregroundColor: brand.textDark,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
@@ -284,7 +296,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
 
   void _copyToClipboard(String content) {
     Clipboard.setData(ClipboardData(text: content));
-    _toast('Copied to clipboard', background: AppColors.kTextDark);
+    _toast('Copied to clipboard', background: context.brand.textDark);
   }
 }
 
@@ -314,14 +326,17 @@ class _SubjectPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Material(
-      color: AppColors.kPrimary.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(999),
+      color: brand.primary.withValues(alpha: 0.08),
+      borderRadius: AppRadius.pillBorder,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pillBorder,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.xs + 2,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -329,22 +344,22 @@ class _SubjectPill extends StatelessWidget {
                 _subjectEmoji(subject),
                 style: const TextStyle(fontSize: 14, height: 1),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: AppSpacing.xs + 2),
               Flexible(
                 child: Text(
                   subject,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.labelMedium.copyWith(
-                    color: AppColors.kPrimary,
+                    color: brand.primary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              const SizedBox(width: 4),
-              const Icon(
+              const SizedBox(width: AppSpacing.xs),
+              Icon(
                 Icons.keyboard_arrow_down_rounded,
                 size: 18,
-                color: AppColors.kPrimary,
+                color: brand.primary,
               ),
             ],
           ),
@@ -361,10 +376,13 @@ class _SubjectSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.xl,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -374,17 +392,22 @@ class _SubjectSheet extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(2),
+                  color: brand.border,
+                  borderRadius: AppRadius.xsBorder,
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            const Text('Choose a subject', style: AppTextStyles.headingMedium),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'Choose a subject',
+              style: AppTextStyles.headingMedium.copyWith(
+                color: brand.textDark,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
               children: [
                 for (final s in subjects)
                   _SubjectChoiceChip(
@@ -414,30 +437,35 @@ class _SubjectChoiceChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Material(
-      color: selected ? AppColors.kPrimary : AppColors.kSurface,
-      borderRadius: BorderRadius.circular(999),
+      color: selected ? brand.primary : brand.surface,
+      borderRadius: AppRadius.pillBorder,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pillBorder,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md + 2, vertical: AppSpacing.sm + 2,
+          ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: AppRadius.pillBorder,
             border: Border.all(
-              color: selected ? AppColors.kPrimary : const Color(0xFFE5E7EB),
+              color: selected ? brand.primary : brand.border,
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(_subjectEmoji(label),
-                  style: const TextStyle(fontSize: 14, height: 1)),
-              const SizedBox(width: 6),
+              Text(
+                _subjectEmoji(label),
+                style: const TextStyle(fontSize: 14, height: 1),
+              ),
+              const SizedBox(width: AppSpacing.xs + 2),
               Text(
                 label,
                 style: AppTextStyles.labelMedium.copyWith(
-                  color: selected ? Colors.white : AppColors.kTextDark,
+                  color: selected ? Colors.white : brand.textDark,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -461,23 +489,25 @@ class _LevelRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final displayLevel = level.replaceAll(' ', '-');
     return Container(
       width: double.infinity,
-      color: AppColors.kSurface,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      color: brand.surface,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm + 2,
+      ),
       child: Row(
         children: [
           Material(
-            color: AppColors.kAccent.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(999),
+            color: brand.accent.withValues(alpha: 0.10),
+            borderRadius: AppRadius.pillBorder,
             child: InkWell(
               onTap: onTap,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: AppRadius.pillBorder,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
+                  horizontal: AppSpacing.sm + 2, vertical: AppSpacing.xs + 1,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -485,13 +515,13 @@ class _LevelRow extends StatelessWidget {
                     Icon(
                       Icons.school_outlined,
                       size: 13,
-                      color: AppColors.kAccent.withValues(alpha: 0.85),
+                      color: brand.accent.withValues(alpha: 0.85),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: AppSpacing.xs + 2),
                     Text(
                       displayLevel,
                       style: AppTextStyles.labelSmall.copyWith(
-                        color: AppColors.kAccent,
+                        color: brand.accent,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -499,7 +529,7 @@ class _LevelRow extends StatelessWidget {
                     Icon(
                       Icons.unfold_more_rounded,
                       size: 12,
-                      color: AppColors.kAccent.withValues(alpha: 0.85),
+                      color: brand.accent.withValues(alpha: 0.85),
                     ),
                   ],
                 ),
@@ -522,19 +552,22 @@ class _LimitWarningBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      color: AppColors.kGold.withValues(alpha: 0.12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg, vertical: AppSpacing.sm + 2,
+      ),
+      color: brand.gold.withValues(alpha: 0.12),
       child: Row(
         children: [
-          const Icon(Icons.info_rounded, size: 16, color: AppColors.kGold),
-          const SizedBox(width: 8),
+          Icon(Icons.info_rounded, size: 16, color: brand.gold),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               '$remaining question${remaining == 1 ? '' : 's'} remaining today',
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.kTextDark,
+                color: brand.textDark,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w500,
               ),
@@ -547,7 +580,7 @@ class _LimitWarningBanner extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Empty state
+// Empty state — MentorBot intro + tappable suggestion chips
 // ---------------------------------------------------------------------------
 
 class _EmptyState extends StatelessWidget {
@@ -561,8 +594,11 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl, vertical: AppSpacing.xxl,
+      ),
       child: Column(
         children: [
           Container(
@@ -598,38 +634,38 @@ class _EmptyState extends StatelessWidget {
                 begin: const Offset(0.7, 0.7),
                 end: const Offset(1, 1),
                 duration: 500.ms,
-                curve: Curves.easeOutBack,
+                curve: AppMotion.celebrate,
               )
               .fade(duration: 400.ms),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.xl - 4),
           Text(
             "Hello! I'm MentorBot \u{1F44B}",
             textAlign: TextAlign.center,
-            style: AppTextStyles.displayMedium.copyWith(fontSize: 22),
+            style: AppTextStyles.displayMedium.copyWith(
+              color: brand.textDark,
+              fontSize: 22,
+            ),
           )
               .animate(delay: 150.ms)
               .fade(duration: 400.ms)
               .slideY(begin: 0.1, end: 0, duration: 400.ms),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             'Ask me anything about your O/A Level subjects.',
             textAlign: TextAlign.center,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.kTextMuted,
+              color: brand.textMuted,
               height: 1.5,
             ),
           ).animate(delay: 220.ms).fade(duration: 400.ms),
-          const SizedBox(height: 28),
+          const SizedBox(height: AppSpacing.xxl - 4),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
             alignment: WrapAlignment.center,
             children: [
               for (final s in suggestions)
-                _SuggestionChip(
-                  label: s,
-                  onTap: () => onSuggestionTap(s),
-                ),
+                _SuggestionChip(label: s, onTap: () => onSuggestionTap(s)),
             ],
           )
               .animate(delay: 300.ms)
@@ -649,23 +685,24 @@ class _SuggestionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Material(
-      color: AppColors.kSurface,
-      borderRadius: BorderRadius.circular(999),
+      color: brand.surface,
+      borderRadius: AppRadius.pillBorder,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pillBorder,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md + 2, vertical: AppSpacing.sm + 2,
+          ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: const Color(0xFFE5E7EB)),
+            borderRadius: AppRadius.pillBorder,
+            border: Border.all(color: brand.border),
           ),
           child: Text(
             label,
-            style: AppTextStyles.labelMedium.copyWith(
-              color: AppColors.kTextDark,
-            ),
+            style: AppTextStyles.labelMedium.copyWith(color: brand.textDark),
           ),
         ),
       ),
@@ -695,12 +732,14 @@ class _MessageList extends StatelessWidget {
     return ListView.builder(
       reverse: true,
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md, vertical: AppSpacing.md,
+      ),
       itemCount: messages.length,
       itemBuilder: (ctx, i) {
         final msg = messages[messages.length - 1 - i];
         return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs + 2),
           child: msg.role == MessageRole.user
               ? _UserBubble(message: msg)
               : _AiBubble(
@@ -721,6 +760,7 @@ class _UserBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final w = MediaQuery.of(context).size.width;
     return Align(
       alignment: Alignment.centerRight,
@@ -731,25 +771,24 @@ class _UserBubble extends StatelessWidget {
           children: [
             if (message.imageUrl != null)
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs + 2),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: AppRadius.mdBorder,
                   child: _ImageThumb(path: message.imageUrl!, size: 140),
                 ),
               ),
             if (message.content.isNotEmpty)
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
+                  horizontal: AppSpacing.md + 2, vertical: AppSpacing.sm + 2,
                 ),
-                decoration: const BoxDecoration(
-                  color: AppColors.kPrimary,
-                  borderRadius: BorderRadius.only(
+                decoration: BoxDecoration(
+                  color: brand.primary,
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(18),
                     topRight: Radius.circular(18),
                     bottomLeft: Radius.circular(18),
-                    bottomRight: Radius.circular(4),
+                    bottomRight: AppRadius.xsRadius,
                   ),
                 ),
                 child: Text(
@@ -763,11 +802,11 @@ class _UserBubble extends StatelessWidget {
                   ),
                 ),
               ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               _fmtTime(message.timestamp),
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.kTextMuted,
+                color: brand.textMuted,
                 fontSize: 11,
               ),
             ),
@@ -793,6 +832,7 @@ class _AiBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     final w = MediaQuery.of(context).size.width;
     final isStreamingEmpty = message.isStreaming && message.content.isEmpty;
 
@@ -804,11 +844,13 @@ class _AiBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 4),
+              padding: const EdgeInsets.only(
+                left: AppSpacing.xs, bottom: AppSpacing.xs,
+              ),
               child: Text(
                 'MentorBot \u{1F916}',
                 style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.kAccent,
+                  color: brand.accent,
                   fontWeight: FontWeight.w700,
                   fontSize: 11,
                 ),
@@ -817,18 +859,17 @@ class _AiBubble extends StatelessWidget {
             DecoratedBox(
               decoration: BoxDecoration(
                 color: message.isError
-                    ? AppColors.kError.withValues(alpha: 0.05)
-                    : AppColors.kSurface,
+                    ? brand.error.withValues(alpha: 0.05)
+                    : brand.surface,
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(4),
+                  topLeft: AppRadius.xsRadius,
                   topRight: Radius.circular(18),
                   bottomRight: Radius.circular(18),
                   bottomLeft: Radius.circular(18),
                 ),
                 border: Border(
                   left: BorderSide(
-                    color:
-                        message.isError ? AppColors.kError : AppColors.kAccent,
+                    color: message.isError ? brand.error : brand.accent,
                     width: 3,
                   ),
                 ),
@@ -841,7 +882,10 @@ class _AiBubble extends StatelessWidget {
                 ],
               ),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 12, 8),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md + 2, AppSpacing.md,
+                  AppSpacing.md, AppSpacing.sm,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -854,7 +898,7 @@ class _AiBubble extends StatelessWidget {
                         styleSheet: _markdownStyle(context),
                       ),
                     if (message.isError) ...[
-                      const SizedBox(height: 10),
+                      const SizedBox(height: AppSpacing.sm + 2),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: OutlinedButton.icon(
@@ -862,39 +906,39 @@ class _AiBubble extends StatelessWidget {
                           icon: const Icon(Icons.refresh_rounded, size: 16),
                           label: const Text('Retry'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.kError,
+                            foregroundColor: brand.error,
                             side: BorderSide(
-                              color: AppColors.kError.withValues(alpha: 0.5),
+                              color: brand.error.withValues(alpha: 0.5),
                             ),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.xs + 2,
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(999),
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: AppRadius.pillBorder,
                             ),
                           ),
                         ),
                       ),
                     ] else if (!message.isStreaming) ...[
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
                       Row(
                         children: [
                           _FeedbackIcon(
                             icon: Icons.thumb_up_alt_outlined,
                             filled: Icons.thumb_up_alt_rounded,
                             active: message.feedback == MessageFeedback.up,
-                            activeColor: AppColors.kAccent,
+                            activeColor: brand.accent,
                             onTap: () => onFeedback(MessageFeedback.up),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.sm),
                           _FeedbackIcon(
                             icon: Icons.thumb_down_alt_outlined,
                             filled: Icons.thumb_down_alt_rounded,
                             active: message.feedback == MessageFeedback.down,
-                            activeColor: AppColors.kError,
+                            activeColor: brand.error,
                             onTap: () => onFeedback(MessageFeedback.down),
                           ),
                           const Spacer(),
@@ -905,13 +949,12 @@ class _AiBubble extends StatelessWidget {
                             visualDensity: VisualDensity.compact,
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(
-                              minWidth: 28,
-                              minHeight: 28,
+                              minWidth: 28, minHeight: 28,
                             ),
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.content_copy_rounded,
                               size: 16,
-                              color: AppColors.kTextMuted,
+                              color: brand.textMuted,
                             ),
                           ),
                         ],
@@ -921,13 +964,13 @@ class _AiBubble extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs),
             Padding(
-              padding: const EdgeInsets.only(left: 4),
+              padding: const EdgeInsets.only(left: AppSpacing.xs),
               child: Text(
                 _fmtTime(message.timestamp),
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.kTextMuted,
+                  color: brand.textMuted,
                   fontSize: 11,
                 ),
               ),
@@ -956,15 +999,16 @@ class _FeedbackIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return InkResponse(
       onTap: onTap,
       radius: 18,
       child: Padding(
-        padding: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(AppSpacing.xs),
         child: Icon(
           active ? filled : icon,
           size: 16,
-          color: active ? activeColor : AppColors.kTextMuted,
+          color: active ? activeColor : brand.textMuted,
         ),
       ),
     );
@@ -972,49 +1016,51 @@ class _FeedbackIcon extends StatelessWidget {
 }
 
 MarkdownStyleSheet _markdownStyle(BuildContext context) {
+  final brand = context.brand;
   final base = MarkdownStyleSheet.fromTheme(Theme.of(context));
   return base.copyWith(
-    p: AppTextStyles.bodyMedium.copyWith(fontSize: 15, height: 1.5),
+    p: AppTextStyles.bodyMedium.copyWith(
+      fontSize: 15, height: 1.5, color: brand.textDark,
+    ),
     strong: AppTextStyles.bodyMedium.copyWith(
-      fontSize: 15,
-      fontWeight: FontWeight.w700,
+      fontSize: 15, fontWeight: FontWeight.w700, color: brand.textDark,
     ),
     em: AppTextStyles.bodyMedium.copyWith(
-      fontSize: 15,
-      fontStyle: FontStyle.italic,
+      fontSize: 15, fontStyle: FontStyle.italic, color: brand.textDark,
     ),
-    h1: AppTextStyles.headingMedium,
-    h2: AppTextStyles.headingSmall,
-    h3: AppTextStyles.labelLarge,
-    listBullet: AppTextStyles.bodyMedium.copyWith(fontSize: 15),
+    h1: AppTextStyles.headingMedium.copyWith(color: brand.textDark),
+    h2: AppTextStyles.headingSmall.copyWith(color: brand.textDark),
+    h3: AppTextStyles.labelLarge.copyWith(color: brand.textDark),
+    listBullet:
+        AppTextStyles.bodyMedium.copyWith(fontSize: 15, color: brand.textDark),
     blockquote: AppTextStyles.bodyMedium.copyWith(
       fontSize: 14,
-      color: AppColors.kTextMuted,
+      color: brand.textMuted,
       fontStyle: FontStyle.italic,
     ),
     blockquoteDecoration: BoxDecoration(
-      color: AppColors.kAccent.withValues(alpha: 0.06),
-      borderRadius: BorderRadius.circular(6),
-      border: const Border(
-        left: BorderSide(color: AppColors.kAccent, width: 3),
-      ),
+      color: brand.accent.withValues(alpha: 0.06),
+      borderRadius: AppRadius.smBorder,
+      border: Border(left: BorderSide(color: brand.accent, width: 3)),
     ),
-    blockquotePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    blockquotePadding: const EdgeInsets.symmetric(
+      horizontal: AppSpacing.md, vertical: AppSpacing.sm,
+    ),
     code: AppTextStyles.monoSmall.copyWith(
-      backgroundColor: const Color(0xFFF3F4F6),
-      color: AppColors.kTextDark,
+      backgroundColor: brand.surfaceAlt,
+      color: brand.textDark,
     ),
     codeblockDecoration: BoxDecoration(
-      color: const Color(0xFFF3F4F6),
-      borderRadius: BorderRadius.circular(8),
+      color: brand.surfaceAlt,
+      borderRadius: AppRadius.smBorder,
     ),
-    codeblockPadding: const EdgeInsets.all(12),
-    tableBorder: TableBorder.all(color: const Color(0xFFE5E7EB)),
+    codeblockPadding: const EdgeInsets.all(AppSpacing.md),
+    tableBorder: TableBorder.all(color: brand.border),
   );
 }
 
 // ---------------------------------------------------------------------------
-// Typing dots — used inside empty streaming AI bubble
+// Typing dots — used inside an empty streaming AI bubble
 // ---------------------------------------------------------------------------
 
 class _TypingDots extends StatelessWidget {
@@ -1022,16 +1068,17 @@ class _TypingDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(3, (i) {
         return Padding(
-          padding: EdgeInsets.only(right: i == 2 ? 0 : 4),
+          padding: EdgeInsets.only(right: i == 2 ? 0 : AppSpacing.xs),
           child: Container(
             width: 7,
             height: 7,
-            decoration: const BoxDecoration(
-              color: AppColors.kAccent,
+            decoration: BoxDecoration(
+              color: brand.accent,
               shape: BoxShape.circle,
             ),
           )
@@ -1043,7 +1090,7 @@ class _TypingDots extends StatelessWidget {
                 begin: 0.6,
                 end: 1.2,
                 duration: 600.ms,
-                curve: Curves.easeInOut,
+                curve: AppMotion.settle,
               )
               .fadeIn(begin: 0.35, duration: 600.ms),
         );
@@ -1064,31 +1111,34 @@ class _ImagePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: AppColors.kSurface,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg, vertical: AppSpacing.sm,
+      ),
+      color: brand.surface,
       child: Align(
         alignment: Alignment.centerLeft,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: AppRadius.mdBorder,
               child: _ImageThumb(path: path, size: 80),
             ),
             Positioned(
               top: -6,
               right: -6,
               child: Material(
-                color: AppColors.kTextDark,
+                color: brand.textDark,
                 shape: const CircleBorder(),
                 elevation: 2,
                 child: InkWell(
                   onTap: onRemove,
                   customBorder: const CircleBorder(),
                   child: const Padding(
-                    padding: EdgeInsets.all(4),
+                    padding: EdgeInsets.all(AppSpacing.xs),
                     child: Icon(
                       Icons.close_rounded,
                       size: 14,
@@ -1122,12 +1172,12 @@ class _ImageThumb extends StatelessWidget {
     );
   }
 
-  Widget _err(BuildContext _, Object __, StackTrace? ___) {
+  Widget _err(BuildContext ctx, Object _, StackTrace? __) {
+    final brand = ctx.brand;
     return Container(
-      color: const Color(0xFFE5E7EB),
+      color: brand.border,
       alignment: Alignment.center,
-      child:
-          const Icon(Icons.broken_image_outlined, color: AppColors.kTextMuted),
+      child: Icon(Icons.broken_image_outlined, color: brand.textMuted),
     );
   }
 }
@@ -1155,14 +1205,18 @@ class _InputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Material(
-      color: AppColors.kSurface,
+      color: brand.surface,
       elevation: 8,
       shadowColor: Colors.black.withValues(alpha: 0.08),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md, AppSpacing.sm + 2,
+            AppSpacing.md, AppSpacing.sm + 2,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -1170,17 +1224,15 @@ class _InputBar extends StatelessWidget {
                 onPressed: onAttach,
                 splashRadius: 22,
                 tooltip: 'Attach image',
-                icon: const Icon(
-                  Icons.image_outlined,
-                  color: AppColors.kTextMuted,
-                ),
+                icon: Icon(Icons.image_outlined, color: brand.textMuted),
               ),
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.md + 2),
                   decoration: BoxDecoration(
-                    color: AppColors.kBackground,
-                    borderRadius: BorderRadius.circular(24),
+                    color: brand.background,
+                    borderRadius: AppRadius.pillBorder,
                   ),
                   child: TextField(
                     controller: controller,
@@ -1189,28 +1241,29 @@ class _InputBar extends StatelessWidget {
                     minLines: 1,
                     keyboardType: TextInputType.multiline,
                     textInputAction: TextInputAction.newline,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 15,
-                      color: AppColors.kTextDark,
+                      color: brand.textDark,
                       height: 1.4,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Ask MentorBot anything...',
                       hintStyle: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.kTextMuted,
+                        color: brand.textMuted,
                         fontSize: 15,
                       ),
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 12),
                       isCollapsed: true,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               _SendButton(
                 enabled: canSend,
                 loading: isSending,
@@ -1237,11 +1290,12 @@ class _SendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return SizedBox(
       width: 44,
       height: 44,
       child: Material(
-        color: enabled ? AppColors.kPrimary : const Color(0xFFCBD5E1),
+        color: enabled ? brand.primary : brand.border,
         shape: const CircleBorder(),
         child: InkWell(
           onTap: enabled ? onPressed : null,
@@ -1278,14 +1332,17 @@ class _LimitReachedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Material(
-      color: AppColors.kSurface,
+      color: brand.surface,
       elevation: 8,
       shadowColor: Colors.black.withValues(alpha: 0.08),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.lg,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -1296,16 +1353,14 @@ class _LimitReachedCard extends StatelessWidget {
                     height: 36,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: AppColors.kGold.withValues(alpha: 0.15),
+                      color: brand.gold.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.lock_rounded,
-                      size: 18,
-                      color: AppColors.kGold,
+                    child: Icon(
+                      Icons.lock_rounded, size: 18, color: brand.gold,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1313,14 +1368,14 @@ class _LimitReachedCard extends StatelessWidget {
                         Text(
                           'Daily limit reached \u{1F512}',
                           style: AppTextStyles.headingSmall.copyWith(
-                            fontSize: 15,
+                            color: brand.textDark, fontSize: 15,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Upgrade to Premium for unlimited AI tutoring.',
                           style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.kTextMuted,
+                            color: brand.textMuted,
                             fontSize: 12.5,
                             height: 1.4,
                           ),
@@ -1330,48 +1385,23 @@ class _LimitReachedCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacing.md + 2),
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
-                      onPressed: () =>
-                          ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            "We'll remind you tomorrow.",
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: Colors.white,
-                            ),
-                          ),
-                          backgroundColor: AppColors.kTextDark,
-                          behavior: SnackBarBehavior.floating,
-                          margin: const EdgeInsets.all(16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          duration: const Duration(milliseconds: 1800),
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.kTextDark,
-                        minimumSize: const Size.fromHeight(44),
-                        side: const BorderSide(color: Color(0xFFE5E7EB)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Remind Tomorrow'),
+                    child: PillButton(
+                      label: 'Remind Tomorrow',
+                      variant: PillVariant.secondary,
+                      dense: true,
+                      onPressed: () => _remindTomorrowToast(context),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: AppSpacing.sm + 2),
                   Expanded(
-                    child: ElevatedButton(
+                    child: PillButton(
+                      label: 'Upgrade Now',
+                      dense: true,
                       onPressed: () => onUpgrade(),
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(44),
-                      ),
-                      child: const Text('Upgrade Now'),
                     ),
                   ),
                 ],
@@ -1379,6 +1409,23 @@ class _LimitReachedCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _remindTomorrowToast(BuildContext context) {
+    final brand = context.brand;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          "We'll remind you tomorrow.",
+          style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+        ),
+        backgroundColor: brand.textDark,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(AppSpacing.lg),
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdBorder),
+        duration: const Duration(milliseconds: 1800),
       ),
     );
   }
