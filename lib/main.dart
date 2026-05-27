@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
@@ -68,9 +70,14 @@ void main() async {
     FirebaseFunctions.instance.useFunctionsEmulator('localhost', 5001);
   }
 
-  // NOTF-01 — FCM must initialize before runApp; background handler registered here.
+  // NOTF-01 — FCM background handler must register before runApp, but the rest
+  // of the messaging init (getInitialMessage, APNS token wait) is moved off the
+  // critical path: on iOS Simulator with a free Apple Developer account, APNS
+  // never provisions and getInitialMessage() can hang indefinitely, blocking
+  // runApp and producing a white screen. handlePendingNavigation is invoked
+  // from the dashboard mount, so a one-frame delay here is harmless.
   final container = ProviderContainer();
-  await container.read(messagingServiceProvider).initialize();
+  unawaited(container.read(messagingServiceProvider).initialize());
 
   runAppGuarded(
     () => runApp(

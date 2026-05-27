@@ -12,6 +12,10 @@
 .swiftpm/
 migrate_working_dir/
 
+# Local AI CLI tool state (Gemini, Antigravity, etc.) — per-machine, not source
+.antigravitycli/
+.gemini/
+
 # IntelliJ related
 *.iml
 *.ipr
