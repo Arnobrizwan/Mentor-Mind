@@ -8,9 +8,15 @@ import 'package:mentor_minds/application/viewmodels/config/remote_config_provide
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
+import 'package:mentor_minds/core/theme/app_radius.dart';
+import 'package:mentor_minds/core/theme/app_spacing.dart';
+import 'package:mentor_minds/core/theme/brand_colors.dart';
+import 'package:mentor_minds/shared/widgets/pill_button.dart';
 
 // ---------------------------------------------------------------------------
-// AdminScreen — Phase 5 ADMN-01..08 (5-tab panel)
+// AdminScreen — 6 tabs (Dashboard / Users / Content / Notifications /
+// Analytics / Config). Phase-5 of the redesign brings it onto the design
+// system so admins flipping into dark mode don't see legacy white surfaces.
 // ---------------------------------------------------------------------------
 
 class AdminScreen extends ConsumerStatefulWidget {
@@ -151,6 +157,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   }
 
   Widget _tabBody(AdminState admin, bool wide) {
+    final brand = context.brand;
     final child = switch (_tabIndex) {
       0 => _DashboardTab(userCount: admin.users.length),
       1 => _UsersTab(
@@ -198,18 +205,26 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(wide ? 24 : 16, 16, 16, 8),
+          padding: EdgeInsets.fromLTRB(
+            wide ? AppSpacing.xl : AppSpacing.lg,
+            AppSpacing.lg,
+            AppSpacing.lg,
+            AppSpacing.sm,
+          ),
           child: Row(
             children: [
-              const Text('Admin Panel', style: AppTextStyles.headingLarge),
+              Text(
+                'Admin Panel',
+                style: AppTextStyles.headingLarge.copyWith(
+                  color: brand.textDark,
+                ),
+              ),
               const Spacer(),
               if (admin.error != null)
                 Flexible(
                   child: Text(
                     admin.error!,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.kError,
-                    ),
+                    style: AppTextStyles.bodySmall.copyWith(color: brand.error),
                     textAlign: TextAlign.end,
                   ),
                 ),
@@ -222,6 +237,10 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Dashboard tab — KPI cards (placeholders until analytics fills in)
+// ---------------------------------------------------------------------------
+
 class _DashboardTab extends StatelessWidget {
   const _DashboardTab({required this.userCount});
 
@@ -229,61 +248,76 @@ class _DashboardTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
         Wrap(
-          spacing: 12,
-          runSpacing: 12,
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.md,
           children: [
-            _StatCard(label: 'Users loaded', value: '$userCount'),
-            const _StatCard(label: 'DAU (today)', value: '—'),
-            const _StatCard(label: 'Premium', value: '—'),
-            const _StatCard(label: 'Messages today', value: '—'),
+            _KpiCard(label: 'Users loaded', value: '$userCount'),
+            const _KpiCard(label: 'DAU (today)', value: '—'),
+            const _KpiCard(label: 'Premium', value: '—'),
+            const _KpiCard(label: 'Messages today', value: '—'),
           ],
         ),
-        const SizedBox(height: 24),
-        const Text('Recent activity', style: AppTextStyles.headingSmall),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.xl),
+        Text(
+          'Recent activity',
+          style: AppTextStyles.headingSmall.copyWith(color: brand.textDark),
+        ),
+        const SizedBox(height: AppSpacing.sm),
         Text(
           'Full activity feed ships with Analytics in a later pass.',
-          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.kTextMuted),
+          style: AppTextStyles.bodyMedium.copyWith(color: brand.textMuted),
         ),
       ],
     );
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.label, required this.value});
+/// Lightweight KPI tile used on the admin dashboard. Distinct from the
+/// shared StatCard (which takes an icon + tint) — this is label-on-top
+/// + big number, no icon.
+class _KpiCard extends StatelessWidget {
+  const _KpiCard({required this.label, required this.value});
 
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Container(
       width: 160,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.kSurface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.kTextMuted.withValues(alpha: 0.2)),
+        color: brand.surface,
+        borderRadius: AppRadius.mdBorder,
+        border: Border.all(color: brand.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: AppTextStyles.bodySmall.copyWith(color: AppColors.kTextMuted),
+            style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
           ),
-          const SizedBox(height: 6),
-          Text(value, style: AppTextStyles.headingMedium),
+          const SizedBox(height: AppSpacing.xs + 2),
+          Text(
+            value,
+            style: AppTextStyles.headingMedium.copyWith(color: brand.textDark),
+          ),
         ],
       ),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Users tab
+// ---------------------------------------------------------------------------
 
 class _UsersTab extends StatelessWidget {
   const _UsersTab({
@@ -300,25 +334,46 @@ class _UsersTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     if (users.isEmpty) {
-      return const Center(child: Text('No users loaded'));
+      return Center(
+        child: Text(
+          'No users loaded',
+          style: AppTextStyles.bodyMedium.copyWith(color: brand.textMuted),
+        ),
+      );
     }
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       itemCount: users.length + (hasMore ? 1 : 0),
-      separatorBuilder: (_, __) => const Divider(height: 1),
+      separatorBuilder: (_, __) => Divider(height: 1, color: brand.border),
       itemBuilder: (context, i) {
         if (i == users.length) {
-          return TextButton(
-            onPressed: onLoadMore,
-            child: const Text('Load more'),
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+            child: PillButton(
+              label: 'Load more',
+              variant: PillVariant.secondary,
+              dense: true,
+              fullWidth: false,
+              onPressed: onLoadMore,
+            ),
           );
         }
         final row = users[i];
         final isPremium = row.subscriptionType == 'premium';
         return ListTile(
-          title: Text(row.name),
-          subtitle: Text('${row.email} · ${row.role} · ${row.points} pts'),
+          title: Text(
+            row.name,
+            style: AppTextStyles.labelLarge.copyWith(
+              color: brand.textDark,
+              fontSize: 15,
+            ),
+          ),
+          subtitle: Text(
+            '${row.email} · ${row.role} · ${row.points} pts',
+            style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
+          ),
           trailing: PopupMenuButton<String>(
             onSelected: (action) {
               if (action == 'premium') onTogglePremium(row);
@@ -333,10 +388,11 @@ class _UsersTab extends StatelessWidget {
           leading: CircleAvatar(
             backgroundColor: isPremium
                 ? AppColors.kGold.withValues(alpha: 0.3)
-                : AppColors.kPrimary.withValues(alpha: 0.15),
+                : brand.primary.withValues(alpha: 0.15),
             child: Icon(
               isPremium ? Icons.star : Icons.person,
-              color: isPremium ? AppColors.kGold : AppColors.kPrimary,
+              // Gold premium star stays full color in both themes.
+              color: isPremium ? AppColors.kGold : brand.primary,
               size: 20,
             ),
           ),
@@ -346,30 +402,40 @@ class _UsersTab extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Content tab — placeholder for teacher uploads (Phase 7 polish)
+// ---------------------------------------------------------------------------
+
 class _ContentTab extends StatelessWidget {
   const _ContentTab();
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Upload material', style: AppTextStyles.headingSmall),
-          const SizedBox(height: 8),
           Text(
-            'Teacher content upload + Storage write will connect in Phase 7 polish. '
-            'Use Firebase Console or seed script for now.',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.kTextMuted,
-            ),
+            'Upload material',
+            style: AppTextStyles.headingSmall.copyWith(color: brand.textDark),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Teacher content upload + Storage write will connect in Phase 7 '
+            'polish. Use Firebase Console or seed script for now.',
+            style: AppTextStyles.bodyMedium.copyWith(color: brand.textMuted),
           ),
         ],
       ),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Notifications tab — broadcast composer
+// ---------------------------------------------------------------------------
 
 class _NotificationsTab extends StatelessWidget {
   const _NotificationsTab({
@@ -388,22 +454,28 @@ class _NotificationsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
-        const Text('Broadcast', style: AppTextStyles.headingSmall),
-        const SizedBox(height: 12),
+        Text(
+          'Broadcast',
+          style: AppTextStyles.headingSmall.copyWith(color: brand.textDark),
+        ),
+        const SizedBox(height: AppSpacing.md),
         TextField(
           controller: titleController,
+          style: AppTextStyles.bodyMedium.copyWith(color: brand.textDark),
           decoration: const InputDecoration(labelText: 'Title'),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         TextField(
           controller: bodyController,
           maxLines: 4,
+          style: AppTextStyles.bodyMedium.copyWith(color: brand.textDark),
           decoration: const InputDecoration(labelText: 'Body'),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         DropdownButtonFormField<String>(
           initialValue: role,
           decoration: const InputDecoration(labelText: 'Recipient role'),
@@ -416,18 +488,27 @@ class _NotificationsTab extends StatelessWidget {
             if (v != null) onRoleChanged(v);
           },
         ),
-        const SizedBox(height: 16),
-        FilledButton(onPressed: onSend, child: const Text('Send broadcast')),
+        const SizedBox(height: AppSpacing.lg),
+        PillButton(
+          label: 'Send broadcast',
+          icon: Icons.send_rounded,
+          onPressed: onSend,
+        ),
       ],
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Analytics tab — Gemini usage line chart + daily breakdown
+// ---------------------------------------------------------------------------
 
 class _AnalyticsTab extends ConsumerWidget {
   const _AnalyticsTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final brand = context.brand;
     final admin = ref.watch(adminViewModelProvider);
 
     if (admin.analyticsLoading && admin.usageLogDays.isEmpty) {
@@ -436,15 +517,20 @@ class _AnalyticsTab extends ConsumerWidget {
 
     if (admin.analyticsError != null) {
       return ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
-          Text(admin.analyticsError!, style: AppTextStyles.bodyMedium),
-          const SizedBox(height: 12),
-          FilledButton(
+          Text(
+            admin.analyticsError!,
+            style: AppTextStyles.bodyMedium.copyWith(color: brand.textDark),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          PillButton(
+            label: 'Retry',
+            icon: Icons.refresh_rounded,
+            fullWidth: false,
             onPressed: () => ref
                 .read(adminViewModelProvider.notifier)
                 .loadUsageAnalytics(),
-            child: const Text('Retry'),
           ),
         ],
       );
@@ -460,17 +546,19 @@ class _AnalyticsTab extends ConsumerWidget {
         : days.map((d) => d.calls).reduce((a, b) => a > b ? a : b).toDouble();
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
-        Text('Gemini usage (last ${days.length} days)',
-            style: AppTextStyles.headingSmall),
-        const SizedBox(height: 8),
+        Text(
+          'Gemini usage (last ${days.length} days)',
+          style: AppTextStyles.headingSmall.copyWith(color: brand.textDark),
+        ),
+        const SizedBox(height: AppSpacing.sm),
         Text(
           '${admin.totalCallsLast14Days} calls · '
           '\$${admin.totalCostLast14Days.toStringAsFixed(2)} estimated',
-          style: AppTextStyles.bodySmall.copyWith(color: AppColors.kTextMuted),
+          style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.lg),
         SizedBox(
           height: 220,
           child: days.isEmpty
@@ -478,7 +566,7 @@ class _AnalyticsTab extends ConsumerWidget {
                   child: Text(
                     'No usage_log data yet — MentorBot calls will appear here.',
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.kTextMuted,
+                      color: brand.textMuted,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -494,7 +582,7 @@ class _AnalyticsTab extends ConsumerWidget {
                       LineChartBarData(
                         spots: spots,
                         isCurved: true,
-                        color: AppColors.kPrimary,
+                        color: brand.primary,
                         barWidth: 3,
                         dotData: const FlDotData(show: true),
                       ),
@@ -502,26 +590,36 @@ class _AnalyticsTab extends ConsumerWidget {
                   ),
                 ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Text(
           'Source: /system/usage_log_{YYYY-MM-DD} (server-written)',
-          style: AppTextStyles.bodySmall.copyWith(color: AppColors.kTextMuted),
+          style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
         ),
         if (days.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          const Text('Daily breakdown', style: AppTextStyles.labelLarge),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.xl),
+          Text(
+            'Daily breakdown',
+            style: AppTextStyles.labelLarge.copyWith(color: brand.textDark),
+          ),
+          const SizedBox(height: AppSpacing.sm),
           for (final d in days.reversed)
             ListTile(
               dense: true,
-              title: Text(d.dateKey, style: AppTextStyles.bodyMedium),
+              title: Text(
+                d.dateKey,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: brand.textDark,
+                ),
+              ),
               subtitle: Text(
                 '${d.calls} calls · ${d.promptTokens + d.completionTokens} tokens',
-                style: AppTextStyles.bodySmall,
+                style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
               ),
               trailing: Text(
                 '\$${d.estimatedCostUsd.toStringAsFixed(3)}',
-                style: AppTextStyles.labelMedium,
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: brand.textDark,
+                ),
               ),
             ),
         ],
@@ -531,9 +629,9 @@ class _AnalyticsTab extends ConsumerWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Config tab — live view of /config/gamification, /config/curriculum,
-// /config/quotas. Read-only here; admins edit values directly in Firebase
-// Console and the Flutter app picks up changes via the stream providers.
+// Config tab — live view of /config/{gamification,curriculum,quotas}.
+// Read-only: admins edit values in Firebase Console; the app reloads
+// automatically through the stream providers.
 // ---------------------------------------------------------------------------
 
 class _ConfigTab extends ConsumerWidget {
@@ -541,20 +639,21 @@ class _ConfigTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final brand = context.brand;
     final gamAsync = ref.watch(gamificationConfigStreamProvider);
     final curAsync = ref.watch(curriculumConfigStreamProvider);
     final quoAsync = ref.watch(quotasConfigStreamProvider);
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
         Text(
           'Live values streamed from /config/* in Firestore. '
           'Edit these docs in Firebase Console to change them — the app '
           'reloads automatically.',
-          style: AppTextStyles.bodySmall.copyWith(color: AppColors.kTextMuted),
+          style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.lg),
 
         // -- /config/quotas --
         _ConfigSection(
@@ -579,22 +678,33 @@ class _ConfigTab extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _ConfigRow('Levels', cfg.levels.join(' · ')),
-              const SizedBox(height: 6),
-              Text('Subjects (${cfg.subjects.length})',
-                  style: AppTextStyles.labelMedium),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.xs + 2),
+              Text(
+                'Subjects (${cfg.subjects.length})',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: brand.textDark,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
               Wrap(
-                spacing: 6,
-                runSpacing: 6,
+                spacing: AppSpacing.xs + 2,
+                runSpacing: AppSpacing.xs + 2,
                 children: [
                   for (final s in cfg.subjects)
                     Chip(
-                      label: Text(s, style: AppTextStyles.bodySmall),
+                      label: Text(
+                        s,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: brand.textDark,
+                        ),
+                      ),
                       visualDensity: VisualDensity.compact,
+                      backgroundColor: brand.background,
+                      side: BorderSide(color: brand.border),
                     ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: AppSpacing.xs + 2),
               _ConfigRow(
                 'Subject "all" sentinel',
                 cfg.materialsSubjectAllSentinel,
@@ -619,28 +729,36 @@ class _ConfigTab extends ConsumerWidget {
                 'Streak lookback days',
                 '${cfg.streakLookbackDays}',
               ),
-              const SizedBox(height: 8),
-              Text('Badges (${cfg.badges.length})',
-                  style: AppTextStyles.labelMedium),
-              const SizedBox(height: 6),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Badges (${cfg.badges.length})',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: brand.textDark,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs + 2),
               for (final b in cfg.badges)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(b.emoji, style: const TextStyle(fontSize: 18)),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('${b.name} · target ${b.target ?? '—'}',
-                                style: AppTextStyles.bodyMedium),
+                            Text(
+                              '${b.name} · target ${b.target ?? '—'}',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: brand.textDark,
+                              ),
+                            ),
                             Text(
                               'id: ${b.id} · field: ${b.progressField ?? '—'}',
                               style: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.kTextMuted,
+                                color: brand.textMuted,
                               ),
                             ),
                           ],
@@ -649,10 +767,14 @@ class _ConfigTab extends ConsumerWidget {
                     ],
                   ),
                 ),
-              const SizedBox(height: 8),
-              Text('Milestones (${cfg.milestones.length})',
-                  style: AppTextStyles.labelMedium),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Milestones (${cfg.milestones.length})',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: brand.textDark,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
               for (final m in cfg.milestones)
                 _ConfigRow('${m.points} pts', m.rewardHint),
             ],
@@ -676,20 +798,26 @@ class _ConfigSection<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.md + 2),
       decoration: BoxDecoration(
-        color: AppColors.kSurface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.kTextMuted.withValues(alpha: 0.2)),
+        color: brand.surface,
+        borderRadius: AppRadius.mdBorder,
+        border: Border.all(color: brand.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text(title, style: AppTextStyles.headingSmall),
+              Text(
+                title,
+                style: AppTextStyles.headingSmall.copyWith(
+                  color: brand.textDark,
+                ),
+              ),
               const Spacer(),
               if (asyncStatus.isLoading)
                 const SizedBox(
@@ -699,18 +827,16 @@ class _ConfigSection<T> extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.sm + 2),
           asyncStatus.when(
             data: builder,
             error: (e, _) => Text(
               'Could not load: $e',
-              style:
-                  AppTextStyles.bodySmall.copyWith(color: AppColors.kError),
+              style: AppTextStyles.bodySmall.copyWith(color: brand.error),
             ),
             loading: () => Text(
               'Loading…',
-              style: AppTextStyles.bodySmall
-                  .copyWith(color: AppColors.kTextMuted),
+              style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
             ),
           ),
         ],
@@ -726,6 +852,7 @@ class _ConfigRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -735,16 +862,17 @@ class _ConfigRow extends StatelessWidget {
             width: 160,
             child: Text(
               label,
-              style: AppTextStyles.bodySmall
-                  .copyWith(color: AppColors.kTextMuted),
+              style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
             ),
           ),
           Expanded(
-            child: Text(value, style: AppTextStyles.bodyMedium),
+            child: Text(
+              value,
+              style: AppTextStyles.bodyMedium.copyWith(color: brand.textDark),
+            ),
           ),
         ],
       ),
     );
   }
 }
-
