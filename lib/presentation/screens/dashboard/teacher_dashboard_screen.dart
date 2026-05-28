@@ -103,7 +103,7 @@ class _TeacherDashboardScreenState
             case 1:
               context.goNamed(AppRoutes.materials);
             case 2:
-              context.goNamed(AppRoutes.notifications);
+              context.goNamed(AppRoutes.teacherInbox);
             case 3:
               context.goNamed(AppRoutes.teacherProfile);
           }

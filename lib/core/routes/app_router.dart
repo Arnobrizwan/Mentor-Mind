@@ -17,6 +17,7 @@ import 'package:mentor_minds/presentation/screens/search/search_screen.dart';
 import 'package:mentor_minds/presentation/screens/splash/splash_screen.dart';
 import 'package:mentor_minds/presentation/screens/admin/admin_screen.dart';
 import 'package:mentor_minds/presentation/screens/dashboard/teacher_dashboard_screen.dart';
+import 'package:mentor_minds/presentation/screens/inbox/teacher_inbox_screen.dart';
 import 'package:mentor_minds/presentation/screens/legal/legal_screen.dart';
 import 'package:mentor_minds/presentation/screens/tutor/tutor_screen.dart';
 
@@ -56,6 +57,7 @@ abstract final class AppRoutes {
   static const search      = 'search';
   static const profile     = 'profile';
   static const teacherProfile = 'teacherProfile';
+  static const teacherInbox   = 'teacherInbox';
   static const rewards     = 'rewards';
   static const notifications = 'notifications';
   static const admin       = 'admin';
@@ -145,6 +147,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/profile/teacher',
         name: AppRoutes.teacherProfile,
         builder: (_, __) => const TeacherProfileScreen(),
+      ),
+      GoRoute(
+        path: '/inbox/teacher',
+        name: AppRoutes.teacherInbox,
+        builder: (_, __) => const TeacherInboxScreen(),
       ),
       GoRoute(
         path: '/rewards',
