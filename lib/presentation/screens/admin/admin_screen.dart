@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:mentor_minds/application/viewmodels/admin/admin_viewmodel.dart';
+import 'package:mentor_minds/application/viewmodels/auth/auth_viewmodel.dart';
 import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
 import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
@@ -244,12 +245,47 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                     textAlign: TextAlign.end,
                   ),
                 ),
+              IconButton(
+                tooltip: 'Sign out',
+                onPressed: () => _confirmSignOut(context),
+                icon: Icon(Icons.logout_rounded, color: brand.primary),
+              ),
             ],
           ),
         ),
         Expanded(child: child),
       ],
     );
+  }
+
+  // Admin sign-out — relies on the GoRouter auth-state refresh listener to
+  // bounce us to /auth/login the moment Firebase Auth state goes null. No
+  // need to fire goNamed() here; doing so races with the StreamBuilder rebuild
+  // and gets dropped (see cd584ad fix on the teacher dashboard).
+  Future<void> _confirmSignOut(BuildContext context) async {
+    final brand = context.brand;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: const Text(
+          "You'll need to sign back in to access the admin panel.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: brand.primary),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    await ref.read(authViewModelProvider.notifier).signOut();
   }
 }
 
