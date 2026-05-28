@@ -66,6 +66,21 @@ class TeacherDashboardScreen extends ConsumerWidget {
           return _TeacherBody(user: snap.data!);
         },
       ),
+      bottomNavigationBar: _TeacherBottomNav(
+        index: 0,
+        onTap: (i) {
+          switch (i) {
+            case 0:
+              break; // already home
+            case 1:
+              context.goNamed(AppRoutes.materials);
+            case 2:
+              context.goNamed(AppRoutes.notifications);
+            case 3:
+              context.goNamed(AppRoutes.teacherProfile);
+          }
+        },
+      ),
     );
   }
 }
@@ -135,6 +150,8 @@ class _TeacherBody extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               _MyUploads(uid: user.uid),
+              const SizedBox(height: AppSpacing.xl),
+              const _TeacherFooter(),
             ],
           ),
         ),
@@ -1033,6 +1050,171 @@ class _UploadRow extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _TeacherFooter — small "MentorMinds · vX" credit row at the bottom of the
+// scroll content, plus links to the legal screens so they're discoverable
+// from the dashboard without a Profile detour.
+// ---------------------------------------------------------------------------
+
+class _TeacherFooter extends StatelessWidget {
+  const _TeacherFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final brand = context.brand;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _FooterLink(
+                label: 'Help',
+                onTap: () => context.goNamed(AppRoutes.helpFaq),
+              ),
+              _FooterDot(),
+              _FooterLink(
+                label: 'Privacy',
+                onTap: () => context.goNamed(AppRoutes.privacy),
+              ),
+              _FooterDot(),
+              _FooterLink(
+                label: 'Terms',
+                onTap: () => context.goNamed(AppRoutes.terms),
+              ),
+            ],
+          ),
+        ),
+        Text(
+          'MentorMinds for Teachers · v1.0',
+          style: AppTextStyles.bodySmall.copyWith(
+            color: brand.textMuted,
+            fontSize: 11,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'Made for O / A Level classrooms in Bangladesh',
+          style: AppTextStyles.bodySmall.copyWith(
+            color: brand.textMuted.withValues(alpha: 0.7),
+            fontSize: 10,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FooterLink extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _FooterLink({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final brand = context.brand;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadius.smBorder,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xs + 2, vertical: 4,
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.bodySmall.copyWith(
+            color: brand.primary,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FooterDot extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final brand = context.brand;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 1),
+      child: Text(
+        '·',
+        style: TextStyle(color: brand.textMuted, fontSize: 12),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _TeacherBottomNav — Material 3 NavigationBar with teacher-relevant tabs.
+// Mirrors the student dashboard's _BottomNav but slim (Home / Library /
+// Notifications / Profile) since teachers don't have Tutor / Rewards.
+// ---------------------------------------------------------------------------
+
+class _TeacherBottomNav extends StatelessWidget {
+  final int index;
+  final ValueChanged<int> onTap;
+  const _TeacherBottomNav({required this.index, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final brand = context.brand;
+    return NavigationBarTheme(
+      data: NavigationBarThemeData(
+        backgroundColor: brand.surface,
+        indicatorColor: brand.primary.withValues(alpha: 0.12),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return AppTextStyles.labelSmall.copyWith(
+            color: selected ? brand.primary : brand.textMuted,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+            fontSize: 11,
+          );
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return IconThemeData(
+            color: selected ? brand.primary : brand.textMuted,
+            size: 22,
+          );
+        }),
+        height: 68,
+      ),
+      child: NavigationBar(
+        selectedIndex: index,
+        onDestinationSelected: onTap,
+        surfaceTintColor: brand.surface,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book_rounded),
+            label: 'Library',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.notifications_outlined),
+            selectedIcon: Icon(Icons.notifications_rounded),
+            label: 'Inbox',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline_rounded),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'Profile',
+          ),
+        ],
       ),
     );
   }
