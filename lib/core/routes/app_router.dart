@@ -70,6 +70,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     debugLogDiagnostics: false,
     observers: [analytics.screenObserver],
+    // Bulletproof guard: any teacher/admin that lands on /dashboard (e.g. via
+    // a stale back-stack, deep link, or a screen that hasn't been updated to
+    // the role-aware helper) is rewritten to their own home. No matter what
+    // any individual screen does, a teacher cannot end up on the student
+    // dashboard.
+    redirect: (context, state) async {
+      if (state.matchedLocation != '/dashboard') return null;
+      final user = ref.read(firebaseAuthProvider).currentUser;
+      if (user == null) return null; // splash will handle unauthenticated state
+      try {
+        final token = await user.getIdTokenResult();
+        final role = token.claims?['role'] as String?;
+        if (role == 'teacher') return '/dashboard/teacher';
+        if (role == 'admin') return '/admin';
+      } catch (_) {
+        // Claims fetch failed (transient network / token refresh) — let the
+        // student route render; the user's screen will recover on next load.
+      }
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/',

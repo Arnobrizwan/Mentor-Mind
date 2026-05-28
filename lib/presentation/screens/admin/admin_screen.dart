@@ -48,12 +48,17 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     if (_redirected || admin.isLoading) return;
     if (!admin.isAuthorized) {
       _redirected = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Not authorized')),
         );
-        context.goNamed(AppRoutes.dashboard);
+        // Send the user to THEIR role-appropriate home, not always the
+        // student dashboard. A teacher who accidentally hits /admin should
+        // bounce back to /dashboard/teacher, not /dashboard.
+        final route = await resolveHomeRouteName(ref);
+        if (!mounted) return;
+        context.goNamed(route);
       });
     }
   }
