@@ -361,7 +361,6 @@ class _DashboardAppBar extends StatelessWidget {
                       points: points,
                       streak: streak,
                       level: level,
-                      isPremium: isPremium,
                     ),
                   ),
                 ),
@@ -524,14 +523,12 @@ class _HeroGreetingCard extends StatelessWidget {
   final int points;
   final int streak;
   final String level;
-  final bool isPremium;
 
   const _HeroGreetingCard({
     required this.firstName,
     required this.points,
     required this.streak,
     required this.level,
-    required this.isPremium,
   });
 
   @override
@@ -602,14 +599,10 @@ class _HeroGreetingCard extends StatelessWidget {
                   foreground: Colors.white,
                 ).animate().fadeIn(delay: 400.ms, duration: 300.ms)
                     .slideX(begin: -0.2, end: 0),
-              if (isPremium)
-                _HeroChip(
-                  emoji: '\u{1F48E}',
-                  label: 'Premium',
-                  background: brand.gold,
-                  foreground: Colors.white,
-                ).animate().fadeIn(delay: 500.ms, duration: 300.ms)
-                    .slideX(begin: -0.2, end: 0),
+              // Premium status intentionally NOT chip'd here — the
+              // _PremiumHubSection below renders "Premium Member · ACTIVE"
+              // prominently. Adding a 4th chip pushes the row to 2 lines
+              // and crowds the tip strip above.
             ],
           ),
         ],
@@ -897,23 +890,20 @@ class _PremiumHubSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Container(
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg, AppSpacing.md + 2,
-        AppSpacing.lg, AppSpacing.md + 2,
+        AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.md,
       ),
       decoration: BoxDecoration(
+        color: brand.surface,
         borderRadius: AppRadius.lgBorder,
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.kGold, Color(0xFFE08D0B)],
-        ),
+        border: Border.all(color: AppColors.kGold.withValues(alpha: 0.35)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.kGold.withValues(alpha: 0.30),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
+            color: AppColors.kGold.withValues(alpha: 0.10),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -922,14 +912,22 @@ class _PremiumHubSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text('\u{1F48E}',
-                  style: TextStyle(fontSize: 18, height: 1)),
-              const SizedBox(width: AppSpacing.xs + 2),
+              Container(
+                width: 32, height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.kGold.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: const Text('\u{1F48E}',
+                    style: TextStyle(fontSize: 16, height: 1)),
+              ),
+              const SizedBox(width: AppSpacing.sm + 2),
               Text(
                 'Premium Member',
                 style: AppTextStyles.headingSmall.copyWith(
-                  color: Colors.white,
-                  letterSpacing: 0.2,
+                  color: brand.textDark,
+                  letterSpacing: 0.1,
                 ),
               ),
               const Spacer(),
@@ -938,7 +936,7 @@ class _PremiumHubSection extends StatelessWidget {
                   horizontal: AppSpacing.sm, vertical: 3,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.22),
+                  color: AppColors.kGold.withValues(alpha: 0.16),
                   borderRadius: AppRadius.pillBorder,
                 ),
                 child: const Text(
@@ -947,7 +945,7 @@ class _PremiumHubSection extends StatelessWidget {
                     fontFamily: 'Inter',
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: AppColors.kGold,
                     letterSpacing: 0.8,
                   ),
                 ),
@@ -956,10 +954,8 @@ class _PremiumHubSection extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs + 2),
           Text(
-            'All features unlocked. Make the most of them.',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: Colors.white.withValues(alpha: 0.92),
-            ),
+            'All features unlocked.',
+            style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
@@ -1007,8 +1003,9 @@ class _PremiumPerkTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
     return Material(
-      color: Colors.white.withValues(alpha: 0.18),
+      color: AppColors.kGold.withValues(alpha: 0.08),
       borderRadius: AppRadius.mdBorder,
       child: InkWell(
         onTap: onTap,
@@ -1020,16 +1017,16 @@ class _PremiumPerkTile extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: Colors.white, size: 22),
+              Icon(icon, color: AppColors.kGold, size: 22),
               const SizedBox(height: AppSpacing.xs),
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: brand.textDark,
                   height: 1.2,
                 ),
               ),
