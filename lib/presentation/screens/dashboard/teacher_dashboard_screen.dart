@@ -16,6 +16,7 @@ import 'package:mentor_minds/data/models/profile_user.dart';
 import 'package:mentor_minds/data/repositories/materials_repository.dart';
 import 'package:mentor_minds/data/repositories/users_repository.dart';
 import 'package:mentor_minds/data/services/firebase_providers.dart';
+import 'package:mentor_minds/presentation/screens/dashboard/teacher_announcement_sheet.dart';
 import 'package:mentor_minds/presentation/screens/dashboard/teacher_upload_sheet.dart';
 import 'package:mentor_minds/shared/widgets/empty_state.dart';
 import 'package:mentor_minds/shared/widgets/section_header.dart';
@@ -94,7 +95,7 @@ class _TeacherBody extends ConsumerWidget {
           actions: [
             IconButton(
               tooltip: 'Profile',
-              onPressed: () => context.goNamed(AppRoutes.profile),
+              onPressed: () => context.goNamed(AppRoutes.teacherProfile),
               icon: Icon(Icons.person_outline_rounded, color: brand.primary),
             ),
             IconButton(
@@ -443,14 +444,55 @@ class _QuickActionsRow extends ConsumerWidget {
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: _ActionTile(
-            emoji: '\u{1F464}',
-            label: 'My\nprofile',
+            emoji: '\u{1F4E2}',
+            label: 'Send\nannouncement',
             tint: AppColors.kGold,
-            onTap: () => context.goNamed(AppRoutes.profile),
+            onTap: () => _openAnnouncementSheet(context, ref, user),
           ),
         ),
       ],
     );
+  }
+
+  Future<void> _openAnnouncementSheet(
+    BuildContext context,
+    WidgetRef ref,
+    ProfileUser u,
+  ) async {
+    final brand = context.brand;
+    if (!u.isApproved) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: brand.gold,
+          content: const Text(
+            "Your teacher account is awaiting approval — you can't send "
+            "announcements yet.",
+          ),
+        ),
+      );
+      return;
+    }
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: brand.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: AppRadius.xlRadius),
+      ),
+      builder: (_) => TeacherAnnouncementSheet(
+        teacherUid: u.uid,
+        teacherName: u.name,
+      ),
+    );
+    if (ok == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: brand.primary,
+          content: const Text('Announcement sent to your students.'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Future<void> _openUploadSheet(
@@ -475,7 +517,10 @@ class _QuickActionsRow extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: AppRadius.xlRadius),
       ),
-      builder: (_) => TeacherUploadSheet(user: u),
+      builder: (_) => TeacherUploadSheet(
+        uploaderUid: u.uid,
+        availableSubjects: u.subjects,
+      ),
     );
     if (result == true && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -631,87 +676,169 @@ class _MaterialsInSubjects extends ConsumerWidget {
   }
 }
 
-class _TeacherMaterialCard extends StatelessWidget {
+class _TeacherMaterialCard extends ConsumerStatefulWidget {
   final MaterialItem item;
   const _TeacherMaterialCard({required this.item});
 
   @override
+  ConsumerState<_TeacherMaterialCard> createState() =>
+      _TeacherMaterialCardState();
+}
+
+class _TeacherMaterialCardState extends ConsumerState<_TeacherMaterialCard> {
+  bool _pressed = false;
+
+  // Subject → emoji, mirroring the dashboard's local helper to keep the cards
+  // visually consistent across the app.
+  static const _subjectEmoji = <String, String>{
+    'Mathematics': '\u{1F4D0}',
+    'Physics': '⚛️',
+    'Chemistry': '\u{1F9EA}',
+    'Biology': '\u{1F9EC}',
+    'English': '\u{1F4D6}',
+    'ICT': '\u{1F4BB}',
+    'Accounting': '\u{1F9EE}',
+    'Economics': '\u{1F4CA}',
+    'History': '\u{1F4DC}',
+    'Geography': '\u{1F30D}',
+  };
+
+  @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 200,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: AppRadius.lgBorder,
-        child: InkWell(
-          onTap: () => context.goNamed(AppRoutes.materials),
+    final item = widget.item;
+    final fs = ref.watch(firestoreProvider);
+    return AnimatedScale(
+      scale: _pressed ? 0.96 : 1.0,
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
+      child: SizedBox(
+        width: 210,
+        child: Material(
+          color: Colors.transparent,
           borderRadius: AppRadius.lgBorder,
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              borderRadius: AppRadius.lgBorder,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: item.gradient,
+          child: InkWell(
+            onTap: () => context.goNamed(AppRoutes.materials),
+            onTapDown: (_) => setState(() => _pressed = true),
+            onTapCancel: () => setState(() => _pressed = false),
+            onTapUp: (_) => setState(() => _pressed = false),
+            borderRadius: AppRadius.lgBorder,
+            child: Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                borderRadius: AppRadius.lgBorder,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: item.gradient,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: item.gradient.first.withValues(alpha: 0.30),
+                    blurRadius: 12,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm, vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.25),
-                        borderRadius: AppRadius.pillBorder,
-                      ),
-                      child: Text(
-                        item.level,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          height: 1.2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      // Subject emoji on a translucent halo — visually anchors
+                      // each card to its subject before the title is read.
+                      Container(
+                        width: 28, height: 28,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.22),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          _subjectEmoji[item.subject] ?? '\u{1F393}',
+                          style: const TextStyle(fontSize: 14, height: 1),
                         ),
                       ),
-                    ),
-                    const Spacer(),
-                    const Icon(Icons.auto_stories_rounded,
-                        size: 16, color: Colors.white),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                        height: 1.25,
+                      const SizedBox(width: AppSpacing.xs + 2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm, vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          borderRadius: AppRadius.pillBorder,
+                        ),
+                        child: Text(
+                          item.level,
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                            height: 1.2,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.subject,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 11,
-                        color: Colors.white.withValues(alpha: 0.85),
+                      const Spacer(),
+                      // Live view count — reads /materials/{id}.views directly
+                      // so the card updates without a parent rebuild.
+                      StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                        stream:
+                            fs.collection('materials').doc(item.id).snapshots(),
+                        builder: (_, snap) {
+                          final v = (snap.data?.data()?['views'] as num?)
+                                  ?.toInt() ??
+                              0;
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.visibility_outlined,
+                                  size: 12, color: Colors.white),
+                              const SizedBox(width: 3),
+                              Text(
+                                '$v',
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                  height: 1.2,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          height: 1.25,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.subject,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11,
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -732,22 +859,38 @@ class _MyUploads extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fs = ref.watch(firestoreProvider);
+    // No orderBy — Firestore would need a composite index on
+    // (uploadedBy ASC, createdAt DESC) and that's not deployed. The teacher's
+    // own upload list is tiny (<= 50 in practice); sort client-side.
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: fs
           .collection('materials')
           .where('uploadedBy', isEqualTo: uid)
-          .orderBy('createdAt', descending: true)
-          .limit(10)
+          .limit(50)
           .snapshots(),
       builder: (context, snap) {
+        if (snap.hasError) {
+          return _UploadsErrorState(message: snap.error.toString());
+        }
         if (!snap.hasData) {
           return const SizedBox(
             height: 60,
             child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
           );
         }
-        final docs = snap.data!.docs;
-        if (docs.isEmpty) {
+        final docs = [...snap.data!.docs]
+          ..sort((a, b) {
+            final ta = (a.data()['createdAt'] as Timestamp?)?.toDate() ??
+                (a.data()['uploadedAt'] as Timestamp?)?.toDate();
+            final tb = (b.data()['createdAt'] as Timestamp?)?.toDate() ??
+                (b.data()['uploadedAt'] as Timestamp?)?.toDate();
+            if (ta == null && tb == null) return 0;
+            if (ta == null) return 1;
+            if (tb == null) return -1;
+            return tb.compareTo(ta);
+          });
+        final top = docs.take(10).toList();
+        if (top.isEmpty) {
           return const EmptyState(
             title: 'No uploads yet',
             message:
@@ -760,14 +903,46 @@ class _MyUploads extends ConsumerWidget {
         }
         return Column(
           children: [
-            for (var i = 0; i < docs.length; i++) ...[
-              _UploadRow(doc: docs[i]),
-              if (i != docs.length - 1)
+            for (var i = 0; i < top.length; i++) ...[
+              _UploadRow(doc: top[i]),
+              if (i != top.length - 1)
                 const SizedBox(height: AppSpacing.sm + 2),
             ],
           ],
         );
       },
+    );
+  }
+}
+
+class _UploadsErrorState extends StatelessWidget {
+  final String message;
+  const _UploadsErrorState({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final brand = context.brand;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: brand.error.withValues(alpha: 0.08),
+        borderRadius: AppRadius.lgBorder,
+        border: Border.all(color: brand.error.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline_rounded, color: brand.error, size: 20),
+          const SizedBox(width: AppSpacing.sm + 2),
+          Expanded(
+            child: Text(
+              "Couldn't load your uploads. $message",
+              style: AppTextStyles.bodySmall
+                  .copyWith(color: brand.textMuted, height: 1.4),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -186,9 +186,14 @@ class _Header extends ConsumerWidget {
                     icon: const Icon(Icons.arrow_back_rounded,
                         color: Colors.white),
                     tooltip: 'Back',
-                    onPressed: () => context.canPop()
-                        ? context.pop()
-                        : context.goNamed(AppRoutes.dashboard),
+                    onPressed: () async {
+                      if (context.canPop()) {
+                        context.pop();
+                        return;
+                      }
+                      final route = await resolveHomeRouteName(ref);
+                      if (context.mounted) context.goNamed(route);
+                    },
                   ),
                 ),
             Positioned(
@@ -767,28 +772,17 @@ class _SettingsList extends ConsumerWidget {
                 _Tile(
                   icon: Icons.help_rounded,
                   title: 'Help & FAQ',
-                  subtitle: support.helpEmail.isEmpty
-                      ? null
-                      : support.helpEmail,
-                  onTap: () => _launchHelpEmail(context, support),
+                  onTap: () => context.goNamed(AppRoutes.helpFaq),
                 ),
                 _Tile(
                   icon: Icons.policy_rounded,
                   title: 'Privacy Policy',
-                  onTap: () => _launchUrlOrSnack(
-                    context,
-                    support.privacyPolicyUrl,
-                    'Privacy Policy coming soon.',
-                  ),
+                  onTap: () => context.goNamed(AppRoutes.privacy),
                 ),
                 _Tile(
                   icon: Icons.description_rounded,
                   title: 'Terms of Service',
-                  onTap: () => _launchUrlOrSnack(
-                    context,
-                    support.termsOfServiceUrl,
-                    'Terms of Service coming soon.',
-                  ),
+                  onTap: () => context.goNamed(AppRoutes.terms),
                 ),
                 _Tile(
                   icon: Icons.star_rate_rounded,
@@ -1841,53 +1835,6 @@ String _deviceLocaleLabel(BuildContext context) {
   return country == null || country.isEmpty
       ? base
       : '$base · $country';
-}
-
-Future<void> _launchHelpEmail(
-  BuildContext context,
-  SupportConfig support,
-) async {
-  if (support.helpEmail.isEmpty) {
-    _showSnack(context, 'Help centre coming soon.');
-    return;
-  }
-  final uri = Uri(
-    scheme: 'mailto',
-    path: support.helpEmail,
-    query: support.helpEmailSubject.isEmpty
-        ? null
-        : 'subject=${Uri.encodeQueryComponent(support.helpEmailSubject)}',
-  );
-  final launched =
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-  if (!launched && context.mounted) {
-    _showSnack(
-      context,
-      'No mail app available. Email ${support.helpEmail} directly.',
-      isError: true,
-    );
-  }
-}
-
-Future<void> _launchUrlOrSnack(
-  BuildContext context,
-  String url,
-  String emptyMessage,
-) async {
-  if (url.isEmpty) {
-    _showSnack(context, emptyMessage);
-    return;
-  }
-  final uri = Uri.tryParse(url);
-  if (uri == null) {
-    _showSnack(context, emptyMessage);
-    return;
-  }
-  final launched =
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-  if (!launched && context.mounted) {
-    _showSnack(context, "Couldn't open $url", isError: true);
-  }
 }
 
 Future<void> _launchStoreRating(

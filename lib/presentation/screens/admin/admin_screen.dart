@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +12,8 @@ import 'package:mentor_minds/core/routes/app_router.dart';
 import 'package:mentor_minds/core/theme/app_radius.dart';
 import 'package:mentor_minds/core/theme/app_spacing.dart';
 import 'package:mentor_minds/core/theme/brand_colors.dart';
+import 'package:mentor_minds/data/services/firebase_providers.dart';
+import 'package:mentor_minds/presentation/screens/dashboard/teacher_upload_sheet.dart';
 import 'package:mentor_minds/shared/widgets/pill_button.dart';
 
 // ---------------------------------------------------------------------------
@@ -159,16 +162,24 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   Widget _tabBody(AdminState admin, bool wide) {
     final brand = context.brand;
     final child = switch (_tabIndex) {
-      0 => _DashboardTab(userCount: admin.users.length),
+      0 => _DashboardTab(
+          totalUsers: admin.totalUsersCount ?? admin.users.length,
+          premium: admin.premiumUsersCount,
+          materials: admin.materialsCount,
+          pendingApprovals: admin.pendingTeachers.length,
+        ),
       1 => _UsersTab(
           users: admin.users,
+          pendingTeachers: admin.pendingTeachers,
           hasMore: admin.hasMoreUsers,
           onLoadMore: () =>
               ref.read(adminViewModelProvider.notifier).loadUsers(),
           onTogglePremium: (row) =>
               ref.read(adminViewModelProvider.notifier).togglePremium(row),
+          onApproveTeacher: (row) =>
+              ref.read(adminViewModelProvider.notifier).approveTeacher(row),
         ),
-      2 => const _ContentTab(),
+      2 => _ContentTab(adminUid: ref.read(firebaseAuthProvider).currentUser?.uid ?? ''),
       3 => _NotificationsTab(
           titleController: _broadcastTitle,
           bodyController: _broadcastBody,
@@ -242,9 +253,17 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
 // ---------------------------------------------------------------------------
 
 class _DashboardTab extends StatelessWidget {
-  const _DashboardTab({required this.userCount});
+  const _DashboardTab({
+    required this.totalUsers,
+    required this.premium,
+    required this.materials,
+    required this.pendingApprovals,
+  });
 
-  final int userCount;
+  final int totalUsers;
+  final int? premium;
+  final int? materials;
+  final int pendingApprovals;
 
   @override
   Widget build(BuildContext context) {
@@ -256,12 +275,47 @@ class _DashboardTab extends StatelessWidget {
           spacing: AppSpacing.md,
           runSpacing: AppSpacing.md,
           children: [
-            _KpiCard(label: 'Users loaded', value: '$userCount'),
-            const _KpiCard(label: 'DAU (today)', value: '—'),
-            const _KpiCard(label: 'Premium', value: '—'),
-            const _KpiCard(label: 'Messages today', value: '—'),
+            _KpiCard(label: 'Total users', value: '$totalUsers'),
+            _KpiCard(
+              label: 'Premium',
+              value: premium != null ? '$premium' : '—',
+            ),
+            _KpiCard(
+              label: 'Materials',
+              value: materials != null ? '$materials' : '—',
+            ),
+            _KpiCard(
+              label: 'Pending approvals',
+              value: '$pendingApprovals',
+              tint: pendingApprovals > 0 ? brand.gold : null,
+            ),
           ],
         ),
+        if (pendingApprovals > 0) ...[
+          const SizedBox(height: AppSpacing.lg),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: brand.gold.withValues(alpha: 0.10),
+              borderRadius: AppRadius.lgBorder,
+              border: Border.all(color: brand.gold.withValues(alpha: 0.40)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.hourglass_top_rounded, color: brand.gold),
+                const SizedBox(width: AppSpacing.sm + 2),
+                Expanded(
+                  child: Text(
+                    '$pendingApprovals teacher${pendingApprovals == 1 ? '' : 's'} '
+                    'waiting for approval. Open the Users tab to review.',
+                    style: AppTextStyles.bodyMedium
+                        .copyWith(color: brand.textDark),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: AppSpacing.xl),
         Text(
           'Recent activity',
@@ -281,33 +335,48 @@ class _DashboardTab extends StatelessWidget {
 /// shared StatCard (which takes an icon + tint) — this is label-on-top
 /// + big number, no icon.
 class _KpiCard extends StatelessWidget {
-  const _KpiCard({required this.label, required this.value});
+  const _KpiCard({
+    required this.label,
+    required this.value,
+    this.tint,
+  });
 
   final String label;
   final String value;
+  final Color? tint;
 
   @override
   Widget build(BuildContext context) {
     final brand = context.brand;
+    final effectiveTint = tint ?? brand.border;
     return Container(
       width: 160,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: brand.surface,
         borderRadius: AppRadius.mdBorder,
-        border: Border.all(color: brand.border),
+        border: Border.all(
+          color: tint != null ? effectiveTint : brand.border,
+          width: tint != null ? 1.5 : 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
+            style: AppTextStyles.bodySmall.copyWith(
+              color: tint ?? brand.textMuted,
+              fontWeight:
+                  tint != null ? FontWeight.w600 : FontWeight.normal,
+            ),
           ),
           const SizedBox(height: AppSpacing.xs + 2),
           Text(
             value,
-            style: AppTextStyles.headingMedium.copyWith(color: brand.textDark),
+            style: AppTextStyles.headingMedium.copyWith(
+              color: tint ?? brand.textDark,
+            ),
           ),
         ],
       ),
@@ -322,20 +391,24 @@ class _KpiCard extends StatelessWidget {
 class _UsersTab extends StatelessWidget {
   const _UsersTab({
     required this.users,
+    required this.pendingTeachers,
     required this.hasMore,
     required this.onLoadMore,
     required this.onTogglePremium,
+    required this.onApproveTeacher,
   });
 
   final List<AdminUserRow> users;
+  final List<AdminUserRow> pendingTeachers;
   final bool hasMore;
   final VoidCallback onLoadMore;
   final void Function(AdminUserRow row) onTogglePremium;
+  final void Function(AdminUserRow row) onApproveTeacher;
 
   @override
   Widget build(BuildContext context) {
     final brand = context.brand;
-    if (users.isEmpty) {
+    if (users.isEmpty && pendingTeachers.isEmpty) {
       return Center(
         child: Text(
           'No users loaded',
@@ -343,13 +416,102 @@ class _UsersTab extends StatelessWidget {
         ),
       );
     }
-    return ListView.separated(
+    return ListView(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      itemCount: users.length + (hasMore ? 1 : 0),
-      separatorBuilder: (_, __) => Divider(height: 1, color: brand.border),
-      itemBuilder: (context, i) {
-        if (i == users.length) {
-          return Padding(
+      children: [
+        if (pendingTeachers.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Icon(Icons.hourglass_top_rounded, color: brand.gold),
+              const SizedBox(width: AppSpacing.xs + 2),
+              Text(
+                'Pending teacher approvals',
+                style: AppTextStyles.headingSmall.copyWith(
+                  color: brand.textDark,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs + 2),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs + 2, vertical: 1,
+                ),
+                decoration: BoxDecoration(
+                  color: brand.gold.withValues(alpha: 0.18),
+                  borderRadius: AppRadius.pillBorder,
+                ),
+                child: Text(
+                  '${pendingTeachers.length}',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: brand.gold, fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          for (final row in pendingTeachers)
+            _PendingTeacherTile(
+              row: row,
+              onApprove: () => onApproveTeacher(row),
+            ),
+          const SizedBox(height: AppSpacing.lg),
+          Divider(color: brand.border),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'All users',
+            style: AppTextStyles.headingSmall.copyWith(color: brand.textDark),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+        ],
+        ...List.generate(users.length, (i) {
+          final row = users[i];
+          final isPremium = row.subscriptionType == 'premium';
+          return Column(
+            children: [
+              ListTile(
+                title: Text(
+                  row.name,
+                  style: AppTextStyles.labelLarge.copyWith(
+                    color: brand.textDark,
+                    fontSize: 15,
+                  ),
+                ),
+                subtitle: Text(
+                  '${row.email} · ${row.role} · ${row.points} pts',
+                  style:
+                      AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
+                ),
+                trailing: PopupMenuButton<String>(
+                  onSelected: (action) {
+                    if (action == 'premium') onTogglePremium(row);
+                  },
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: 'premium',
+                      child:
+                          Text(isPremium ? 'Revoke premium' : 'Grant premium'),
+                    ),
+                  ],
+                ),
+                leading: CircleAvatar(
+                  backgroundColor: isPremium
+                      ? AppColors.kGold.withValues(alpha: 0.3)
+                      : brand.primary.withValues(alpha: 0.15),
+                  child: Icon(
+                    isPremium ? Icons.star : Icons.person,
+                    color: isPremium ? AppColors.kGold : brand.primary,
+                    size: 20,
+                  ),
+                ),
+              ),
+              if (i != users.length - 1)
+                Divider(height: 1, color: brand.border),
+            ],
+          );
+        }),
+        if (hasMore)
+          Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
             child: PillButton(
               label: 'Load more',
@@ -358,60 +520,102 @@ class _UsersTab extends StatelessWidget {
               fullWidth: false,
               onPressed: onLoadMore,
             ),
-          );
-        }
-        final row = users[i];
-        final isPremium = row.subscriptionType == 'premium';
-        return ListTile(
-          title: Text(
-            row.name,
-            style: AppTextStyles.labelLarge.copyWith(
-              color: brand.textDark,
-              fontSize: 15,
-            ),
           ),
-          subtitle: Text(
-            '${row.email} · ${row.role} · ${row.points} pts',
-            style: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
-          ),
-          trailing: PopupMenuButton<String>(
-            onSelected: (action) {
-              if (action == 'premium') onTogglePremium(row);
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'premium',
-                child: Text(isPremium ? 'Revoke premium' : 'Grant premium'),
-              ),
-            ],
-          ),
-          leading: CircleAvatar(
-            backgroundColor: isPremium
-                ? AppColors.kGold.withValues(alpha: 0.3)
-                : brand.primary.withValues(alpha: 0.15),
-            child: Icon(
-              isPremium ? Icons.star : Icons.person,
-              // Gold premium star stays full color in both themes.
-              color: isPremium ? AppColors.kGold : brand.primary,
-              size: 20,
-            ),
-          ),
-        );
-      },
+      ],
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Content tab — placeholder for teacher uploads (Phase 7 polish)
+// _PendingTeacherTile — single row in the Users tab's approval queue.
 // ---------------------------------------------------------------------------
 
-class _ContentTab extends StatelessWidget {
-  const _ContentTab();
+class _PendingTeacherTile extends StatelessWidget {
+  const _PendingTeacherTile({required this.row, required this.onApprove});
+
+  final AdminUserRow row;
+  final VoidCallback onApprove;
 
   @override
   Widget build(BuildContext context) {
     final brand = context.brand;
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md, vertical: AppSpacing.sm + 2,
+      ),
+      decoration: BoxDecoration(
+        color: brand.surface,
+        borderRadius: AppRadius.lgBorder,
+        border: Border.all(color: brand.gold.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: brand.gold.withValues(alpha: 0.20),
+            child: Icon(Icons.school_rounded, color: brand.gold, size: 20),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  row.name,
+                  style: AppTextStyles.labelLarge.copyWith(
+                    color: brand.textDark, fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  row.email,
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style:
+                      AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
+                ),
+                if (row.subjects.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    row.subjects.join(' · '),
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: brand.primary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: brand.primary,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md, vertical: AppSpacing.xs + 2,
+              ),
+            ),
+            onPressed: onApprove,
+            child: const Text('Approve'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Content tab — admin material upload via the shared TeacherUploadSheet.
+// Lists recent uploads from any source so admins can verify what's live.
+// ---------------------------------------------------------------------------
+
+class _ContentTab extends ConsumerWidget {
+  const _ContentTab({required this.adminUid});
+
+  final String adminUid;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final brand = context.brand;
+    final curriculum = ref.watch(currentCurriculumConfigProvider);
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
@@ -423,9 +627,100 @@ class _ContentTab extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Teacher content upload + Storage write will connect in Phase 7 '
-            'polish. Use Firebase Console or seed script for now.',
+            'Publish a new study resource. The sheet writes directly to '
+            '/materials with your uid as uploadedBy.',
             style: AppTextStyles.bodyMedium.copyWith(color: brand.textMuted),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          PillButton(
+            label: 'Open upload form',
+            icon: Icons.upload_file_rounded,
+            onPressed: adminUid.isEmpty
+                ? null
+                : () => showModalBottomSheet<bool>(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: brand.surface,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.vertical(top: AppRadius.xlRadius),
+                      ),
+                      builder: (_) => TeacherUploadSheet(
+                        uploaderUid: adminUid,
+                        availableSubjects: curriculum.subjects,
+                      ),
+                    ).then((ok) {
+                      if (ok == true && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: brand.primary,
+                            content: const Text('Material published.'),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    }),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Text(
+            'Recent uploads',
+            style: AppTextStyles.headingSmall.copyWith(color: brand.textDark),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: ref
+                  .watch(firestoreProvider)
+                  .collection('materials')
+                  .orderBy('createdAt', descending: true)
+                  .limit(20)
+                  .snapshots(),
+              builder: (context, snap) {
+                if (!snap.hasData) {
+                  return const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2));
+                }
+                final docs = snap.data!.docs;
+                if (docs.isEmpty) {
+                  return Text(
+                    'No materials yet.',
+                    style: AppTextStyles.bodyMedium
+                        .copyWith(color: brand.textMuted),
+                  );
+                }
+                return ListView.separated(
+                  itemCount: docs.length,
+                  separatorBuilder: (_, __) =>
+                      Divider(height: 1, color: brand.border),
+                  itemBuilder: (_, i) {
+                    final d = docs[i].data();
+                    final title = (d['title'] as String?) ?? 'Untitled';
+                    final subject = (d['subject'] as String?) ?? '';
+                    final level = (d['level'] as String?) ?? '';
+                    final views = (d['views'] as num?)?.toInt() ?? 0;
+                    return ListTile(
+                      dense: true,
+                      title: Text(
+                        title,
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodyMedium
+                            .copyWith(color: brand.textDark),
+                      ),
+                      subtitle: Text(
+                        '$subject · $level',
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: brand.textMuted),
+                      ),
+                      trailing: Text(
+                        '$views \u{1F441}',
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: brand.textMuted),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),

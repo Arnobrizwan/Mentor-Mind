@@ -205,12 +205,12 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
 // App bar — title + back + search field
 // ---------------------------------------------------------------------------
 
-class _MaterialsAppBar extends StatelessWidget {
+class _MaterialsAppBar extends ConsumerWidget {
   final TextEditingController controller;
   const _MaterialsAppBar({required this.controller});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final brand = context.brand;
     return SliverAppBar(
       backgroundColor: brand.surface,
@@ -233,9 +233,17 @@ class _MaterialsAppBar extends StatelessWidget {
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_rounded),
         tooltip: 'Back',
-        onPressed: () => context.canPop()
-            ? context.pop()
-            : context.goNamed(AppRoutes.dashboard),
+        onPressed: () async {
+          if (context.canPop()) {
+            context.pop();
+            return;
+          }
+          // Resolve the user's role-appropriate home so teachers don't
+          // get kicked into the student dashboard when they back out of
+          // the shared Materials screen.
+          final route = await resolveHomeRouteName(ref);
+          if (context.mounted) context.goNamed(route);
+        },
       ),
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(60),

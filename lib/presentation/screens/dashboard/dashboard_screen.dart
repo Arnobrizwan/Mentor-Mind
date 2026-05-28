@@ -127,6 +127,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   points: state.points,
                   streak: state.streak,
                   level: state.user?.level ?? '',
+                  isPremium:
+                      state.user?.subscriptionType == 'premium',
                   notificationCount: state.notificationCount,
                 ),
                 SliverPadding(
@@ -137,6 +139,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     children: [
                       const _QuickActionRow(),
                       const SizedBox(height: AppSpacing.xl - 4),
+                      if (state.user?.subscriptionType == 'premium') ...[
+                        const _PremiumHubSection(),
+                        const SizedBox(height: AppSpacing.xl - 4),
+                      ],
                       _DailyChallengeCard(
                         challenge: state.dailyChallenge,
                         resetsAt: state.dailyChallengeResetsAt,
@@ -241,6 +247,7 @@ class _DashboardAppBar extends StatelessWidget {
   final int points;
   final int streak;
   final String level;
+  final bool isPremium;
   final int notificationCount;
 
   const _DashboardAppBar({
@@ -248,6 +255,7 @@ class _DashboardAppBar extends StatelessWidget {
     required this.points,
     required this.streak,
     required this.level,
+    required this.isPremium,
     required this.notificationCount,
   });
 
@@ -353,6 +361,7 @@ class _DashboardAppBar extends StatelessWidget {
                       points: points,
                       streak: streak,
                       level: level,
+                      isPremium: isPremium,
                     ),
                   ),
                 ),
@@ -515,12 +524,14 @@ class _HeroGreetingCard extends StatelessWidget {
   final int points;
   final int streak;
   final String level;
+  final bool isPremium;
 
   const _HeroGreetingCard({
     required this.firstName,
     required this.points,
     required this.streak,
     required this.level,
+    required this.isPremium,
   });
 
   @override
@@ -590,6 +601,14 @@ class _HeroGreetingCard extends StatelessWidget {
                   background: brand.primary,
                   foreground: Colors.white,
                 ).animate().fadeIn(delay: 400.ms, duration: 300.ms)
+                    .slideX(begin: -0.2, end: 0),
+              if (isPremium)
+                _HeroChip(
+                  emoji: '\u{1F48E}',
+                  label: 'Premium',
+                  background: brand.gold,
+                  foreground: Colors.white,
+                ).animate().fadeIn(delay: 500.ms, duration: 300.ms)
                     .slideX(begin: -0.2, end: 0),
             ],
           ),
@@ -860,6 +879,161 @@ class _QuickActionTileState extends State<_QuickActionTile> {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _PremiumHubSection — premium-only home strip. Only mounted when the user's
+// subscriptionType == 'premium'. Surfaces the three premium-exclusive
+// capabilities with one-tap shortcuts so the perks feel real, not abstract.
+// ---------------------------------------------------------------------------
+
+class _PremiumHubSection extends StatelessWidget {
+  const _PremiumHubSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg, AppSpacing.md + 2,
+        AppSpacing.lg, AppSpacing.md + 2,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.lgBorder,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.kGold, Color(0xFFE08D0B)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.kGold.withValues(alpha: 0.30),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('\u{1F48E}',
+                  style: TextStyle(fontSize: 18, height: 1)),
+              const SizedBox(width: AppSpacing.xs + 2),
+              Text(
+                'Premium Member',
+                style: AppTextStyles.headingSmall.copyWith(
+                  color: Colors.white,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm, vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.22),
+                  borderRadius: AppRadius.pillBorder,
+                ),
+                child: const Text(
+                  'ACTIVE',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs + 2),
+          Text(
+            'All features unlocked. Make the most of them.',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: Colors.white.withValues(alpha: 0.92),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _PremiumPerkTile(
+                  icon: Icons.all_inclusive_rounded,
+                  label: 'Unlimited\ntutor',
+                  onTap: () => context.goNamed(AppRoutes.tutor),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _PremiumPerkTile(
+                  icon: Icons.image_outlined,
+                  label: 'Diagram\nanalysis',
+                  onTap: () => context.goNamed(AppRoutes.tutor),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _PremiumPerkTile(
+                  icon: Icons.history_rounded,
+                  label: 'Search\nsessions',
+                  onTap: () => context.goNamed(AppRoutes.search),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.15, end: 0);
+  }
+}
+
+class _PremiumPerkTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _PremiumPerkTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.18),
+      borderRadius: AppRadius.mdBorder,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.mdBorder,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xs + 2, vertical: AppSpacing.sm + 2,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: 22),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                  height: 1.2,
+                ),
+              ),
+            ],
           ),
         ),
       ),

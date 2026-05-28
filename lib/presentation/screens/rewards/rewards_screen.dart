@@ -55,12 +55,12 @@ class RewardsScreen extends ConsumerWidget {
 // Header — title + animated count-up + progress card
 // ---------------------------------------------------------------------------
 
-class _Header extends StatelessWidget {
+class _Header extends ConsumerWidget {
   final RewardsState state;
   const _Header({required this.state});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final brand = context.brand;
     return Container(
       padding: const EdgeInsets.fromLTRB(
@@ -74,9 +74,14 @@ class _Header extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.arrow_back_rounded),
                 tooltip: 'Back',
-                onPressed: () => context.canPop()
-                    ? context.pop()
-                    : context.goNamed(AppRoutes.dashboard),
+                onPressed: () async {
+                  if (context.canPop()) {
+                    context.pop();
+                    return;
+                  }
+                  final route = await resolveHomeRouteName(ref);
+                  if (context.mounted) context.goNamed(route);
+                },
               ),
               Text(
                 'My Rewards',

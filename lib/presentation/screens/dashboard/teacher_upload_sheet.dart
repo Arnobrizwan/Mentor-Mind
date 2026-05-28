@@ -6,27 +6,33 @@ import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/theme/app_radius.dart';
 import 'package:mentor_minds/core/theme/app_spacing.dart';
 import 'package:mentor_minds/core/theme/brand_colors.dart';
-import 'package:mentor_minds/data/models/profile_user.dart';
 import 'package:mentor_minds/data/services/firebase_providers.dart';
 
 // ---------------------------------------------------------------------------
 // TeacherUploadSheet
 //
-// Bottom sheet that lets an approved teacher publish a new material doc to
-// /materials. Metadata-only for now — file URL is optional. The full
-// Storage-backed flow lands in the admin upload form; this sheet covers the
-// "I just want to publish a note / link a resource" path that's missing on
-// the teacher dashboard.
+// Bottom sheet that lets an approved teacher (or any admin) publish a new
+// material doc to /materials. Metadata-only for now — file URL is optional.
+// The full Storage-backed flow can layer on later.
 //
 // Firestore rules check: /materials create allows isApprovedTeacher() or
-// isAdmin() — so unapproved teachers will be rejected at the server. We block
-// that on the client too via the user.subjects check + an `isApproved` read
-// to surface a friendlier message instead of a silent rules denial.
+// isAdmin() — so unapproved teachers will be rejected at the server. The
+// catch block surfaces a friendlier message on permission-denied instead of
+// a silent rules denial.
+//
+// Pass `uploaderUid` (the user's uid for the `uploadedBy` field) and
+// `availableSubjects` (the dropdown options). Admins pass the full curriculum;
+// teachers pass their own enrolled subjects.
 // ---------------------------------------------------------------------------
 
 class TeacherUploadSheet extends ConsumerStatefulWidget {
-  final ProfileUser user;
-  const TeacherUploadSheet({super.key, required this.user});
+  final String uploaderUid;
+  final List<String> availableSubjects;
+  const TeacherUploadSheet({
+    super.key,
+    required this.uploaderUid,
+    required this.availableSubjects,
+  });
 
   @override
   ConsumerState<TeacherUploadSheet> createState() =>
@@ -45,8 +51,8 @@ class _TeacherUploadSheetState extends ConsumerState<TeacherUploadSheet> {
   @override
   void initState() {
     super.initState();
-    if (widget.user.subjects.isNotEmpty) {
-      _subject = widget.user.subjects.first;
+    if (widget.availableSubjects.isNotEmpty) {
+      _subject = widget.availableSubjects.first;
     }
   }
 
@@ -73,15 +79,18 @@ class _TeacherUploadSheetState extends ConsumerState<TeacherUploadSheet> {
     });
     try {
       final fs = ref.read(firestoreProvider);
+      final uidSuffix = widget.uploaderUid.length >= 6
+          ? widget.uploaderUid.substring(0, 6)
+          : widget.uploaderUid;
       final docId =
-          'teacher_${widget.user.uid.substring(0, 6)}_${DateTime.now().millisecondsSinceEpoch}';
+          'mat_${uidSuffix}_${DateTime.now().millisecondsSinceEpoch}';
       await fs.collection('materials').doc(docId).set({
         'title': title,
         'subject': _subject,
         'level': _level,
         'type': _type,
         'fileUrl': _urlCtrl.text.trim(),
-        'uploadedBy': widget.user.uid,
+        'uploadedBy': widget.uploaderUid,
         'views': 0,
         'createdAt': FieldValue.serverTimestamp(),
         'uploadedAt': FieldValue.serverTimestamp(),
@@ -158,7 +167,7 @@ class _TeacherUploadSheetState extends ConsumerState<TeacherUploadSheet> {
                 initialValue: _subject,
                 decoration: const InputDecoration(labelText: 'Subject'),
                 items: [
-                  for (final s in widget.user.subjects)
+                  for (final s in widget.availableSubjects)
                     DropdownMenuItem(value: s, child: Text(s)),
                 ],
                 onChanged: _saving ? null : (v) => setState(() => _subject = v),

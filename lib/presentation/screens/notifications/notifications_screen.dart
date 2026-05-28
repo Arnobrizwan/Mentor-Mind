@@ -70,9 +70,14 @@ class _Header extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.arrow_back_rounded),
             tooltip: 'Back',
-            onPressed: () => context.canPop()
-                ? context.pop()
-                : context.goNamed(AppRoutes.dashboard),
+            onPressed: () async {
+              if (context.canPop()) {
+                context.pop();
+                return;
+              }
+              final route = await resolveHomeRouteName(ref);
+              if (context.mounted) context.goNamed(route);
+            },
           ),
           Text(
             'Notifications',

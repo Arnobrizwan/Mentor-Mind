@@ -168,9 +168,22 @@ service cloud.firestore {
 
     match /notifications/{id} {
       allow read: if isSignedIn();
+      // Three creator paths:
+      //   1. Admins create anything.
+      //   2. Any signed-in user persists their own FCM-ingest notifications
+      //      (source == 'fcm_client', unread).
+      //   3. Approved teachers may post student-targeted announcements,
+      //      stamped with their uid as `createdBy` so we can audit/throttle.
       allow create: if isAdmin() || (
         isSignedIn()
         && request.resource.data.get('source', '') == 'fcm_client'
+        && request.resource.data.read == false
+      ) || (
+        isApprovedTeacher()
+        && request.resource.data.get('source', '') == 'teacher_announcement'
+        && request.resource.data.get('createdBy', '') == request.auth.uid
+        && request.resource.data.recipientRole == 'student'
+        && request.resource.data.type == 'announcement'
         && request.resource.data.read == false
       );
       allow update: if isSignedIn()

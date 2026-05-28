@@ -831,6 +831,48 @@ const testUsers = [
       questionsPerSubject: {},
     },
     sessions: [],
+    // Materials seeded with uploadedBy: <teacherUid> so the teacher dashboard's
+    // "My uploads" KPI + "My recent uploads" list show real content for demos.
+    // Each gets a deterministic doc id derived from `slug` so re-seeding is
+    // idempotent.
+    uploads: [
+      {
+        slug: 'org_chem_naming',
+        title: 'Organic Chemistry — IUPAC Naming Guide',
+        subject: 'Chemistry',
+        level: 'A Level',
+        type: 'NOTE',
+        daysAgo: 1,
+        views: 42,
+      },
+      {
+        slug: 'mole_calc_practice',
+        title: 'Mole Calculation Practice Set',
+        subject: 'Chemistry',
+        level: 'O Level',
+        type: 'PDF',
+        daysAgo: 3,
+        views: 87,
+      },
+      {
+        slug: 'bio_genetics_intro',
+        title: 'Genetics — Mendelian Inheritance Intro',
+        subject: 'Biology',
+        level: 'A Level',
+        type: 'NOTE',
+        daysAgo: 5,
+        views: 31,
+      },
+      {
+        slug: 'bio_resp_diagrams',
+        title: 'Cellular Respiration — Annotated Diagrams',
+        subject: 'Biology',
+        level: 'A Level',
+        type: 'PDF',
+        daysAgo: 8,
+        views: 56,
+      },
+    ],
   },
   {
     email: 'admin@mentorminds.test',
@@ -900,6 +942,29 @@ async function seedUser(u) {
   return uid;
 }
 
+// Seeds /materials documents authored by a single teacher. Idempotent: each
+// material uses `mat_seed_<slug>` as its doc id so re-runs update in place.
+async function seedUploadsFor(uid, uploads) {
+  if (!uploads || uploads.length === 0) return 0;
+  const now = Date.now();
+  for (const u of uploads) {
+    const ts = new Date(now - (u.daysAgo || 0) * 24 * 60 * 60 * 1000);
+    const docId = `mat_seed_${u.slug}`;
+    await db.collection('materials').doc(docId).set({
+      title: u.title,
+      subject: u.subject,
+      level: u.level,
+      type: u.type || 'NOTE',
+      fileUrl: '',
+      uploadedBy: uid,
+      views: u.views ?? 0,
+      createdAt: admin.firestore.Timestamp.fromDate(ts),
+      uploadedAt: admin.firestore.Timestamp.fromDate(ts),
+    });
+  }
+  return uploads.length;
+}
+
 // Seeds /sessions documents for a single user. Idempotent: each session uses
 // a deterministic doc id (`seed_<uid>_<index>`) so re-running the script
 // updates timestamps in place rather than creating duplicates.
@@ -936,16 +1001,25 @@ async function run() {
 
   console.log(`\nSeeding ${testUsers.length} test accounts...`);
   let totalSessions = 0;
+  let totalUploads = 0;
   for (const u of testUsers) {
     const uid = await seedUser(u);
-    const n = await seedSessionsFor(uid, u.sessions);
-    if (n > 0) {
-      console.log(`    └─ ${n} session${n === 1 ? '' : 's'} seeded`);
-      totalSessions += n;
+    const ns = await seedSessionsFor(uid, u.sessions);
+    if (ns > 0) {
+      console.log(`    └─ ${ns} session${ns === 1 ? '' : 's'} seeded`);
+      totalSessions += ns;
+    }
+    const nu = await seedUploadsFor(uid, u.uploads);
+    if (nu > 0) {
+      console.log(`    └─ ${nu} upload${nu === 1 ? '' : 's'} seeded`);
+      totalUploads += nu;
     }
   }
   if (totalSessions > 0) {
     console.log(`  ${totalSessions} session document${totalSessions === 1 ? '' : 's'} written under /sessions.`);
+  }
+  if (totalUploads > 0) {
+    console.log(`  ${totalUploads} teacher-authored material${totalUploads === 1 ? '' : 's'} written under /materials.`);
   }
 
   console.log(`\nSeeding ${materials.length} materials...`);

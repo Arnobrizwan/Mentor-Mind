@@ -56,11 +56,18 @@ const _subjectColors = <String, Color>{
 Color _colorForSubject(String s) =>
     _subjectColors[s] ?? const Color(0xFF1A3C8F); // AppColors.kPrimary
 
+// Pastel gradient: shifts the subject's saturated hue toward a light wash
+// (top-left) and a softer mid-tone (bottom-right). White text still passes
+// AA contrast against the bottom stop on every subject in the catalog.
 List<Color> _gradientForSubject(String s) {
   final base = _colorForSubject(s);
   final hsl = HSLColor.fromColor(base);
-  final darker = hsl
-      .withLightness((hsl.lightness - 0.18).clamp(0.0, 1.0))
+  final lighter = hsl
+      .withLightness((hsl.lightness + 0.18).clamp(0.0, 1.0))
+      .withSaturation((hsl.saturation * 0.85).clamp(0.0, 1.0))
       .toColor();
-  return [base, darker];
+  final mid = hsl
+      .withLightness((hsl.lightness + 0.06).clamp(0.0, 1.0))
+      .toColor();
+  return [lighter, mid];
 }

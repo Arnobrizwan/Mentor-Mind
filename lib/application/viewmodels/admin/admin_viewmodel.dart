@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +17,8 @@ class AdminUserRow {
   final String role;
   final String subscriptionType;
   final int points;
+  final bool isApproved;
+  final List<String> subjects;
 
   const AdminUserRow({
     required this.uid,
@@ -23,6 +27,8 @@ class AdminUserRow {
     required this.role,
     required this.subscriptionType,
     required this.points,
+    this.isApproved = true,
+    this.subjects = const [],
   });
 }
 
@@ -37,6 +43,15 @@ class AdminState {
   final List<UsageLogDay> usageLogDays;
   final String? analyticsError;
 
+  // Teacher approval queue (role == 'teacher' && isApproved == false). Streamed
+  // separately from the paginated user list so admins always see fresh signups.
+  final List<AdminUserRow> pendingTeachers;
+
+  // Live KPIs for the dashboard tab. Backed by Firestore aggregate counts.
+  final int? totalUsersCount;
+  final int? premiumUsersCount;
+  final int? materialsCount;
+
   const AdminState({
     this.isLoading = true,
     this.isAuthorized = false,
@@ -47,6 +62,10 @@ class AdminState {
     this.analyticsLoading = false,
     this.usageLogDays = const [],
     this.analyticsError,
+    this.pendingTeachers = const [],
+    this.totalUsersCount,
+    this.premiumUsersCount,
+    this.materialsCount,
   });
 
   int get totalCallsLast14Days =>
@@ -67,6 +86,10 @@ class AdminState {
     bool? analyticsLoading,
     List<UsageLogDay>? usageLogDays,
     String? analyticsError,
+    List<AdminUserRow>? pendingTeachers,
+    int? totalUsersCount,
+    int? premiumUsersCount,
+    int? materialsCount,
     bool clearError = false,
     bool clearAnalyticsError = false,
   }) =>
@@ -81,6 +104,10 @@ class AdminState {
         usageLogDays: usageLogDays ?? this.usageLogDays,
         analyticsError:
             clearAnalyticsError ? null : (analyticsError ?? this.analyticsError),
+        pendingTeachers: pendingTeachers ?? this.pendingTeachers,
+        totalUsersCount: totalUsersCount ?? this.totalUsersCount,
+        premiumUsersCount: premiumUsersCount ?? this.premiumUsersCount,
+        materialsCount: materialsCount ?? this.materialsCount,
       );
 }
 
@@ -101,6 +128,15 @@ class AdminViewModel extends StateNotifier<AdminState> {
 
   static const _pageSize = 50;
 
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
+      _pendingTeachersSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
+      _premiumCountSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
+      _materialsCountSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
+      _totalUsersCountSub;
+
   Future<void> _init() async {
     final uid = _authRepo.currentUser?.uid;
     if (uid == null) {
@@ -120,6 +156,7 @@ class AdminViewModel extends StateNotifier<AdminState> {
         error: ok ? null : 'Not authorized',
       );
       if (ok) {
+        _attachLiveStreams();
         await Future.wait([
           loadUsers(reset: true),
           loadUsageAnalytics(),
@@ -185,6 +222,10 @@ class AdminViewModel extends StateNotifier<AdminState> {
           subscriptionType:
               (data['subscriptionType'] as String?) ?? 'free',
           points: (data['points'] as num?)?.toInt() ?? 0,
+          isApproved: (data['isApproved'] as bool?) ?? true,
+          subjects: ((data['subjects'] as List?) ?? const [])
+              .map((e) => e.toString())
+              .toList(growable: false),
         );
       }).toList(growable: false);
 
@@ -214,6 +255,8 @@ class AdminViewModel extends StateNotifier<AdminState> {
                     role: u.role,
                     subscriptionType: makePremium ? 'premium' : 'free',
                     points: u.points,
+                    isApproved: u.isApproved,
+                    subjects: u.subjects,
                   )
                 : u,
           )
@@ -238,6 +281,100 @@ class AdminViewModel extends StateNotifier<AdminState> {
     } catch (e) {
       state = state.copyWith(error: 'Broadcast failed: $e');
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Live streams — pending-teacher queue + 3 dashboard KPI counts.
+  // Wired only after auth check passes (firestore.rules require isAdmin()).
+  // ---------------------------------------------------------------------------
+
+  void _attachLiveStreams() {
+    _pendingTeachersSub?.cancel();
+    _pendingTeachersSub = _firestore
+        .collection('users')
+        .where('role', isEqualTo: 'teacher')
+        .where('isApproved', isEqualTo: false)
+        .snapshots()
+        .listen(
+      (snap) {
+        if (!mounted) return;
+        final rows = snap.docs.map((d) {
+          final data = d.data();
+          return AdminUserRow(
+            uid: d.id,
+            name: (data['name'] as String?) ?? 'Teacher',
+            email: (data['email'] as String?) ?? '',
+            role: 'teacher',
+            subscriptionType:
+                (data['subscriptionType'] as String?) ?? 'free',
+            points: (data['points'] as num?)?.toInt() ?? 0,
+            isApproved: false,
+            subjects: ((data['subjects'] as List?) ?? const [])
+                .map((e) => e.toString())
+                .toList(growable: false),
+          );
+        }).toList(growable: false);
+        state = state.copyWith(pendingTeachers: rows);
+      },
+      onError: (e) => debugPrint('pendingTeachers stream: $e'),
+    );
+
+    _totalUsersCountSub?.cancel();
+    _totalUsersCountSub = _firestore.collection('users').snapshots().listen(
+      (snap) {
+        if (!mounted) return;
+        state = state.copyWith(totalUsersCount: snap.size);
+      },
+      onError: (e) => debugPrint('totalUsers stream: $e'),
+    );
+
+    _premiumCountSub?.cancel();
+    _premiumCountSub = _firestore
+        .collection('users')
+        .where('subscriptionType', isEqualTo: 'premium')
+        .snapshots()
+        .listen(
+      (snap) {
+        if (!mounted) return;
+        state = state.copyWith(premiumUsersCount: snap.size);
+      },
+      onError: (e) => debugPrint('premiumCount stream: $e'),
+    );
+
+    _materialsCountSub?.cancel();
+    _materialsCountSub =
+        _firestore.collection('materials').snapshots().listen(
+      (snap) {
+        if (!mounted) return;
+        state = state.copyWith(materialsCount: snap.size);
+      },
+      onError: (e) => debugPrint('materialsCount stream: $e'),
+    );
+  }
+
+  // Approve a pending teacher by flipping isApproved on their user doc.
+  // Firestore rules (`/users/{uid}` update) allow admins to write any field,
+  // so this is a direct doc write rather than a callable.
+  Future<void> approveTeacher(AdminUserRow row) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(row.uid)
+          .update({'isApproved': true});
+      // Pending stream will auto-remove this row when the snapshot listener
+      // fires; nothing else to do here.
+    } catch (e) {
+      state = state.copyWith(error: 'approveTeacher failed: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _pendingTeachersSub?.cancel();
+    _totalUsersCountSub?.cancel();
+    _premiumCountSub?.cancel();
+    _materialsCountSub?.cancel();
+    super.dispose();
   }
 }
 

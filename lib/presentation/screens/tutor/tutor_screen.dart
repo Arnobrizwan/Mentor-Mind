@@ -68,12 +68,13 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
   // Actions
   // -------------------------------------------------------------------------
 
-  void _onBack() {
+  Future<void> _onBack() async {
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
-    } else {
-      context.goNamed(AppRoutes.dashboard);
+      return;
     }
+    final route = await resolveHomeRouteName(ref);
+    if (mounted) context.goNamed(route);
   }
 
   Future<void> _onSend() async {

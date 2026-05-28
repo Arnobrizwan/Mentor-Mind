@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
@@ -212,19 +213,27 @@ class ChatViewModel extends StateNotifier<ChatState> {
       );
 
       _subSub?.cancel();
-      _subSub = _subscriptionsRepo.watchSubscription(uid).listen((sub) {
-        final premium = sub.isPremiumActive;
-        if (premium != state.isPremium) {
-          state = state.copyWith(
-            isPremium: premium,
-            canSendMessage:
-                premium || state.dailyMessageCount < state.dailyLimit,
-          );
-          if (premium) {
-            unawaited(_authRepo.currentUser?.getIdToken(true));
+      _subSub = _subscriptionsRepo.watchSubscription(uid).listen(
+        (sub) {
+          final premium = sub.isPremiumActive;
+          if (premium != state.isPremium) {
+            state = state.copyWith(
+              isPremium: premium,
+              canSendMessage:
+                  premium || state.dailyMessageCount < state.dailyLimit,
+            );
+            if (premium) {
+              unawaited(_authRepo.currentUser?.getIdToken(true));
+            }
           }
-        }
-      });
+        },
+        // Non-fatal — keep the last-known premium flag rather than blanking
+        // the tutor on a transient stream error (network blip, auth refresh,
+        // rules eval). Logged for diagnostics so we notice systemic failures.
+        onError: (Object e) {
+          debugPrint('chat_viewmodel: subscription stream error: $e');
+        },
+      );
     } catch (_) {
       state = state.copyWith(
         isLoading: false,

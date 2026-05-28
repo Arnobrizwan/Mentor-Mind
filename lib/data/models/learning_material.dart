@@ -166,11 +166,18 @@ class LearningMaterial {
     );
   }
 
+  // Matches the pastel sweep used by MaterialItem so the browse screen and
+  // dashboard carousels render the same softer aesthetic.
   List<Color> get subjectGradient {
     final base = subjectColorFor(subject);
     final hsl = HSLColor.fromColor(base);
-    final darker =
-        hsl.withLightness((hsl.lightness - 0.2).clamp(0.0, 1.0)).toColor();
-    return [base, darker];
+    final lighter = hsl
+        .withLightness((hsl.lightness + 0.18).clamp(0.0, 1.0))
+        .withSaturation((hsl.saturation * 0.85).clamp(0.0, 1.0))
+        .toColor();
+    final mid = hsl
+        .withLightness((hsl.lightness + 0.06).clamp(0.0, 1.0))
+        .toColor();
+    return [lighter, mid];
   }
 }

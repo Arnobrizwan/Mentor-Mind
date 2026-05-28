@@ -78,12 +78,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               focusNode: _focus,
               hasText: _ctrl.text.isNotEmpty,
               onClear: _clear,
-              onBack: () {
+              onBack: () async {
                 if (Navigator.of(context).canPop()) {
                   Navigator.of(context).pop();
-                } else {
-                  context.goNamed(AppRoutes.dashboard);
+                  return;
                 }
+                final route = await resolveHomeRouteName(ref);
+                if (context.mounted) context.goNamed(route);
               },
             ),
             Expanded(

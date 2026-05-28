@@ -83,7 +83,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       case SplashDestination.studentDashboard:
         context.goNamed(AppRoutes.dashboard);
       case SplashDestination.teacherDashboard:
-        context.go('/dashboard/teacher');
+        context.goNamed(AppRoutes.teacherDashboard);
       case SplashDestination.admin:
         context.goNamed(AppRoutes.admin);
       case SplashDestination.login:
