@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -84,21 +87,65 @@ abstract final class AppRoutes {
   static const terms       = 'terms';
 }
 
+// Public routes — accessible without auth. Anything not in this set will
+// redirect to /auth/login when the user signs out (or has never signed in).
+const _publicLocations = <String>{
+  '/',           // splash decides where to send the user
+  '/onboarding',
+  '/auth/login',
+  '/auth/register',
+};
+
+/// ChangeNotifier-flavored bridge from a broadcast Stream to GoRouter's
+/// refreshListenable parameter. Each stream event triggers a router-wide
+/// redirect re-evaluation — used here to react instantly to sign-in /
+/// sign-out events without any per-screen navigation logic.
+class _RouterRefreshNotifier extends ChangeNotifier {
+  late final StreamSubscription<dynamic> _sub;
+  _RouterRefreshNotifier(Stream<dynamic> stream) {
+    _sub = stream.asBroadcastStream().listen((_) => notifyListeners());
+  }
+  @override
+  void dispose() {
+    _sub.cancel();
+    super.dispose();
+  }
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   final analytics = ref.read(analyticsServiceProvider);
+  // Auth-aware refresh: any sign-in / sign-out fires this notifier, which
+  // GoRouter responds to by re-running the redirect callback below. This is
+  // what kicks a freshly signed-out user off a protected screen without
+  // relying on the previous screen's BuildContext (which is mid-unmount).
+  final authRefresh = _RouterRefreshNotifier(
+    ref.read(firebaseAuthProvider).authStateChanges(),
+  );
+  ref.onDispose(authRefresh.dispose);
+
   return GoRouter(
     initialLocation: '/',
     debugLogDiagnostics: false,
     observers: [analytics.screenObserver],
+    refreshListenable: authRefresh,
     // Bulletproof guard: any teacher/admin that lands on /dashboard (e.g. via
     // a stale back-stack, deep link, or a screen that hasn't been updated to
     // the role-aware helper) is rewritten to their own home. No matter what
     // any individual screen does, a teacher cannot end up on the student
     // dashboard.
     redirect: (context, state) async {
-      if (state.matchedLocation != '/dashboard') return null;
+      final loc = state.matchedLocation;
       final user = ref.read(firebaseAuthProvider).currentUser;
-      if (user == null) return null; // splash will handle unauthenticated state
+
+      // Unauthenticated users on a protected route → /auth/login.
+      // Splash, onboarding, login, register stay accessible.
+      if (user == null && !_publicLocations.contains(loc)) {
+        return '/auth/login';
+      }
+
+      // The /dashboard-specific role rewrite stays below.
+      if (loc != '/dashboard') return null;
+      if (user == null) return null; // already handled above
 
       // Same dual lookup as resolveHomeRouteName — claim first, then
       // Firestore. Seeded teacher / admin accounts may not have the role
