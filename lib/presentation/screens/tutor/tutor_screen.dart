@@ -230,6 +230,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
         leading: IconButton(
           onPressed: _onBack,
           icon: const Icon(Icons.arrow_back_rounded),
+          tooltip: 'Back',
         ),
         title: _SubjectPill(
           subject: state.selectedSubject,
@@ -601,32 +602,32 @@ class _EmptyState extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Container(
-            width: 100,
-            height: 100,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.kAccent,
-                  AppColors.kAccent.withValues(alpha: 0.65),
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.kAccent.withValues(alpha: 0.35),
-                  blurRadius: 28,
-                  offset: const Offset(0, 10),
+          // Mascot in a soft radial halo, with a gentle vertical float.
+          // Replaces the previous flat teal-circle-with-icon placeholder.
+          SizedBox(
+            width: 200,
+            height: 200,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Halo — radial accent glow behind the mascot.
+                Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColors.kAccent.withValues(alpha: 0.28),
+                        AppColors.kAccent.withValues(alpha: 0.0),
+                      ],
+                      stops: const [0.45, 1.0],
+                    ),
+                  ),
                 ),
+                // The mascot illustration itself, animated by _FloatingMascot.
+                const _FloatingMascot(size: 168),
               ],
-            ),
-            child: const Icon(
-              Icons.smart_toy_rounded,
-              size: 50,
-              color: Colors.white,
             ),
           )
               .animate()
@@ -637,7 +638,7 @@ class _EmptyState extends StatelessWidget {
                 curve: AppMotion.celebrate,
               )
               .fade(duration: 400.ms),
-          const SizedBox(height: AppSpacing.xl - 4),
+          const SizedBox(height: AppSpacing.md),
           Text(
             "Hello! I'm MentorBot \u{1F44B}",
             textAlign: TextAlign.center,
@@ -658,55 +659,175 @@ class _EmptyState extends StatelessWidget {
               height: 1.5,
             ),
           ).animate(delay: 220.ms).fade(duration: 400.ms),
-          const SizedBox(height: AppSpacing.xxl - 4),
+          const SizedBox(height: AppSpacing.xl),
+          // Subtle "try one of these" label above the chips so the chips
+          // read as starter prompts, not just decorative pills.
+          Text(
+            'Try one of these',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: brand.textMuted,
+              letterSpacing: 1.0,
+            ),
+          ).animate(delay: 280.ms).fade(duration: 400.ms),
+          const SizedBox(height: AppSpacing.sm + 2),
           Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             alignment: WrapAlignment.center,
             children: [
-              for (final s in suggestions)
-                _SuggestionChip(label: s, onTap: () => onSuggestionTap(s)),
+              for (var i = 0; i < suggestions.length; i++)
+                _SuggestionChip(
+                  label: suggestions[i],
+                  delay: 320 + (i * 80),
+                  onTap: () => onSuggestionTap(suggestions[i]),
+                ),
             ],
-          )
-              .animate(delay: 300.ms)
-              .fade(duration: 450.ms)
-              .slideY(begin: 0.1, end: 0, duration: 450.ms),
+          ),
         ],
       ),
     );
   }
 }
 
-class _SuggestionChip extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
+// ---------------------------------------------------------------------------
+// _FloatingMascot — onboarding_hero.png with a gentle vertical bob. Used
+// inside _EmptyState as the MentorBot avatar. Ignored for input.
+// ---------------------------------------------------------------------------
 
-  const _SuggestionChip({required this.label, required this.onTap});
+class _FloatingMascot extends StatefulWidget {
+  final double size;
+  const _FloatingMascot({required this.size});
+
+  @override
+  State<_FloatingMascot> createState() => _FloatingMascotState();
+}
+
+class _FloatingMascotState extends State<_FloatingMascot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3600),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final brand = context.brand;
-    return Material(
-      color: brand.surface,
-      borderRadius: AppRadius.pillBorder,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AppRadius.pillBorder,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md + 2, vertical: AppSpacing.sm + 2,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: AppRadius.pillBorder,
-            border: Border.all(color: brand.border),
-          ),
-          child: Text(
-            label,
-            style: AppTextStyles.labelMedium.copyWith(color: brand.textDark),
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, child) {
+        final dy = (Curves.easeInOut.transform(_ctrl.value) - 0.5) * 10;
+        return Transform.translate(offset: Offset(0, dy), child: child);
+      },
+      child: SizedBox(
+        height: widget.size,
+        width: widget.size,
+        child: Image.asset(
+          'assets/images/illustrations/onboarding_hero.png',
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.medium,
+          errorBuilder: (_, __, ___) => Icon(
+            Icons.smart_toy_rounded,
+            size: widget.size * 0.5,
+            color: AppColors.kAccent,
           ),
         ),
       ),
     );
+  }
+}
+
+class _SuggestionChip extends StatefulWidget {
+  final String label;
+  final int delay;
+  final VoidCallback onTap;
+
+  const _SuggestionChip({
+    required this.label,
+    required this.delay,
+    required this.onTap,
+  });
+
+  @override
+  State<_SuggestionChip> createState() => _SuggestionChipState();
+}
+
+class _SuggestionChipState extends State<_SuggestionChip> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final brand = context.brand;
+    return AnimatedScale(
+      scale: _pressed ? 0.94 : 1.0,
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: AppRadius.pillBorder,
+        child: InkWell(
+          onTap: widget.onTap,
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapCancel: () => setState(() => _pressed = false),
+          onTapUp: (_) => setState(() => _pressed = false),
+          borderRadius: AppRadius.pillBorder,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md + 2, vertical: AppSpacing.sm + 2,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: AppRadius.pillBorder,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  brand.surface,
+                  brand.accent.withValues(alpha: 0.07),
+                ],
+              ),
+              border: Border.all(color: brand.accent.withValues(alpha: 0.30)),
+              boxShadow: [
+                BoxShadow(
+                  color: brand.accent.withValues(alpha: 0.10),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('✨',
+                    style: TextStyle(fontSize: 12, height: 1)),
+                const SizedBox(width: AppSpacing.xs + 2),
+                Flexible(
+                  child: Text(
+                    widget.label,
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: brand.textDark,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ).animate(delay: Duration(milliseconds: widget.delay))
+        .fade(duration: 350.ms)
+        .slideY(begin: 0.15, end: 0, duration: 350.ms);
   }
 }
 

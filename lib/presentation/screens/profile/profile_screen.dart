@@ -6,6 +6,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import 'package:mentor_minds/data/models/support_config.dart';
 import 'package:mentor_minds/application/viewmodels/profile/profile_viewmodel.dart';
 import 'package:mentor_minds/application/viewmodels/settings/theme_mode_provider.dart';
 import 'package:mentor_minds/core/constants/app_colors.dart';
@@ -95,11 +99,20 @@ class _ProfileBody extends ConsumerWidget {
                 AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.xxl,
               ),
               child: Center(
-                child: Text(
-                  'MentorMinds · v1.0',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: brand.textMuted,
-                  ),
+                child: FutureBuilder<PackageInfo>(
+                  future: PackageInfo.fromPlatform(),
+                  builder: (context, snap) {
+                    final info = snap.data;
+                    final label = info == null
+                        ? 'MentorMinds'
+                        : 'MentorMinds · v${info.version} (${info.buildNumber})';
+                    return Text(
+                      label,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: brand.textMuted,
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -124,8 +137,12 @@ class _Header extends ConsumerWidget {
       profileViewModelProvider.select((s) => s.uploadingAvatar),
     );
 
+    // Header sizes to its content rather than locking to a fixed pixel height.
+    // Three layers: gradient → background illustration (low opacity, decorative)
+    // → SafeArea-wrapped content. SafeArea pushes content below the system
+    // status bar; the Stack hosts the absolutely-positioned back/edit buttons
+    // and sizes to the inner Column.
     return Container(
-      height: 220,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -135,51 +152,104 @@ class _Header extends ConsumerWidget {
       ),
       child: Stack(
         children: [
-          Positioned(
-            top: AppSpacing.sm,
-            left: AppSpacing.xs,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              onPressed: () => context.canPop()
-                  ? context.pop()
-                  : context.goNamed(AppRoutes.dashboard),
+          // Decorative background illustration — low-opacity hero image
+          // bleeds in from the right behind the content. Purely aesthetic;
+          // semantic content is unchanged.
+          //
+          // Opacity is intentionally low (0.10) and the multiply blend tints
+          // the image with the indigo primary so the PNG's off-white
+          // background doesn't wash out the dark header.
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: true,
+              child: Opacity(
+                opacity: 0.10,
+                child: Image.asset(
+                  'assets/images/illustrations/onboarding_hero.png',
+                  fit: BoxFit.contain,
+                  alignment: Alignment.centerRight,
+                  color: AppColors.kPrimary,
+                  colorBlendMode: BlendMode.multiply,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
             ),
           ),
-          Positioned(
-            top: AppSpacing.sm,
-            right: AppSpacing.xs,
-            child: IconButton(
-              icon: const Icon(Icons.edit_rounded, color: Colors.white),
-              tooltip: 'Edit profile',
-              onPressed: () => _openEditSheet(context, user),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.xxxl),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+          SafeArea(
+            bottom: false,
+            child: Stack(
               children: [
-                _Avatar(user: user, uploading: uploading),
-                const SizedBox(height: AppSpacing.sm + 2),
-                Text(
-                  user.name,
-                  style: AppTextStyles.headingMedium.copyWith(
-                    color: Colors.white, fontSize: 18,
+                Positioned(
+                  top: AppSpacing.sm,
+                  left: AppSpacing.xs,
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded,
+                        color: Colors.white),
+                    tooltip: 'Back',
+                    onPressed: () => context.canPop()
+                        ? context.pop()
+                        : context.goNamed(AppRoutes.dashboard),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  user.email,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: Colors.white.withValues(alpha: 0.80),
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                _RoleChip(user: user),
-              ],
+            Positioned(
+              top: AppSpacing.sm,
+              right: AppSpacing.xs,
+              child: IconButton(
+                icon: const Icon(Icons.edit_rounded, color: Colors.white),
+                tooltip: 'Edit profile',
+                onPressed: () => _openEditSheet(context, user),
+              ),
             ),
-          ),
+            // SizedBox.expand makes the Padding+Column fill the Stack's width
+            // (Stack would otherwise give it loose constraints and the Column
+            // would shrink to intrinsic width + left-align). Now the Column's
+            // crossAxisAlignment defaults to center and the avatar/name/email
+            // sit in the middle of the header.
+            SizedBox(
+              width: double.infinity,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.xxl,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _Avatar(user: user, uploading: uploading),
+                    const SizedBox(height: AppSpacing.sm + 2),
+                    Text(
+                      user.name,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.headingMedium.copyWith(
+                        color: Colors.white,
+                        fontSize: 20,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      user.email,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.white.withValues(alpha: 0.80),
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm + 2),
+                    _RoleChip(user: user),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
         ],
       ),
     );
@@ -194,19 +264,27 @@ class _Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 84,
-      height: 84,
+      width: 96,
+      height: 96,
       child: Stack(
+        alignment: Alignment.center,
         children: [
           Container(
-            width: 72,
-            height: 72,
+            width: 84,
+            height: 84,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.kAccent,
               border: Border.all(
                 color: Colors.white.withValues(alpha: 0.7), width: 2,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
               image: user.avatarUrl != null
                   ? DecorationImage(
                       image: NetworkImage(user.avatarUrl!),
@@ -221,7 +299,7 @@ class _Avatar extends StatelessWidget {
                     style: const TextStyle(
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.w700,
-                      fontSize: 26,
+                      fontSize: 30,
                       color: Colors.white,
                     ),
                   )
@@ -229,7 +307,7 @@ class _Avatar extends StatelessWidget {
           ),
           Positioned(
             right: 0,
-            bottom: AppSpacing.sm,
+            bottom: 0,
             child: GestureDetector(
               onTap: uploading ? null : () => _openEditSheet(context, user),
               child: Container(
@@ -453,12 +531,7 @@ class _UpgradeCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    const features = [
-      'Unlimited AI tutoring',
-      'Diagram upload & analysis',
-      'Full chat history search',
-      'Advanced analytics',
-    ];
+    final sub = ref.watch(currentSubscriptionConfigProvider);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg + 2),
       decoration: BoxDecoration(
@@ -480,11 +553,11 @@ class _UpgradeCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Upgrade to Premium 🚀',
+            sub.headline,
             style: AppTextStyles.headingMedium.copyWith(color: Colors.white),
           ),
           const SizedBox(height: AppSpacing.md),
-          for (final f in features) ...[
+          for (final f in sub.features) ...[
             Row(
               children: [
                 const Icon(Icons.check_rounded, color: Colors.white, size: 18),
@@ -514,7 +587,7 @@ class _UpgradeCard extends ConsumerWidget {
                     .refreshAuthToken();
               },
               icon: const Icon(Icons.bolt_rounded, color: AppColors.kGold),
-              label: const Text('Upgrade Now — ৳299/month'),
+              label: Text(sub.ctaLabel),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: AppColors.kPrimary,
@@ -679,41 +752,52 @@ class _SettingsList extends ConsumerWidget {
               _Tile(
                 icon: Icons.language_rounded,
                 title: 'Language',
-                subtitle: 'English',
+                subtitle: _deviceLocaleLabel(context),
                 onTap: () =>
                     _showSnack(context, 'More languages coming soon.'),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.md + 2),
-          _Group(
-            title: 'Support',
-            children: [
-              _Tile(
-                icon: Icons.help_rounded,
-                title: 'Help & FAQ',
-                onTap: () => _showSnack(context, 'Help centre coming soon.'),
-              ),
-              _Tile(
-                icon: Icons.policy_rounded,
-                title: 'Privacy Policy',
-                onTap: () =>
-                    _showSnack(context, 'Privacy Policy coming soon.'),
-              ),
-              _Tile(
-                icon: Icons.description_rounded,
-                title: 'Terms of Service',
-                onTap: () =>
-                    _showSnack(context, 'Terms of Service coming soon.'),
-              ),
-              _Tile(
-                icon: Icons.star_rate_rounded,
-                title: 'Rate the App',
-                onTap: () =>
-                    _showSnack(context, 'In-app ratings coming soon.'),
-              ),
-            ],
-          ),
+          Consumer(builder: (context, ref, _) {
+            final support = ref.watch(currentSupportConfigProvider);
+            return _Group(
+              title: 'Support',
+              children: [
+                _Tile(
+                  icon: Icons.help_rounded,
+                  title: 'Help & FAQ',
+                  subtitle: support.helpEmail.isEmpty
+                      ? null
+                      : support.helpEmail,
+                  onTap: () => _launchHelpEmail(context, support),
+                ),
+                _Tile(
+                  icon: Icons.policy_rounded,
+                  title: 'Privacy Policy',
+                  onTap: () => _launchUrlOrSnack(
+                    context,
+                    support.privacyPolicyUrl,
+                    'Privacy Policy coming soon.',
+                  ),
+                ),
+                _Tile(
+                  icon: Icons.description_rounded,
+                  title: 'Terms of Service',
+                  onTap: () => _launchUrlOrSnack(
+                    context,
+                    support.termsOfServiceUrl,
+                    'Terms of Service coming soon.',
+                  ),
+                ),
+                _Tile(
+                  icon: Icons.star_rate_rounded,
+                  title: 'Rate the App',
+                  onTap: () => _launchStoreRating(context, support),
+                ),
+              ],
+            );
+          }),
           const SizedBox(height: AppSpacing.md + 2),
           _Group(
             title: 'Danger Zone',
@@ -1729,6 +1813,113 @@ void _showSnack(BuildContext context, String msg, {bool isError = false}) {
       duration: const Duration(milliseconds: 1800),
     ),
   );
+}
+
+// ---------------------------------------------------------------------------
+// SUPPORT section launchers
+// ---------------------------------------------------------------------------
+//
+// Each helper falls back to a snackbar when the config field is empty OR the
+// platform refuses to handle the URI (no mail app, no Play Store, etc.). The
+// snack copy stays close to the original "coming soon" tone so users still
+// see a coherent UX before pricing/legal pages are live.
+
+/// Returns a human-readable label for the current device locale — used as the
+/// `Language` tile subtitle so it reflects reality instead of hardcoded copy.
+String _deviceLocaleLabel(BuildContext context) {
+  final locale = Localizations.maybeLocaleOf(context);
+  if (locale == null) return 'English';
+  final lang = locale.languageCode;
+  final country = locale.countryCode;
+  final base = switch (lang) {
+        'en' => 'English',
+        'bn' => 'বাংলা',
+        'hi' => 'हिन्दी',
+        'ur' => 'اردو',
+        _ => lang.toUpperCase(),
+      };
+  return country == null || country.isEmpty
+      ? base
+      : '$base · $country';
+}
+
+Future<void> _launchHelpEmail(
+  BuildContext context,
+  SupportConfig support,
+) async {
+  if (support.helpEmail.isEmpty) {
+    _showSnack(context, 'Help centre coming soon.');
+    return;
+  }
+  final uri = Uri(
+    scheme: 'mailto',
+    path: support.helpEmail,
+    query: support.helpEmailSubject.isEmpty
+        ? null
+        : 'subject=${Uri.encodeQueryComponent(support.helpEmailSubject)}',
+  );
+  final launched =
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!launched && context.mounted) {
+    _showSnack(
+      context,
+      'No mail app available. Email ${support.helpEmail} directly.',
+      isError: true,
+    );
+  }
+}
+
+Future<void> _launchUrlOrSnack(
+  BuildContext context,
+  String url,
+  String emptyMessage,
+) async {
+  if (url.isEmpty) {
+    _showSnack(context, emptyMessage);
+    return;
+  }
+  final uri = Uri.tryParse(url);
+  if (uri == null) {
+    _showSnack(context, emptyMessage);
+    return;
+  }
+  final launched =
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!launched && context.mounted) {
+    _showSnack(context, "Couldn't open $url", isError: true);
+  }
+}
+
+Future<void> _launchStoreRating(
+  BuildContext context,
+  SupportConfig support,
+) async {
+  final isIos = Platform.isIOS;
+  final id = isIos ? support.appStoreId : support.playStorePackageName;
+  if (id.isEmpty) {
+    _showSnack(context, 'In-app ratings coming soon.');
+    return;
+  }
+  // Try the platform-native deep link first, fall back to the web URL so
+  // emulators (which often lack a real Play Store) still resolve gracefully.
+  final deepLink = Uri.parse(
+    isIos
+        ? 'itms-apps://itunes.apple.com/app/id$id'
+        : 'market://details?id=$id',
+  );
+  final webLink = Uri.parse(
+    isIos
+        ? 'https://apps.apple.com/app/id$id'
+        : 'https://play.google.com/store/apps/details?id=$id',
+  );
+  final deepLaunched =
+      await launchUrl(deepLink, mode: LaunchMode.externalApplication);
+  if (deepLaunched) return;
+  final webLaunched =
+      await launchUrl(webLink, mode: LaunchMode.externalApplication);
+  if (!webLaunched && context.mounted) {
+    _showSnack(context, "Couldn't open the store.", isError: true);
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -94,6 +94,14 @@
         { "fieldPath": "type", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "_comment": "Tutor/Dashboard: users/{uid}/usage order by __name__ desc limit 1 (latest usage doc, date-keyed). collectionGroup since the parent ID is dynamic.",
+      "collectionGroup": "usage",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "__name__", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

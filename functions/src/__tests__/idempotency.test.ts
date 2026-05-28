@@ -5,7 +5,7 @@
 //
 // Approach used here: invoke `mentorBotChat.run({ data, auth, app })` — the
 // firebase-functions v2 onCall returns a runnable with `.run()`. We mock the
-// Firestore SDK + GeminiClient at the module boundary.
+// Firestore SDK + TutorAIClient at the module boundary.
 
 // ---- Mock infra (mirror of plan 03-05 test mock; shared lib in PR future) ----
 
@@ -98,22 +98,22 @@ jest.mock('../lib/rate_limit', () => ({
   })),
 }));
 
-// Capture Gemini call count + return canned response.
-const geminiCallCount = { value: 0 };
-jest.mock('../lib/gemini', () => ({
+// Capture LLM call count + return canned response.
+const llmCallCount = { value: 0 };
+jest.mock('../lib/tutor_ai', () => ({
   MODEL_CONFIG: {
-    modelId: 'gemini-2.5-pro',
+    modelId: 'llama-3.3-70b-versatile',
+    visionModelId: 'meta-llama/llama-4-scout-17b-16e-instruct',
     timeoutSeconds: 60,
     memory: '512MiB',
     maxOutputTokens: 1024,
     temperature: 0.7,
     topP: 0.95,
-    topK: 40,
   },
-  SYSTEM_PROMPT_VERSION: '1',
-  makeGeminiClient: jest.fn(() => ({
+  SYSTEM_PROMPT_VERSION: '3',
+  makeTutorAIClient: jest.fn(() => ({
     generate: async () => {
-      geminiCallCount.value++;
+      llmCallCount.value++;
       return { text: 'cached fake', promptTokens: 7, completionTokens: 13 };
     },
   })),
@@ -146,28 +146,28 @@ beforeEach(() => {
   mockGet.mockClear();
   mockSet.mockClear();
   mockBatchOps.length = 0;
-  geminiCallCount.value = 0;
+  llmCallCount.value = 0;
 });
 
 describe('mentorBotChat — idempotency', () => {
-  it('first call returns Gemini text and writes user + assistant docs', async () => {
+  it('first call returns LLM text and writes user + assistant docs', async () => {
     const result = await mentorBotChat.run(makeRequest());
     expect(result.text).toBe('cached fake');
     expect(result.messageId).toBe(REQ_ID);
-    expect(geminiCallCount.value).toBe(1);
+    expect(llmCallCount.value).toBe(1);
     const writes = mockBatchOps.map((op) => op.path);
     expect(writes).toContain(`sessions/${SESSION_ID}/messages/${REQ_ID}`);
     expect(writes).toContain(`sessions/${SESSION_ID}/messages/${REQ_ID}-user`);
     expect(writes).toContain(`sessions/${SESSION_ID}`);
   });
 
-  it('second call with same clientRequestId returns cached response (Gemini called ONCE total)', async () => {
+  it('second call with same clientRequestId returns cached response (LLM called ONCE total)', async () => {
     // First call — populates the idempotency doc.
     await mentorBotChat.run(makeRequest());
-    expect(geminiCallCount.value).toBe(1);
+    expect(llmCallCount.value).toBe(1);
     // Second call with the SAME clientRequestId — must short-circuit.
     const second = await mentorBotChat.run(makeRequest());
-    expect(geminiCallCount.value).toBe(1); // unchanged
+    expect(llmCallCount.value).toBe(1); // unchanged
     expect(second.messageId).toBe(REQ_ID);
     expect(second.text).toBe('cached fake');
   });

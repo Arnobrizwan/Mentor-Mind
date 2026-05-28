@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,6 +14,7 @@ import 'package:mentor_minds/presentation/screens/rewards/rewards_screen.dart';
 import 'package:mentor_minds/presentation/screens/search/search_screen.dart';
 import 'package:mentor_minds/presentation/screens/splash/splash_screen.dart';
 import 'package:mentor_minds/presentation/screens/admin/admin_screen.dart';
+import 'package:mentor_minds/presentation/screens/dashboard/teacher_dashboard_screen.dart';
 import 'package:mentor_minds/presentation/screens/tutor/tutor_screen.dart';
 
 // Route name constants — always navigate by name, never by path string.
@@ -69,7 +69,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/dashboard/teacher',
         name: AppRoutes.teacherDashboard,
-        builder: (_, __) => const _PlaceholderScreen(label: 'Teacher Dashboard'),
+        builder: (_, __) => const TeacherDashboardScreen(),
       ),
       GoRoute(
         path: '/tutor',
@@ -109,20 +109,3 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
-
-class _PlaceholderScreen extends StatelessWidget {
-  final String label;
-  const _PlaceholderScreen({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Text(
-          label,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 18),
-        ),
-      ),
-    );
-  }
-}

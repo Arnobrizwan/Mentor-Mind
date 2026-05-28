@@ -73,6 +73,7 @@ class _Header extends StatelessWidget {
             children: [
               IconButton(
                 icon: const Icon(Icons.arrow_back_rounded),
+                tooltip: 'Back',
                 onPressed: () => context.canPop()
                     ? context.pop()
                     : context.goNamed(AppRoutes.dashboard),

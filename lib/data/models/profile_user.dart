@@ -17,6 +17,7 @@ class ProfileUser {
   final int points;
   final String? avatarUrl;
   final bool notificationsEnabled;
+  final bool isApproved;
 
   const ProfileUser({
     required this.uid,
@@ -29,12 +30,14 @@ class ProfileUser {
     required this.points,
     required this.avatarUrl,
     required this.notificationsEnabled,
+    required this.isApproved,
   });
 
   bool get isPremium => subscriptionType == 'premium';
 
   ProfileUser copyWith({
     String? subscriptionType,
+    bool? isApproved,
   }) =>
       ProfileUser(
         uid: uid,
@@ -47,6 +50,7 @@ class ProfileUser {
         points: points,
         avatarUrl: avatarUrl,
         notificationsEnabled: notificationsEnabled,
+        isApproved: isApproved ?? this.isApproved,
       );
 
   String get initials {
@@ -89,6 +93,7 @@ class ProfileUser {
       points: (data['points'] as num?)?.toInt() ?? 0,
       avatarUrl: (avatar?.isEmpty ?? true) ? null : avatar,
       notificationsEnabled: (data['notificationsEnabled'] as bool?) ?? true,
+      isApproved: (data['isApproved'] as bool?) ?? true,
     );
   }
 }

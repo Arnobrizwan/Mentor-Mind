@@ -76,6 +76,25 @@ const _subjectColors = <String, Color>{
 Color subjectColorFor(String s) =>
     _subjectColors[s] ?? AppColors.kPrimary;
 
+// Subject icon mapping — used on material cards / search rows so each subject
+// has a distinct visual identity beyond just colour. Material Icons only (no
+// PNG assets to bundle). Fallback is the generic book icon.
+const _subjectIcons = <String, IconData>{
+  'Mathematics': Icons.functions_rounded,
+  'Physics':     Icons.bolt_rounded,
+  'Chemistry':   Icons.science_rounded,
+  'Biology':     Icons.biotech_rounded,
+  'English':     Icons.menu_book_rounded,
+  'ICT':         Icons.code_rounded,
+  'Accounting':  Icons.calculate_rounded,
+  'Economics':   Icons.trending_up_rounded,
+  'History':     Icons.history_edu_rounded,
+  'Geography':   Icons.public_rounded,
+};
+
+IconData subjectIconFor(String s) =>
+    _subjectIcons[s] ?? Icons.auto_stories_rounded;
+
 // ---------------------------------------------------------------------------
 // LearningMaterial — full materials-browse projection of /materials.
 // Contains file URL, type, views, and createdAt for the browse screen.

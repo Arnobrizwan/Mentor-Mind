@@ -16,6 +16,7 @@ import 'package:mentor_minds/data/models/learning_material.dart';
 import 'package:mentor_minds/data/models/material_search_hit.dart';
 import 'package:mentor_minds/data/models/session_search_hit.dart';
 import 'package:mentor_minds/shared/widgets/empty_state.dart';
+import 'package:mentor_minds/shared/widgets/premium_upgrade_modal.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -139,6 +140,7 @@ class _SearchHeader extends StatelessWidget {
           IconButton(
             onPressed: onBack,
             icon: const Icon(Icons.arrow_back_rounded),
+            tooltip: 'Back',
             splashRadius: 22,
           ),
           Expanded(
@@ -1074,7 +1076,7 @@ class _GoPremiumButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () => _showComingSoon(context),
+        onPressed: () => PremiumUpgradeModal.show(context),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.kGold,
           foregroundColor: Colors.white,
@@ -1086,25 +1088,6 @@ class _GoPremiumButton extends StatelessWidget {
         child: const Text('Go Premium'),
       ),
     );
-  }
-
-  void _showComingSoon(BuildContext context) {
-    final brand = context.brand;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            'Premium plans are coming soon.',
-            style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
-          ),
-          backgroundColor: brand.textDark,
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(AppSpacing.lg),
-          shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdBorder),
-          duration: const Duration(milliseconds: 1800),
-        ),
-      );
   }
 }
 

@@ -510,6 +510,7 @@ class _CurvedHeader extends StatelessWidget {
                   color: Colors.white,
                   size: 24,
                 ),
+                tooltip: 'Back',
                 splashRadius: 22,
               ),
             ),

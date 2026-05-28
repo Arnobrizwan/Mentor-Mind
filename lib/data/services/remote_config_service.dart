@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mentor_minds/data/models/curriculum_config.dart';
 import 'package:mentor_minds/data/models/gamification_config.dart';
 import 'package:mentor_minds/data/models/quotas_config.dart';
+import 'package:mentor_minds/data/models/subscription_config.dart';
+import 'package:mentor_minds/data/models/support_config.dart';
 
 // ---------------------------------------------------------------------------
 // RemoteConfigService — streams /config/{gamification,curriculum,quotas}.
@@ -41,5 +43,21 @@ class RemoteConfigService {
       if (data == null || data.isEmpty) return QuotasConfig.defaults;
       return QuotasConfig.fromMap(data);
     }).handleError((_) => QuotasConfig.defaults);
+  }
+
+  Stream<SubscriptionConfig> watchSubscription() {
+    return _configs.doc('subscription').snapshots().map((snap) {
+      final data = snap.data();
+      if (data == null || data.isEmpty) return SubscriptionConfig.defaults;
+      return SubscriptionConfig.fromMap(data);
+    }).handleError((_) => SubscriptionConfig.defaults);
+  }
+
+  Stream<SupportConfig> watchSupport() {
+    return _configs.doc('support').snapshots().map((snap) {
+      final data = snap.data();
+      if (data == null || data.isEmpty) return SupportConfig.defaults;
+      return SupportConfig.fromMap(data);
+    }).handleError((_) => SupportConfig.defaults);
   }
 }

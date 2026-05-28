@@ -32,6 +32,31 @@ const kTutorSuggestionsBySubject = <String, List<String>>{
     'Explain metaphor vs simile with examples',
     'Summarize a passage in my own words',
   ],
+  'ICT': [
+    'Difference between RAM and ROM',
+    'Pseudocode for finding the largest number in a list',
+    'What is a relational database, in simple terms?',
+  ],
+  'Accounting': [
+    'Explain the accounting equation with an example',
+    'How do I prepare a trial balance?',
+    'What is the difference between debit and credit?',
+  ],
+  'Economics': [
+    'Explain supply and demand with a diagram',
+    'What is opportunity cost?',
+    'Difference between fiscal and monetary policy',
+  ],
+  'History': [
+    'Causes of World War I — summarized',
+    'How did the Mughal Empire fall?',
+    'Source-based question tips for Paper 2',
+  ],
+  'Geography': [
+    'Explain the water cycle with a sketch',
+    'What causes a tropical cyclone?',
+    'Push and pull factors of migration',
+  ],
 };
 
 /// Subject-aware starter prompts for empty tutor chat.
@@ -47,13 +72,25 @@ List<String> tutorSuggestionsFor(String? subject) {
       ];
 }
 
-/// Ensures fallback picker includes the curriculum list. Pass [fallback]
-/// from currentCurriculumConfigProvider.subjects when available so admin
-/// edits are honored; falls back to the model defaults otherwise.
+/// Tutor subject picker options.
+///
+/// Returns the union of the student's enrolled subjects + every other
+/// curriculum subject (or model defaults when admin config is missing), with
+/// the enrolled ones first so the student's primary subjects stay at the top.
+///
+/// This way a student can ask MentorBot about any subject — Biology, History,
+/// Geography — without having to re-onboard. The system prompt has playbooks
+/// for all of them; restricting the picker would just hide working coverage.
 List<String> tutorSubjectOptions(
   List<String> userSubjects, {
   List<String>? fallback,
 }) {
-  if (userSubjects.isNotEmpty) return userSubjects;
-  return fallback ?? CurriculumConfig.defaults.subjects;
+  final all = fallback ?? CurriculumConfig.defaults.subjects;
+  final seen = <String>{};
+  final merged = <String>[];
+  for (final s in [...userSubjects, ...all]) {
+    if (s.isEmpty) continue;
+    if (seen.add(s)) merged.add(s);
+  }
+  return merged;
 }

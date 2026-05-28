@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 /// OBSV-01/05 — Crashlytics + device keys. Call once after Firebase.initializeApp.
@@ -34,7 +35,7 @@ Future<void> configureCrashlytics() async {
 }
 
 /// Wraps [runApp] with zone error forwarding to Crashlytics.
-void runAppGuarded(void Function() appRunner) {
+void runAppGuarded(FutureOr<void> Function() appRunner) {
   runZonedGuarded(
     appRunner,
     (error, stack) {

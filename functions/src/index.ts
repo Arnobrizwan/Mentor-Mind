@@ -3,10 +3,10 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { db } from "./lib/admin";
 import {
-  makeGeminiClient,
+  makeTutorAIClient,
   MODEL_CONFIG,
   SYSTEM_PROMPT_VERSION,
-} from "./lib/gemini";
+} from "./lib/tutor_ai";
 import { checkAndIncrement } from "./lib/rate_limit";
 import { unauthenticated, internal, mapKnownError } from "./lib/errors";
 import { getDhakaDateKey } from "./lib/quota";
@@ -22,20 +22,23 @@ export { publishDailyChallenge } from "./schedulers/publish_daily_challenge";
 
 // ---------------------------------------------------------------------------
 // Cost estimation helper (D-15 — pinned per-million-token rates as of 2026-05)
-// Rates apply to gemini-2.5-pro / gemini-1.5-pro / gemini-3.1-pro (same tier).
-// Update here when Vertex changes pricing — one-line edits only.
+// Provider: Groq free tier = $0 for inference. Rates below stay 0 unless the
+// project upgrades to Groq paid tier; when that happens, fill in:
+//   - llama-3.3-70b-versatile: $0.59 in / $0.79 out per MTok (Groq paid, 2026-05)
+//   - llama-4-scout (vision):  $0.11 in / $0.34 out per MTok (Groq paid, 2026-05)
+// estimatedCostUsd is still logged for forward-compat dashboards.
 // ---------------------------------------------------------------------------
 
-const GEMINI_INPUT_RATE_PER_MTOK = 1.25;
-const GEMINI_OUTPUT_RATE_PER_MTOK = 5.0;
+const LLM_INPUT_RATE_PER_MTOK = 0;
+const LLM_OUTPUT_RATE_PER_MTOK = 0;
 
 function estimateCostUsd(
   promptTokens: number,
   completionTokens: number
 ): number {
   return (
-    (promptTokens / 1_000_000) * GEMINI_INPUT_RATE_PER_MTOK +
-    (completionTokens / 1_000_000) * GEMINI_OUTPUT_RATE_PER_MTOK
+    (promptTokens / 1_000_000) * LLM_INPUT_RATE_PER_MTOK +
+    (completionTokens / 1_000_000) * LLM_OUTPUT_RATE_PER_MTOK
   );
 }
 
@@ -65,7 +68,7 @@ export const ping = onCall(
 // D-11: upserts /sessions/{sid} metadata
 // D-04: promptVersion stamp on every message doc
 // D-19: isPremium forwarded to checkAndIncrement (premium = bypass daily cap)
-// D-21: GEMINI_CLIENT_MODE=fake → FakeGeminiClient; absent/prod → VertexGeminiClient
+// D-21: TUTOR_AI_CLIENT_MODE=fake → FakeTutorAIClient; absent/prod → GroqTutorAIClient
 // AI-10: non-streaming (generateContent only; no generateContentStream)
 // ---------------------------------------------------------------------------
 
@@ -148,7 +151,7 @@ export const mentorBotChat = onCall(
           (cached["completionTokens"] as number) ?? 0;
 
         // --------- USAGE LOG (IDEMPOTENCY HIT — NON-TRANSACTIONAL — D-15) ---------
-        // Gemini was NOT re-invoked. Count the call but do NOT increment tokens/cost
+        // The LLM was NOT re-invoked. Count the call but do NOT increment tokens/cost
         // (dedupe is free — model was not invoked again).
         const idempDateKey = getDhakaDateKey();
         const idempLogRef = db
@@ -175,7 +178,7 @@ export const mentorBotChat = onCall(
           );
         }
         functions.logger.info("mentorBotChat: idempotent hit", {
-          event: "gemini_call_idempotent_hit",
+          event: "tutor_ai_call_idempotent_hit",
           uid,
           sessionId,
           clientRequestId,
@@ -193,7 +196,7 @@ export const mentorBotChat = onCall(
       }
 
       // ---------------------- RATE LIMIT (TRANSACTION) ----------------------
-      // Pitfall P-2: Gemini is called AFTER this transaction commits — never inside it.
+      // Pitfall P-2: the LLM is called AFTER this transaction commits — never inside it.
       await checkAndIncrement(uid, kind, isPremium, clientRequestId);
 
       // ---------------------- (OPTIONAL) IMAGE FETCH ----------------------
@@ -220,10 +223,10 @@ export const mentorBotChat = onCall(
         imageInline = { buffer: bytes, mimeType };
       }
 
-      // ---------------------- GEMINI CALL (AFTER tx commits) ----------------------
+      // ---------------------- LLM CALL (AFTER tx commits) ----------------------
       const mode: "prod" | "fake" =
-        process.env["GEMINI_CLIENT_MODE"] === "fake" ? "fake" : "prod";
-      const client = makeGeminiClient(mode);
+        process.env["TUTOR_AI_CLIENT_MODE"] === "fake" ? "fake" : "prod";
+      const client = makeTutorAIClient(mode);
       // Prompt prefix encodes subject + level so the system prompt can calibrate.
       const promptPrefix =
         subject && level ? `[Subject: ${subject}, Level: ${level}]\n` : "";
@@ -312,7 +315,7 @@ export const mentorBotChat = onCall(
       }
 
       functions.logger.info("mentorBotChat: success", {
-        event: "gemini_call",
+        event: "tutor_ai_call",
         uid,
         sessionId,
         clientRequestId,

@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 480" fill="none" role="img" aria-label="MentorBot helping a student learn">
+  <!-- Decorative glow blobs (sit on the indigo background) -->
+  <circle cx="320" cy="60"  r="110" fill="#FFFFFF" fill-opacity="0.04"/>
+  <circle cx="40"  cy="430" r="90"  fill="#00C9A7" fill-opacity="0.10"/>
+  <circle cx="56"  cy="80"  r="28"  fill="#00C9A7" fill-opacity="0.14"/>
+  <circle cx="312" cy="408" r="20"  fill="#FFFFFF" fill-opacity="0.08"/>
+
+  <!-- Sparkle decorations (gold + teal) -->
+  <path d="M48 200 L52 210 L62 214 L52 218 L48 228 L44 218 L34 214 L44 210 Z" fill="#F5A623" fill-opacity="0.75"/>
+  <path d="M308 168 L311 175 L318 178 L311 181 L308 188 L305 181 L298 178 L305 175 Z" fill="#00C9A7" fill-opacity="0.75"/>
+  <path d="M280 360 L282 365 L287 367 L282 369 L280 374 L278 369 L273 367 L278 365 Z" fill="#F5A623" fill-opacity="0.65"/>
+
+  <!-- MentorBot floating card (top) -->
+  <g transform="translate(80 78)">
+    <!-- Soft outer glow -->
+    <rect x="-6" y="-6" width="212" height="68" rx="22" fill="#00C9A7" fill-opacity="0.18"/>
+    <!-- Card body -->
+    <rect x="0" y="0" width="200" height="56" rx="16"
+          fill="#FFFFFF" fill-opacity="0.10" stroke="#00C9A7" stroke-opacity="0.45" stroke-width="1"/>
+    <!-- AI badge -->
+    <rect x="12" y="10" width="36" height="36" rx="8" fill="#00C9A7"/>
+    <text x="30" y="33" text-anchor="middle"
+          font-family="Poppins, Inter, sans-serif" font-weight="700" font-size="13" fill="#FFFFFF">AI</text>
+    <!-- Labels -->
+    <text x="58" y="24" font-family="Poppins, Inter, sans-serif" font-weight="600" font-size="14" fill="#FFFFFF">MentorBot</text>
+    <text x="58" y="41" font-family="Inter, sans-serif" font-weight="400" font-size="11"
+          fill="#FFFFFF" fill-opacity="0.65">Ready to help you learn</text>
+    <!-- Conversation tail -->
+    <path d="M90 60 L100 70 L108 60 Z" fill="#FFFFFF" fill-opacity="0.10"
+          stroke="#00C9A7" stroke-opacity="0.45" stroke-width="1"/>
+  </g>
+
+  <!-- Student avatar (center, large) -->
+  <g transform="translate(180 260)">
+    <!-- Pulse ring -->
+    <circle cx="0" cy="0" r="76" fill="#FFFFFF" fill-opacity="0.04"/>
+    <circle cx="0" cy="0" r="62" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.20" stroke-width="2"/>
+    <!-- Head -->
+    <circle cx="0" cy="-14" r="20" fill="#FFFFFF"/>
+    <!-- Shoulders / torso -->
+    <path d="M-34 38
+             C -34 14, -18 4, 0 4
+             C 18 4, 34 14, 34 38
+             L 34 50 L -34 50 Z"
+          fill="#FFFFFF"/>
+    <!-- Indigo collar accent -->
+    <path d="M-12 12 L 0 24 L 12 12 L 6 6 L 0 10 L -6 6 Z" fill="#1A3C8F"/>
+    <!-- Gold spark by head (curiosity moment) -->
+    <path d="M22 -34 L24 -29 L29 -27 L24 -25 L22 -20 L20 -25 L15 -27 L20 -29 Z" fill="#F5A623"/>
+  </g>
+
+  <!-- Subject chips row (bottom) -->
+  <g font-family="Inter, sans-serif" font-weight="500" font-size="12" fill="#FFFFFF">
+    <!-- Maths -->
+    <g transform="translate(54 390)">
+      <rect x="0" y="0" width="78" height="32" rx="16"
+            fill="#FFFFFF" fill-opacity="0.10" stroke="#FFFFFF" stroke-opacity="0.20" stroke-width="1"/>
+      <circle cx="14" cy="16" r="4" fill="#F5A623"/>
+      <text x="44" y="21" text-anchor="middle">Maths</text>
+    </g>
+    <!-- Physics (centered, slightly lifted for visual rhythm) -->
+    <g transform="translate(140 378)">
+      <rect x="0" y="0" width="86" height="32" rx="16"
+            fill="#FFFFFF" fill-opacity="0.14" stroke="#00C9A7" stroke-opacity="0.50" stroke-width="1"/>
+      <circle cx="14" cy="16" r="4" fill="#00C9A7"/>
+      <text x="48" y="21" text-anchor="middle">Physics</text>
+    </g>
+    <!-- Chemistry -->
+    <g transform="translate(234 390)">
+      <rect x="0" y="0" width="98" height="32" rx="16"
+            fill="#FFFFFF" fill-opacity="0.10" stroke="#FFFFFF" stroke-opacity="0.20" stroke-width="1"/>
+      <circle cx="14" cy="16" r="4" fill="#1A3C8F"/>
+      <text x="54" y="21" text-anchor="middle">Chemistry</text>
+    </g>
+  </g>
+</svg>

@@ -143,7 +143,17 @@ service cloud.firestore {
 
     match /materials/{id} {
       allow read: if isSignedIn();
-      allow create, update: if isApprovedTeacher() || isAdmin();
+      allow create: if isApprovedTeacher() || isAdmin();
+      // Teachers/admins can update any field. Any signed-in user (students
+      // included) can increment the `views` counter by +1 — and nothing else.
+      // This keeps analytics accurate without granting students free write
+      // access to material content.
+      allow update: if isApprovedTeacher() || isAdmin()
+        || (isSignedIn()
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['views'])
+            && request.resource.data.views is int
+            && request.resource.data.views == resource.data.views + 1);
       allow delete: if isAdmin();
     }
 

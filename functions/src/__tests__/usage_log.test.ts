@@ -1,5 +1,5 @@
 // Unit tests for the /system/usage_log_{date} aggregate write block.
-// Mocks the Firestore Admin SDK + GeminiClient. Tests the deltas, the
+// Mocks the Firestore Admin SDK + TutorAIClient. Tests the deltas, the
 // idempotency-hit path, and the failure-isolation behavior.
 
 interface Capture {
@@ -84,18 +84,18 @@ jest.mock('../lib/rate_limit', () => ({
   checkAndIncrement: jest.fn(async () => ({ allowed: true, remaining: 29, resetAt: 0 })),
 }));
 
-jest.mock('../lib/gemini', () => ({
+jest.mock('../lib/tutor_ai', () => ({
   MODEL_CONFIG: {
-    modelId: 'gemini-2.5-pro',
+    modelId: 'llama-3.3-70b-versatile',
+    visionModelId: 'meta-llama/llama-4-scout-17b-16e-instruct',
     timeoutSeconds: 60,
     memory: '512MiB',
     maxOutputTokens: 1024,
     temperature: 0.7,
     topP: 0.95,
-    topK: 40,
   },
-  SYSTEM_PROMPT_VERSION: '1',
-  makeGeminiClient: () => ({
+  SYSTEM_PROMPT_VERSION: '3',
+  makeTutorAIClient: () => ({
     generate: async () => ({ text: 'fake', promptTokens: 100, completionTokens: 200 }),
   }),
 }));
@@ -131,11 +131,12 @@ describe('mentorBotChat — usage_log aggregate write', () => {
     expect(usageLogWrite!.data['calls']).toMatchObject({ _op: 'increment', _val: 1 });
     expect(usageLogWrite!.data['promptTokens']).toMatchObject({ _op: 'increment', _val: 100 });
     expect(usageLogWrite!.data['completionTokens']).toMatchObject({ _op: 'increment', _val: 200 });
-    // estimatedCostUsd = (100/1e6 * 1.25) + (200/1e6 * 5.0) = 0.000125 + 0.001 = 0.001125
+    // estimatedCostUsd = (100/1e6 * 0) + (200/1e6 * 0) = 0 on Groq free tier.
+    // The estimated-cost field is still written for forward-compat dashboards
+    // (rates flip non-zero if the project upgrades to Groq paid tier).
     expect(usageLogWrite!.data['estimatedCostUsd']).toMatchObject({
       _op: 'increment',
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      _val: expect.closeTo(0.001125, 6),
+      _val: 0,
     });
   });
 

@@ -40,6 +40,7 @@ ProfileUser buildProfileUser({
   int points = 0,
   String? avatarUrl,
   bool notificationsEnabled = true,
+  bool isApproved = true,
 }) {
   return ProfileUser(
     uid: uid,
@@ -52,5 +53,6 @@ ProfileUser buildProfileUser({
     points: points,
     avatarUrl: avatarUrl,
     notificationsEnabled: notificationsEnabled,
+    isApproved: isApproved,
   );
 }

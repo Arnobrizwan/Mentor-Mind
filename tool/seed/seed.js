@@ -287,6 +287,200 @@ const materials = [
       createdAt: daysAgo(12),
     },
   },
+  {
+    id: 'mat_trial_balance',
+    data: {
+      title: 'Trial Balance Worked Examples',
+      subject: 'Accounting',
+      level: 'A Level',
+      type: 'pdf',
+      fileUrl: 'https://example.com/trial-balance.pdf',
+      thumbnailUrl: null,
+      uploadedBy: 'seed_admin',
+      views: 108,
+      createdAt: daysAgo(6),
+    },
+  },
+
+  // Biology (additional)
+  {
+    id: 'mat_photosynthesis',
+    data: {
+      title: 'Photosynthesis Step-by-Step',
+      subject: 'Biology',
+      level: 'O Level',
+      type: 'video',
+      fileUrl: 'https://www.youtube.com/watch?v=eo5XndJaz-Y',
+      thumbnailUrl: null,
+      uploadedBy: 'seed_admin',
+      views: 287,
+      createdAt: daysAgo(4),
+    },
+  },
+
+  // English (additional)
+  {
+    id: 'mat_unseen_passage',
+    data: {
+      title: 'Unseen Passage Strategy (PEEL)',
+      subject: 'English',
+      level: 'O Level',
+      type: 'pdf',
+      fileUrl: 'https://example.com/unseen-peel.pdf',
+      thumbnailUrl: null,
+      uploadedBy: 'seed_admin',
+      views: 174,
+      createdAt: daysAgo(2),
+    },
+  },
+
+  // ICT (additional)
+  {
+    id: 'mat_databases_sql',
+    data: {
+      title: 'Databases & SQL Crash Course',
+      subject: 'ICT',
+      level: 'O Level',
+      type: 'note',
+      fileUrl: 'https://example.com/sql-crash-course',
+      thumbnailUrl: null,
+      uploadedBy: 'seed_admin',
+      views: 235,
+      createdAt: daysAgo(10),
+    },
+  },
+
+  // Economics
+  {
+    id: 'mat_supply_demand',
+    data: {
+      title: 'Supply and Demand Diagrams',
+      subject: 'Economics',
+      level: 'O Level',
+      type: 'pdf',
+      fileUrl: 'https://example.com/supply-demand.pdf',
+      thumbnailUrl: null,
+      uploadedBy: 'seed_admin',
+      views: 198,
+      createdAt: daysAgo(3),
+    },
+  },
+  {
+    id: 'mat_elasticity',
+    data: {
+      title: 'Price Elasticity Explained',
+      subject: 'Economics',
+      level: 'A Level',
+      type: 'video',
+      fileUrl: 'https://www.youtube.com/watch?v=HHcblIxiAAk',
+      thumbnailUrl: null,
+      uploadedBy: 'seed_admin',
+      views: 142,
+      createdAt: hoursAgo(18),
+    },
+  },
+  {
+    id: 'mat_market_failure',
+    data: {
+      title: 'Market Failure Case Studies',
+      subject: 'Economics',
+      level: 'A Level',
+      type: 'note',
+      fileUrl: 'https://example.com/market-failure',
+      thumbnailUrl: null,
+      uploadedBy: 'seed_admin',
+      views: 89,
+      createdAt: daysAgo(7),
+    },
+  },
+
+  // History
+  {
+    id: 'mat_partition_1947',
+    data: {
+      title: 'Partition of 1947 — Key Causes',
+      subject: 'History',
+      level: 'O Level',
+      type: 'pdf',
+      fileUrl: 'https://example.com/partition-1947.pdf',
+      thumbnailUrl: null,
+      uploadedBy: 'seed_admin',
+      views: 326,
+      createdAt: daysAgo(2),
+    },
+  },
+  {
+    id: 'mat_liberation_war',
+    data: {
+      title: 'Bangladesh Liberation War 1971',
+      subject: 'History',
+      level: 'O Level',
+      type: 'video',
+      fileUrl: 'https://www.youtube.com/watch?v=ZBjjzJpEM6c',
+      thumbnailUrl: null,
+      uploadedBy: 'seed_admin',
+      views: 521,
+      createdAt: hoursAgo(30),
+    },
+  },
+  {
+    id: 'mat_cold_war',
+    data: {
+      title: 'The Cold War: A-Level Overview',
+      subject: 'History',
+      level: 'A Level',
+      type: 'note',
+      fileUrl: 'https://example.com/cold-war-overview',
+      thumbnailUrl: null,
+      uploadedBy: 'seed_admin',
+      views: 117,
+      createdAt: daysAgo(8),
+    },
+  },
+
+  // Geography
+  {
+    id: 'mat_plate_tectonics',
+    data: {
+      title: 'Plate Tectonics and Earthquakes',
+      subject: 'Geography',
+      level: 'O Level',
+      type: 'video',
+      fileUrl: 'https://www.youtube.com/watch?v=RA2-Vc4PMnA',
+      thumbnailUrl: null,
+      uploadedBy: 'seed_admin',
+      views: 264,
+      createdAt: daysAgo(5),
+    },
+  },
+  {
+    id: 'mat_population_geo',
+    data: {
+      title: 'Population Geography — Bangladesh',
+      subject: 'Geography',
+      level: 'O Level',
+      type: 'pdf',
+      fileUrl: 'https://example.com/population-bd.pdf',
+      thumbnailUrl: null,
+      uploadedBy: 'seed_admin',
+      views: 153,
+      createdAt: daysAgo(9),
+    },
+  },
+  {
+    id: 'mat_climate_change',
+    data: {
+      title: 'Climate Change Case Study',
+      subject: 'Geography',
+      level: 'A Level',
+      type: 'note',
+      fileUrl: 'https://example.com/climate-case-study',
+      thumbnailUrl: null,
+      uploadedBy: 'seed_admin',
+      views: 99,
+      createdAt: daysAgo(13),
+    },
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -357,6 +551,58 @@ const notifications = [
       createdAt: hoursAgo(5),
       timestamp: hoursAgo(5),
       type: 'reminder',
+    },
+  },
+  {
+    id: 'notif_daily_challenge',
+    data: {
+      title: "Today's challenge is live ⚡",
+      body: 'Solve 3 algebra questions and earn 20 bonus points.',
+      recipientRole: 'student',
+      read: false,
+      deeplink: '/dashboard',
+      createdAt: hoursAgo(1),
+      timestamp: hoursAgo(1),
+      type: 'challenge',
+    },
+  },
+  {
+    id: 'notif_badge_earned',
+    data: {
+      title: 'New badge: First Step 🌱',
+      body: 'You finished your first tutoring session — keep going!',
+      recipientRole: 'student',
+      read: true,
+      deeplink: '/rewards',
+      createdAt: hoursAgo(26),
+      timestamp: hoursAgo(26),
+      type: 'reward',
+    },
+  },
+  {
+    id: 'notif_new_materials_geography',
+    data: {
+      title: 'Geography drops just landed 🌍',
+      body: 'Plate tectonics, climate change, population — all new.',
+      recipientRole: 'student',
+      read: false,
+      deeplink: '/materials',
+      createdAt: hoursAgo(10),
+      timestamp: hoursAgo(10),
+      type: 'new_material',
+    },
+  },
+  {
+    id: 'notif_weekly_recap',
+    data: {
+      title: 'Weekly recap: +145 points',
+      body: 'You asked 18 questions and completed 3 sessions this week.',
+      recipientRole: 'student',
+      read: false,
+      deeplink: '/rewards',
+      createdAt: daysAgo(1),
+      timestamp: daysAgo(1),
+      type: 'announcement',
     },
   },
 ];
@@ -478,12 +724,44 @@ const configDocs = {
     warningThreshold: 8,
     timezone: 'Asia/Dhaka',
   },
+  subscription: {
+    // MIRROR: Stripe price_... in functions/.env (STRIPE_PRICE_MONTHLY). The
+    // checkout flow uses the Stripe price ID, NOT this number — keep them
+    // aligned or the upgrade CTA will mislead.
+    monthlyPriceBdt: 299,
+    currencySymbol: '৳',
+    headline: 'Upgrade to Premium 🚀',
+    features: [
+      'Unlimited AI tutoring',
+      'Diagram upload & analysis',
+      'Full chat history search',
+      'Advanced analytics',
+    ],
+    ctaLabelFormat: 'Upgrade Now',
+  },
+  support: {
+    // Profile → SUPPORT tile destinations. Admin-editable so legal pages and
+    // help contact can change without an app release.
+    helpEmail: 'support@mentorminds.app',
+    helpEmailSubject: 'MentorMinds — Help request',
+    privacyPolicyUrl: 'https://mentorminds.app/privacy',
+    termsOfServiceUrl: 'https://mentorminds.app/terms',
+    playStorePackageName: 'com.mentorminds.mentor_minds',
+    // Fill in once the iOS app is approved on the App Store.
+    appStoreId: '',
+  },
 };
 
 // ---------------------------------------------------------------------------
 // Seed data — test accounts (Firebase Auth + /users + /rewards)
 // ---------------------------------------------------------------------------
 
+// questionsPerSubject drives the progress rings on the dashboard
+// ("Your Subjects" section). The badge target for "subject_expert" is 100,
+// so a value of 40 reads as ~40% on that subject's ring.
+//
+// sessions: list of { subject, question, hoursAgo } — seeded into the
+// /sessions collection under the user's uid. Drives "Recent Sessions".
 const testUsers = [
   {
     email: 'student@mentorminds.test',
@@ -497,7 +775,20 @@ const testUsers = [
       isApproved: true,
       badges: ['first_login'],
       points: 12,
+      questionsPerSubject: {
+        Mathematics: 38,
+        Physics: 22,
+        Chemistry: 14,
+      },
     },
+    sessions: [
+      { subject: 'Mathematics', question: 'Walk me through solving x² − 5x + 6 = 0', hoursAgo: 2 },
+      { subject: 'Mathematics', question: 'How do I differentiate sin(x²)?',          hoursAgo: 6 },
+      { subject: 'Physics',     question: 'Explain Newton\'s second law with an example', hoursAgo: 22 },
+      { subject: 'Chemistry',   question: 'Balance H₂ + O₂ → H₂O and explain why',    hoursAgo: 30 },
+      { subject: 'Physics',     question: 'Speed vs velocity — what\'s the difference?', hoursAgo: 50 },
+      { subject: 'Mathematics', question: 'Practice problem on the quadratic formula',  hoursAgo: 74 },
+    ],
   },
   {
     email: 'premium@mentorminds.test',
@@ -511,7 +802,19 @@ const testUsers = [
       isApproved: true,
       badges: ['first_login', 'streak_3'],
       points: 140,
+      questionsPerSubject: {
+        Mathematics: 72,
+        Physics: 55,
+        Biology: 40,
+        English: 28,
+      },
     },
+    sessions: [
+      { subject: 'Biology',     question: 'Explain photosynthesis step by step',        hoursAgo: 1 },
+      { subject: 'Mathematics', question: 'Integration by parts — when do I use it?',   hoursAgo: 8 },
+      { subject: 'Physics',     question: 'Derive the kinematic equations',             hoursAgo: 26 },
+      { subject: 'English',     question: 'How do I structure a persuasive essay?',     hoursAgo: 48 },
+    ],
   },
   {
     email: 'teacher@mentorminds.test',
@@ -525,7 +828,9 @@ const testUsers = [
       isApproved: true,
       badges: [],
       points: 0,
+      questionsPerSubject: {},
     },
+    sessions: [],
   },
   {
     email: 'admin@mentorminds.test',
@@ -539,7 +844,9 @@ const testUsers = [
       isApproved: true,
       badges: ['first_login'],
       points: 0,
+      questionsPerSubject: {},
     },
+    sessions: [],
   },
 ];
 
@@ -578,6 +885,7 @@ async function seedUser(u) {
     isApproved: u.profile.isApproved,
     badges: u.profile.badges,
     points: u.profile.points,
+    questionsPerSubject: u.profile.questionsPerSubject || {},
     emailVerified: true,
     createdAt: FieldValue.serverTimestamp(),
   }, { merge: true });
@@ -588,6 +896,31 @@ async function seedUser(u) {
     badges: u.profile.badges,
     history: [],
   }, { merge: true });
+
+  return uid;
+}
+
+// Seeds /sessions documents for a single user. Idempotent: each session uses
+// a deterministic doc id (`seed_<uid>_<index>`) so re-running the script
+// updates timestamps in place rather than creating duplicates.
+async function seedSessionsFor(uid, sessions) {
+  if (!sessions || sessions.length === 0) return 0;
+  const now = Date.now();
+  for (let i = 0; i < sessions.length; i++) {
+    const s = sessions[i];
+    const ts = new Date(now - s.hoursAgo * 60 * 60 * 1000);
+    const docId = `seed_${uid}_${i}`;
+    await db.collection('sessions').doc(docId).set({
+      userId: uid,
+      subject: s.subject,
+      title: s.question,
+      lastQuestion: s.question,
+      messageCount: 4 + (i % 3),
+      createdAt: admin.firestore.Timestamp.fromDate(ts),
+      updatedAt: admin.firestore.Timestamp.fromDate(ts),
+    });
+  }
+  return sessions.length;
 }
 
 // ---------------------------------------------------------------------------
@@ -602,8 +935,17 @@ async function run() {
   }
 
   console.log(`\nSeeding ${testUsers.length} test accounts...`);
+  let totalSessions = 0;
   for (const u of testUsers) {
-    await seedUser(u);
+    const uid = await seedUser(u);
+    const n = await seedSessionsFor(uid, u.sessions);
+    if (n > 0) {
+      console.log(`    └─ ${n} session${n === 1 ? '' : 's'} seeded`);
+      totalSessions += n;
+    }
+  }
+  if (totalSessions > 0) {
+    console.log(`  ${totalSessions} session document${totalSessions === 1 ? '' : 's'} written under /sessions.`);
   }
 
   console.log(`\nSeeding ${materials.length} materials...`);

@@ -21,73 +21,76 @@ import 'core/routes/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  runAppGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
 
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-  ));
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+    ));
 
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      await configureCrashlytics();
+    } catch (e) {
+      debugPrint('Firebase init failed: $e');
+    }
+
+    // App Check — emits a token per-call for any callable with enforceAppCheck.
+    // Release builds use App Attest where available (iOS 14+ Secure Enclave),
+    // silently falling back to DeviceCheck on devices/accounts where App Attest
+    // is not provisioned. Debug builds use the Debug provider — auto-generates
+    // a UUID token that must be registered in Firebase Console (BACKEND_SETUP §6).
+    // The Functions emulator bypasses App Check validation (RESEARCH Pitfall 6).
+    // Provider choice locked by free-Apple-Developer-account decision; see CONTEXT D-02.
+    await FirebaseAppCheck.instance.activate(
+      appleProvider: kReleaseMode
+          ? AppleProvider.appAttestWithDeviceCheckFallback
+          : AppleProvider.debug,
+      androidProvider: kReleaseMode
+          ? AndroidProvider.playIntegrity
+          : AndroidProvider.debug,
     );
-    await configureCrashlytics();
-  } catch (e) {
-    debugPrint('Firebase init failed: $e');
-  }
 
-  // App Check — emits a token per-call for any callable with enforceAppCheck.
-  // Release builds use App Attest where available (iOS 14+ Secure Enclave),
-  // silently falling back to DeviceCheck on devices/accounts where App Attest
-  // is not provisioned. Debug builds use the Debug provider — auto-generates
-  // a UUID token that must be registered in Firebase Console (BACKEND_SETUP §6).
-  // The Functions emulator bypasses App Check validation (RESEARCH Pitfall 6).
-  // Provider choice locked by free-Apple-Developer-account decision; see CONTEXT D-02.
-  await FirebaseAppCheck.instance.activate(
-    appleProvider: kReleaseMode
-        ? AppleProvider.appAttestWithDeviceCheckFallback
-        : AppleProvider.debug,
-  );
+    // When launched with --dart-define=USE_EMULATOR=true, redirect all SDK
+    // calls to the local Firebase Emulator Suite instead of the production
+    // project. The const-conditional is evaluated at compile time so release
+    // builds (without the dart-define) tree-shake this branch entirely.
+    // lib/main.dart MUST NOT import from test/ — the 3-line wiring is
+    // intentionally duplicated here; the shared helper lives in
+    // test/_helpers/emulator_setup.dart for use by integration tests only.
+    const bool useEmulator =
+        bool.fromEnvironment('USE_EMULATOR', defaultValue: false);
+    if (useEmulator) {
+      FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
+      await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+      await FirebaseStorage.instance.useStorageEmulator('localhost', 9199);
+      FirebaseFunctions.instance.useFunctionsEmulator('localhost', 5001);
+    }
 
-  // When launched with --dart-define=USE_EMULATOR=true, redirect all SDK
-  // calls to the local Firebase Emulator Suite instead of the production
-  // project. The const-conditional is evaluated at compile time so release
-  // builds (without the dart-define) tree-shake this branch entirely.
-  // lib/main.dart MUST NOT import from test/ — the 3-line wiring is
-  // intentionally duplicated here; the shared helper lives in
-  // test/_helpers/emulator_setup.dart for use by integration tests only.
-  const bool useEmulator =
-      bool.fromEnvironment('USE_EMULATOR', defaultValue: false);
-  if (useEmulator) {
-    FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
-    await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
-    await FirebaseStorage.instance.useStorageEmulator('localhost', 9199);
-    FirebaseFunctions.instance.useFunctionsEmulator('localhost', 5001);
-  }
+    // NOTF-01 — FCM background handler must register before runApp, but the rest
+    // of the messaging init (getInitialMessage, APNS token wait) is moved off the
+    // critical path: on iOS Simulator with a free Apple Developer account, APNS
+    // never provisions and getInitialMessage() can hang indefinitely, blocking
+    // runApp and producing a white screen. handlePendingNavigation is invoked
+    // from the dashboard mount, so a one-frame delay here is harmless.
+    final container = ProviderContainer();
+    unawaited(container.read(messagingServiceProvider).initialize());
 
-  // NOTF-01 — FCM background handler must register before runApp, but the rest
-  // of the messaging init (getInitialMessage, APNS token wait) is moved off the
-  // critical path: on iOS Simulator with a free Apple Developer account, APNS
-  // never provisions and getInitialMessage() can hang indefinitely, blocking
-  // runApp and producing a white screen. handlePendingNavigation is invoked
-  // from the dashboard mount, so a one-frame delay here is harmless.
-  final container = ProviderContainer();
-  unawaited(container.read(messagingServiceProvider).initialize());
-
-  runAppGuarded(
-    () => runApp(
+    runApp(
       UncontrolledProviderScope(
         container: container,
         child: const MentorMindsApp(),
       ),
-    ),
-  );
+    );
+  });
 }
 
 class MentorMindsApp extends ConsumerWidget {

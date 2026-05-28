@@ -410,212 +410,27 @@ class _IllustrationPlaceholder extends StatelessWidget {
           colors: [Color(0xFF1E4BB5), Color(0xFF1A3C8F)],
         ),
       ),
-      child: Stack(
-        clipBehavior: Clip.hardEdge,
-        children: [
-          // Decorative background circles
-          const Positioned(
-            top: -60,
-            right: -60,
-            child: _GlowCircle(size: 220, color: Colors.white, opacity: 0.04),
-          ),
-          const Positioned(
-            bottom: -20,
-            left: -50,
-            child: _GlowCircle(
-                size: 180, color: AppColors.kAccent, opacity: 0.10),
-          ),
-          const Positioned(
-            top: 48,
-            left: 28,
-            child:
-                _GlowCircle(size: 56, color: AppColors.kAccent, opacity: 0.14),
-          ),
-          const Positioned(
-            bottom: 60,
-            right: 24,
-            child: _GlowCircle(size: 40, color: Colors.white, opacity: 0.08),
-          ),
-
-          // Main illustration content
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // MentorBot floating card — the mascot peek (B moment).
-                _FloatingCard(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: const BoxDecoration(
-                          color: AppColors.kAccent,
-                          borderRadius: AppRadius.smBorder,
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'AI',
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm + 2),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            'MentorBot',
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Text(
-                            'Ready to help you learn',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 11,
-                              color: Colors.white.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: AppSpacing.xl - 2),
-
-                // Student avatar
-                Container(
-                  width: 88,
-                  height: 88,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.10),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.20),
-                      width: 2,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.person_rounded,
-                    size: 52,
-                    color: Colors.white,
-                  ),
-                ),
-
-                const SizedBox(height: AppSpacing.xl - 2),
-
-                // Floating subject chips
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: ['Maths', 'Physics', 'Chemistry']
-                      .map(
-                        (s) => Container(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.xs,
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
-                            vertical: AppSpacing.xs + 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.10),
-                            borderRadius: AppRadius.pillBorder,
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.18),
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            s,
-                            style: const TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 11,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ],
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: Semantics(
+            label: 'MentorBot helping a student learn',
+            image: true,
+            child: Image.asset(
+              'assets/images/illustrations/onboarding_hero.png',
+              fit: BoxFit.contain,
             ),
-          )
-              .animate()
-              .scale(
-                begin: const Offset(0.92, 0.92),
-                end: const Offset(1.0, 1.0),
-                duration: 700.ms,
-                curve: AppMotion.standard,
-              )
-              .fade(duration: 600.ms),
-        ],
-      ),
-    );
-  }
-}
-
-class _GlowCircle extends StatelessWidget {
-  final double size;
-  final Color color;
-  final double opacity;
-  const _GlowCircle({
-    required this.size,
-    required this.color,
-    required this.opacity,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withValues(alpha: opacity),
-      ),
-    );
-  }
-}
-
-class _FloatingCard extends StatelessWidget {
-  final Widget child;
-  const _FloatingCard({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.10),
-        borderRadius: AppRadius.lgBorder,
-        border: Border.all(
-          color: AppColors.kAccent.withValues(alpha: 0.35),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.kAccent.withValues(alpha: 0.18),
-            blurRadius: 24,
           ),
-        ],
-      ),
-      child: child,
+        ),
+      )
+          .animate()
+          .scale(
+            begin: const Offset(0.92, 0.92),
+            end: const Offset(1.0, 1.0),
+            duration: 700.ms,
+            curve: AppMotion.standard,
+          )
+          .fade(duration: 600.ms),
     );
   }
 }
@@ -760,6 +575,7 @@ class _OnboardingTopBar extends StatelessWidget {
           child: IconButton(
             onPressed: onBack,
             icon: const Icon(Icons.arrow_back_ios_new_rounded),
+            tooltip: 'Back',
             color: brand.textDark,
             iconSize: 20,
             splashRadius: 24,

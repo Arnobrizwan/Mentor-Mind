@@ -232,6 +232,7 @@ class _MaterialsAppBar extends StatelessWidget {
       ),
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_rounded),
+        tooltip: 'Back',
         onPressed: () => context.canPop()
             ? context.pop()
             : context.goNamed(AppRoutes.dashboard),
@@ -687,9 +688,9 @@ class _ThumbnailArea extends StatelessWidget {
         if (!hasThumb)
           Center(
             child: Icon(
-              _iconForType(material.type),
-              color: Colors.white.withValues(alpha: 0.55),
-              size: 42,
+              subjectIconFor(material.subject),
+              color: Colors.white.withValues(alpha: 0.85),
+              size: 46,
             ),
           ),
         Positioned(
@@ -743,11 +744,6 @@ class _ThumbnailArea extends StatelessWidget {
     );
   }
 
-  IconData _iconForType(MaterialType t) => switch (t) {
-        MaterialType.pdf   => Icons.picture_as_pdf_rounded,
-        MaterialType.video => Icons.play_circle_fill_rounded,
-        MaterialType.note  => Icons.description_rounded,
-      };
 }
 
 class _GradientBg extends StatelessWidget {

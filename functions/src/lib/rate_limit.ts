@@ -10,8 +10,8 @@
 //        FieldValue.arrayUnion — RESEARCH §Pitfall P-5).
 // D-19:  isPremium = true bypasses DAILY cap; burst + monthly STILL apply.
 //
-// CRITICAL — Pitfall P-2: NEVER call Gemini inside this transaction. Plan 03-06's
-// mentorBotChat handler calls Gemini AFTER the transaction commits.
+// CRITICAL — Pitfall P-2: NEVER call the LLM inside this transaction. Plan 03-06's
+// mentorBotChat handler calls the LLM AFTER the transaction commits.
 
 import * as admin from 'firebase-admin';
 import { defineString } from 'firebase-functions/params';

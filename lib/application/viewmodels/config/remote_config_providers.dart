@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mentor_minds/data/models/curriculum_config.dart';
 import 'package:mentor_minds/data/models/gamification_config.dart';
 import 'package:mentor_minds/data/models/quotas_config.dart';
+import 'package:mentor_minds/data/models/subscription_config.dart';
+import 'package:mentor_minds/data/models/support_config.dart';
 import 'package:mentor_minds/data/services/firebase_providers.dart';
 import 'package:mentor_minds/data/services/remote_config_service.dart';
 
@@ -58,5 +60,33 @@ final currentQuotasConfigProvider = Provider<QuotasConfig>((ref) {
   return ref.watch(quotasConfigStreamProvider).maybeWhen(
         data: (cfg) => cfg,
         orElse: () => QuotasConfig.defaults,
+      );
+});
+
+// -- Subscription ----------------------------------------------------------
+
+final subscriptionConfigStreamProvider =
+    StreamProvider<SubscriptionConfig>((ref) {
+  return ref.watch(remoteConfigServiceProvider).watchSubscription();
+});
+
+final currentSubscriptionConfigProvider =
+    Provider<SubscriptionConfig>((ref) {
+  return ref.watch(subscriptionConfigStreamProvider).maybeWhen(
+        data: (cfg) => cfg,
+        orElse: () => SubscriptionConfig.defaults,
+      );
+});
+
+// -- Support ---------------------------------------------------------------
+
+final supportConfigStreamProvider = StreamProvider<SupportConfig>((ref) {
+  return ref.watch(remoteConfigServiceProvider).watchSupport();
+});
+
+final currentSupportConfigProvider = Provider<SupportConfig>((ref) {
+  return ref.watch(supportConfigStreamProvider).maybeWhen(
+        data: (cfg) => cfg,
+        orElse: () => SupportConfig.defaults,
       );
 });
