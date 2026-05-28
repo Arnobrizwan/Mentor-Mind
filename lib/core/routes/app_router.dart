@@ -21,26 +21,44 @@ import 'package:mentor_minds/presentation/screens/inbox/teacher_inbox_screen.dar
 import 'package:mentor_minds/presentation/screens/legal/legal_screen.dart';
 import 'package:mentor_minds/presentation/screens/tutor/tutor_screen.dart';
 
-/// Returns the right "home" route name for the currently signed-in user,
-/// based on the role claim cached on their ID token. Falls back to the
-/// student dashboard when no auth or no role is present.
+/// Returns the right "home" route name for the currently signed-in user.
 ///
-/// Used by shared screens (Materials, Search, Notifications, Profile)
-/// when their back button needs to land on the user's dashboard rather
-/// than always defaulting to the student one. Accepts either Ref or
-/// WidgetRef — both expose .read().
+/// Resolution order:
+///   1. ID token claim `role` — fast, no Firestore round-trip
+///   2. Firestore `/users/{uid}.role` — source of truth; used when the claim
+///      is missing or returns the default 'student' (seed accounts and any
+///      user who pre-dates the role-claim cloud function fall here)
+///   3. `AppRoutes.dashboard` (student) as final fallback
+///
+/// Used by shared-screen back buttons AND by the router-level redirect guard
+/// in this file, so a teacher / admin can never end up on the student
+/// dashboard regardless of which sign-up path they came through.
 Future<String> resolveHomeRouteName(WidgetRef ref) async {
   final auth = ref.read(firebaseAuthProvider);
   final user = auth.currentUser;
   if (user == null) return AppRoutes.dashboard;
+
+  // 1. Fast path — claim on the cached ID token.
   try {
     final token = await user.getIdTokenResult();
     final role = token.claims?['role'] as String?;
     if (role == 'teacher') return AppRoutes.teacherDashboard;
     if (role == 'admin') return AppRoutes.admin;
-  } catch (_) {
-    // ignore — fall through to default
-  }
+    // Note: we deliberately DO NOT return early on role == 'student'. The
+    // default claim set by the on-user-create function is 'student', and
+    // seeded accounts may never have had their claim upgraded — we need to
+    // check Firestore to be sure.
+  } catch (_) {}
+
+  // 2. Source-of-truth fallback — /users/{uid}.role
+  try {
+    final firestore = ref.read(firestoreProvider);
+    final doc = await firestore.collection('users').doc(user.uid).get();
+    final role = (doc.data()?['role'] as String?)?.trim();
+    if (role == 'teacher') return AppRoutes.teacherDashboard;
+    if (role == 'admin') return AppRoutes.admin;
+  } catch (_) {}
+
   return AppRoutes.dashboard;
 }
 
@@ -81,15 +99,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (state.matchedLocation != '/dashboard') return null;
       final user = ref.read(firebaseAuthProvider).currentUser;
       if (user == null) return null; // splash will handle unauthenticated state
+
+      // Same dual lookup as resolveHomeRouteName — claim first, then
+      // Firestore. Seeded teacher / admin accounts may not have the role
+      // claim set, so we MUST fall back to /users/{uid}.role to catch them.
       try {
         final token = await user.getIdTokenResult();
         final role = token.claims?['role'] as String?;
         if (role == 'teacher') return '/dashboard/teacher';
         if (role == 'admin') return '/admin';
-      } catch (_) {
-        // Claims fetch failed (transient network / token refresh) — let the
-        // student route render; the user's screen will recover on next load.
-      }
+      } catch (_) {}
+
+      try {
+        final fs = ref.read(firestoreProvider);
+        final doc = await fs.collection('users').doc(user.uid).get();
+        final role = (doc.data()?['role'] as String?)?.trim();
+        if (role == 'teacher') return '/dashboard/teacher';
+        if (role == 'admin') return '/admin';
+      } catch (_) {}
+
       return null;
     },
     routes: [

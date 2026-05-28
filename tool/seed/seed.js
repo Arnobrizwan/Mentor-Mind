@@ -939,6 +939,14 @@ async function seedUser(u) {
     history: [],
   }, { merge: true });
 
+  // Sync the role custom claim. The onUserCreate cloud function defaults
+  // every new auth user to { role: 'student', premium: false }, so teachers
+  // and admins MUST have their claim explicitly upgraded for the client-side
+  // role-aware routing to work without a Firestore fallback fetch.
+  const role = u.profile.role;
+  const premium = u.profile.subscriptionType === 'premium';
+  await admin.auth().setCustomUserClaims(uid, { role, premium });
+
   return uid;
 }
 
