@@ -258,34 +258,48 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     );
   }
 
-  // Admin sign-out — relies on the GoRouter auth-state refresh listener to
-  // bounce us to /auth/login the moment Firebase Auth state goes null. No
-  // need to fire goNamed() here; doing so races with the StreamBuilder rebuild
-  // and gets dropped (see cd584ad fix on the teacher dashboard).
+  // Admin sign-out. Uses ref-scoped references (router + auth viewmodel) so
+  // the navigation does NOT depend on the calling widget's BuildContext —
+  // by the time signOut() resolves, the AdminScreen has often unmounted
+  // (auth state change rebuilds the GoRouter tree). Calling
+  // router.goNamed() directly survives that.
   Future<void> _confirmSignOut(BuildContext context) async {
     final brand = context.brand;
+    // Grab router up-front — it's a long-lived object owned by the provider
+    // scope, so it remains valid even after this widget unmounts during the
+    // post-signOut auth tear-down.
+    final router = GoRouter.of(context);
+    // Prevent the admin viewmodel's "Not authorized" redirect from racing us
+    // and toasting "Not authorized" on the way out.
+    _redirected = true;
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      barrierDismissible: false,
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('Sign out?'),
         content: const Text(
           "You'll need to sign back in to access the admin panel.",
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
             child: const Text('Cancel'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: brand.primary),
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
             child: const Text('Sign out'),
           ),
         ],
       ),
     );
-    if (confirm != true) return;
+    if (confirm != true) {
+      _redirected = false; // user cancelled — re-arm the auth guard
+      return;
+    }
     await ref.read(authViewModelProvider.notifier).signOut();
+    // Explicit nav as belt-and-suspenders alongside the auth refresh listener.
+    router.goNamed(AppRoutes.login);
   }
 }
 
