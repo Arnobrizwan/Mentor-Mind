@@ -754,8 +754,7 @@ class _QuickActionRow extends StatelessWidget {
           child: _QuickActionTile(
             emoji: '\u{1F916}',
             label: 'Ask AI',
-            tint: brand.primary,
-            tintDark: _darken(brand.primary, 0.18),
+            accent: brand.primary,
             onTap: () => context.goNamed(AppRoutes.tutor),
           ).animate().fadeIn(delay: 250.ms, duration: 350.ms)
               .slideY(begin: 0.2, end: 0),
@@ -765,8 +764,7 @@ class _QuickActionRow extends StatelessWidget {
           child: _QuickActionTile(
             emoji: '\u{1F4DA}',
             label: 'Materials',
-            tint: brand.accent,
-            tintDark: _darken(brand.accent, 0.22),
+            accent: brand.accent,
             onTap: () => context.goNamed(AppRoutes.materials),
           ).animate().fadeIn(delay: 350.ms, duration: 350.ms)
               .slideY(begin: 0.2, end: 0),
@@ -776,8 +774,7 @@ class _QuickActionRow extends StatelessWidget {
           child: _QuickActionTile(
             emoji: '\u{1F3C6}',
             label: 'Rewards',
-            tint: brand.gold,
-            tintDark: _darken(brand.gold, 0.22),
+            accent: brand.gold,
             onTap: () => context.goNamed(AppRoutes.rewards),
           ).animate().fadeIn(delay: 450.ms, duration: 350.ms)
               .slideY(begin: 0.2, end: 0),
@@ -785,28 +782,18 @@ class _QuickActionRow extends StatelessWidget {
       ],
     );
   }
-
-  // Returns [c] shifted by [amount] toward black in HSL — used for the
-  // top-left → bottom-right gradient on each action tile so they read as
-  // dimensional rather than flat.
-  static Color _darken(Color c, double amount) {
-    final hsl = HSLColor.fromColor(c);
-    return hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0)).toColor();
-  }
 }
 
 class _QuickActionTile extends StatefulWidget {
   final String emoji;
   final String label;
-  final Color tint;
-  final Color tintDark;
+  final Color accent;
   final VoidCallback onTap;
 
   const _QuickActionTile({
     required this.emoji,
     required this.label,
-    required this.tint,
-    required this.tintDark,
+    required this.accent,
     required this.onTap,
   });
 
@@ -817,8 +804,27 @@ class _QuickActionTile extends StatefulWidget {
 class _QuickActionTileState extends State<_QuickActionTile> {
   bool _pressed = false;
 
+  // Builds a soft pastel gradient from the supplied accent color. The label
+  // text and accent emoji sit on this washed surface — dark text reads cleanly
+  // on the light background.
+  ({Color top, Color bottom, Color border}) _palette() {
+    final hsl = HSLColor.fromColor(widget.accent);
+    final top = hsl
+        .withLightness((hsl.lightness + 0.36).clamp(0.0, 1.0))
+        .withSaturation((hsl.saturation * 0.55).clamp(0.0, 1.0))
+        .toColor();
+    final bottom = hsl
+        .withLightness((hsl.lightness + 0.24).clamp(0.0, 1.0))
+        .withSaturation((hsl.saturation * 0.65).clamp(0.0, 1.0))
+        .toColor();
+    final border = widget.accent.withValues(alpha: 0.30);
+    return (top: top, bottom: bottom, border: border);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final brand = context.brand;
+    final p = _palette();
     return AnimatedScale(
       scale: _pressed ? 0.96 : 1.0,
       duration: const Duration(milliseconds: 120),
@@ -842,13 +848,14 @@ class _QuickActionTileState extends State<_QuickActionTile> {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [widget.tint, widget.tintDark],
+                colors: [p.top, p.bottom],
               ),
+              border: Border.all(color: p.border, width: 1),
               boxShadow: [
                 BoxShadow(
-                  color: widget.tint.withValues(alpha: 0.30),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
+                  color: widget.accent.withValues(alpha: 0.10),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
@@ -860,11 +867,11 @@ class _QuickActionTileState extends State<_QuickActionTile> {
                 const SizedBox(height: AppSpacing.xs + 2),
                 Text(
                   widget.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    color: brand.textDark,
                     height: 1.2,
                   ),
                   maxLines: 1,
