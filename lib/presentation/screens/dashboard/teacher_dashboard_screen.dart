@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
@@ -37,33 +38,60 @@ import 'package:mentor_minds/shared/widgets/section_header.dart';
 //     subjects". Students get tutor + materials + rewards + search.
 // ---------------------------------------------------------------------------
 
-class TeacherDashboardScreen extends ConsumerWidget {
+class TeacherDashboardScreen extends ConsumerStatefulWidget {
   const TeacherDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TeacherDashboardScreen> createState() =>
+      _TeacherDashboardScreenState();
+}
+
+class _TeacherDashboardScreenState
+    extends ConsumerState<TeacherDashboardScreen> {
+  // Bumping this forces the inner StreamBuilder to remount with a fresh
+  // Firestore listener — used when the previous subscription errored out
+  // (typically PERMISSION_DENIED during a sign-out→sign-in transition, which
+  // the Firestore SDK does NOT auto-retry).
+  int _retryKey = 0;
+
+  @override
+  Widget build(BuildContext context) {
     final brand = context.brand;
     final auth = ref.watch(firebaseAuthProvider);
-    final uid = auth.currentUser?.uid;
-
-    if (uid == null) {
-      // Auth state torn down mid-frame — splash will redirect on next pump.
-      return Scaffold(
-        backgroundColor: brand.background,
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
 
     return Scaffold(
       backgroundColor: brand.background,
-      body: StreamBuilder<ProfileUser>(
-        stream:
-            ref.watch(usersRepositoryProvider).watchProfileUser(uid),
-        builder: (context, snap) {
-          if (!snap.hasData) {
+      body: StreamBuilder<User?>(
+        // userChanges() fires on sign-in, sign-out, token refresh, and
+        // displayName/email/photo updates. We re-key the inner StreamBuilder
+        // on each new uid so listeners are always attached with a fresh token.
+        stream: auth.userChanges(),
+        initialData: auth.currentUser,
+        builder: (context, authSnap) {
+          final uid = authSnap.data?.uid;
+          if (uid == null) {
+            // Splash will redirect to /auth/login on next frame; show a brief
+            // spinner so the bottom-nav layout doesn't shift.
             return const Center(child: CircularProgressIndicator());
           }
-          return _TeacherBody(user: snap.data!);
+          return StreamBuilder<ProfileUser>(
+            key: ValueKey('teacher_profile_${uid}_$_retryKey'),
+            stream: ref
+                .read(usersRepositoryProvider)
+                .watchProfileUser(uid),
+            builder: (context, snap) {
+              if (snap.hasError) {
+                return _LoadErrorState(
+                  message: snap.error.toString(),
+                  onRetry: () => setState(() => _retryKey++),
+                );
+              }
+              if (!snap.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              return _TeacherBody(user: snap.data!);
+            },
+          );
         },
       ),
       bottomNavigationBar: _TeacherBottomNav(
@@ -80,6 +108,77 @@ class TeacherDashboardScreen extends ConsumerWidget {
               context.goNamed(AppRoutes.teacherProfile);
           }
         },
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _LoadErrorState — recovery UI for when the teacher-profile stream errors.
+// Triggered most often by a permission-denied during the auth handoff window;
+// tapping Retry remounts the inner StreamBuilder with a fresh listener.
+// ---------------------------------------------------------------------------
+
+class _LoadErrorState extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _LoadErrorState({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final brand = context.brand;
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_rounded, color: brand.error, size: 42),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              "Couldn't load your dashboard",
+              style: AppTextStyles.headingSmall
+                  .copyWith(color: brand.textDark),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.xs + 2),
+            Text(
+              'This usually means your session refreshed mid-load. '
+              'Tap retry to pick up where you left off.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodySmall
+                  .copyWith(color: brand.textMuted, height: 1.4),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: brand.primary),
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Retry'),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ExpansionTile(
+              title: Text(
+                'Details',
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: brand.textMuted),
+              ),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  child: Text(
+                    message,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: brand.textMuted,
+                      fontFamily: 'JetBrainsMono',
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

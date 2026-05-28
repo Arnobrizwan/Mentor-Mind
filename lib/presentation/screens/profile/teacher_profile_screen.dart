@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -25,33 +26,95 @@ import 'package:mentor_minds/data/services/firebase_providers.dart';
 //   * Sign-out routes to /auth/login the same way the student profile does.
 // ---------------------------------------------------------------------------
 
-class TeacherProfileScreen extends ConsumerWidget {
+class TeacherProfileScreen extends ConsumerStatefulWidget {
   const TeacherProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TeacherProfileScreen> createState() =>
+      _TeacherProfileScreenState();
+}
+
+class _TeacherProfileScreenState extends ConsumerState<TeacherProfileScreen> {
+  // See teacher_dashboard_screen.dart for the rationale — Firestore does not
+  // auto-retry PERMISSION_DENIED, so we re-key the inner listener on retry.
+  int _retryKey = 0;
+
+  @override
+  Widget build(BuildContext context) {
     final brand = context.brand;
     final auth = ref.watch(firebaseAuthProvider);
-    final uid = auth.currentUser?.uid;
-
-    if (uid == null) {
-      return Scaffold(
-        backgroundColor: brand.background,
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
 
     return Scaffold(
       backgroundColor: brand.background,
-      body: StreamBuilder<ProfileUser>(
-        stream:
-            ref.watch(usersRepositoryProvider).watchProfileUser(uid),
-        builder: (context, snap) {
-          if (!snap.hasData) {
+      body: StreamBuilder<User?>(
+        stream: auth.userChanges(),
+        initialData: auth.currentUser,
+        builder: (context, authSnap) {
+          final uid = authSnap.data?.uid;
+          if (uid == null) {
             return const Center(child: CircularProgressIndicator());
           }
-          return _TeacherProfileBody(user: snap.data!);
+          return StreamBuilder<ProfileUser>(
+            key: ValueKey('teacher_profile_view_${uid}_$_retryKey'),
+            stream: ref
+                .read(usersRepositoryProvider)
+                .watchProfileUser(uid),
+            builder: (context, snap) {
+              if (snap.hasError) {
+                return _ProfileLoadError(
+                  message: snap.error.toString(),
+                  onRetry: () => setState(() => _retryKey++),
+                );
+              }
+              if (!snap.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              return _TeacherProfileBody(user: snap.data!);
+            },
+          );
         },
+      ),
+    );
+  }
+}
+
+class _ProfileLoadError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _ProfileLoadError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final brand = context.brand;
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_rounded, color: brand.error, size: 36),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              "Couldn't load profile",
+              style: AppTextStyles.headingSmall
+                  .copyWith(color: brand.textDark),
+            ),
+            const SizedBox(height: AppSpacing.xs + 2),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodySmall
+                  .copyWith(color: brand.textMuted, height: 1.4),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: brand.primary),
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }
