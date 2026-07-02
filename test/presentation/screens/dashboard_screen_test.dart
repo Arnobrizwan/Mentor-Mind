@@ -139,6 +139,10 @@ void main() {
         );
         // One frame only — DO NOT call pumpAndSettle (perpetual shimmer/timers).
         await tester.pump();
+        // flutter_animate's Animate widgets arm a one-shot kick-off Timer in
+        // initState; advance the fake clock once so it fires, otherwise the
+        // binding fails the test with "A Timer is still pending".
+        await tester.pump(const Duration(milliseconds: 700));
 
         expect(find.byType(DashboardScreen), findsOneWidget);
         // The _QuickActionRow renders "Ask AI" text unconditionally in the

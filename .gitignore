@@ -68,3 +68,4 @@ database-debug.log
 pubsub-debug.log
 storage-debug.log
 .firebase/
+**/failures/
