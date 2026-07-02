@@ -88,8 +88,8 @@ jobs:
   # Gated on changes under functions/** via dorny/paths-filter@v4. PRs that don't
   # touch functions/ skip the install/build/test steps via per-step `if:` guards;
   # the job itself still runs (the filter step is cheap).
-  # rules.test.ts (plan 03-09) requires the Firestore emulator and is excluded
-  # via --testPathIgnorePatterns=rules. Phase 7 polish wires the emulator into CI.
+  # rules.test.ts (plan 03-09) requires the Firestore emulator; it runs in its
+  # own step under `firebase emulators:exec` (npm run test:rules) below.
   # ─────────────────────────────────────────────────────────────────────────────
   functions:
     name: Cloud Functions lint + build + test (CI-03)
@@ -106,6 +106,7 @@ jobs:
           filters: |
             functions:
               - 'functions/**'
+              - 'firestore.rules'
 
       - uses: actions/setup-node@v4
         if: steps.filter.outputs.functions == 'true'
@@ -124,4 +125,11 @@ jobs:
 
       - name: Run Jest tests
         if: steps.filter.outputs.functions == 'true'
-        run: cd functions && npm test -- --testPathIgnorePatterns=rules
+        run: cd functions && npm test
+
+      # Firestore security-rules tests run against the real emulator.
+      # The emulator needs Java (present on ubuntu-latest runners) and
+      # firebase-tools; emulators:exec exports FIRESTORE_EMULATOR_HOST for jest.
+      - name: Run Firestore rules tests (emulator)
+        if: steps.filter.outputs.functions == 'true'
+        run: cd functions && npx firebase-tools emulators:exec --only firestore --project demo-rules-test "npx jest --testPathPattern=rules"

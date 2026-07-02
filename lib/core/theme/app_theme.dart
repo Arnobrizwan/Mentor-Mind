@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../constants/app_colors.dart';
+import '../constants/app_text_styles.dart';
 import 'app_radius.dart';
 import 'brand_colors.dart';
 
@@ -39,6 +40,27 @@ abstract final class AppTheme {
       useMaterial3: true,
       brightness: brightness,
       fontFamily: 'Inter',
+      // Branded type ramp with brightness-correct colors — AppTextStyles bakes
+      // light-mode colors, so every slot is re-colored from BrandColors here.
+      textTheme: TextTheme(
+        displayLarge: AppTextStyles.displayLarge.copyWith(color: brand.textDark),
+        displayMedium:
+            AppTextStyles.displayMedium.copyWith(color: brand.textDark),
+        headlineLarge: AppTextStyles.headingLarge.copyWith(color: brand.textDark),
+        headlineMedium:
+            AppTextStyles.headingMedium.copyWith(color: brand.textDark),
+        headlineSmall:
+            AppTextStyles.headingSmall.copyWith(color: brand.textDark),
+        titleLarge: AppTextStyles.headingMedium.copyWith(color: brand.textDark),
+        titleMedium: AppTextStyles.headingSmall.copyWith(color: brand.textDark),
+        titleSmall: AppTextStyles.labelMedium.copyWith(color: brand.textDark),
+        bodyLarge: AppTextStyles.bodyLarge.copyWith(color: brand.textDark),
+        bodyMedium: AppTextStyles.bodyMedium.copyWith(color: brand.textDark),
+        bodySmall: AppTextStyles.bodySmall.copyWith(color: brand.textMuted),
+        labelLarge: AppTextStyles.labelLarge.copyWith(color: brand.textDark),
+        labelMedium: AppTextStyles.labelMedium.copyWith(color: brand.textDark),
+        labelSmall: AppTextStyles.labelSmall.copyWith(color: brand.textMuted),
+      ),
       colorScheme: scheme,
       scaffoldBackgroundColor: brand.background,
       extensions: <ThemeExtension<dynamic>>[brand],
