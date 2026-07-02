@@ -92,9 +92,20 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
   StreamSubscription<Map<String, dynamic>>? _userSub;
   StreamSubscription<List<PointsHistory>>? _ledgerSub;
 
+  // Latest raw docs — the server writes badge ids/points to /rewards/{uid}
+  // but the badge PROGRESS counters (sessionsCompleted, totalQuestions,
+  // streakDays, diagramUploads, questionsPerSubject) live on /users/{uid},
+  // so locked-badge progress must merge both.
+  Map<String, dynamic> _latestRewards = const {};
+  Map<String, dynamic> _latestUser = const {};
+  bool _rewardsLoaded = false;
+
   void _bind(String uid) {
     _rewardsSub?.cancel();
     _userSub?.cancel();
+    _latestRewards = const {};
+    _latestUser = const {};
+    _rewardsLoaded = false;
     state = state.copyWith(isLoading: true, clearError: true);
 
     // Rewards doc — badges + history + authoritative points.
@@ -102,7 +113,9 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
         .watchRewardsRaw(uid)
         .listen(
       (data) {
-        _mergeRewards(data);
+        _latestRewards = data;
+        _rewardsLoaded = true;
+        _mergeRewards();
       },
       onError: (_) {
         state = state.copyWith(
@@ -112,17 +125,23 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
       },
     );
 
-    // Users doc — fallback for points and subject tag.
+    // Users doc — badge progress counters + fallback points.
     _userSub = _usersRepo
         .watchUserDocRaw(uid)
         .listen(
       (data) {
-        final pointsFromUser = (data['points'] as num?)?.toInt();
-        if (pointsFromUser != null && state.points == 0) {
-          state = state.copyWith(points: pointsFromUser);
-          state = state.copyWith(
-            nextMilestone: _computeMilestone(pointsFromUser),
-          );
+        _latestUser = data;
+        if (_rewardsLoaded) {
+          // Re-derive locked-badge progress with the fresh counters.
+          _mergeRewards();
+        } else {
+          final pointsFromUser = (data['points'] as num?)?.toInt();
+          if (pointsFromUser != null && state.points == 0) {
+            state = state.copyWith(
+              points: pointsFromUser,
+              nextMilestone: _computeMilestone(pointsFromUser),
+            );
+          }
         }
       },
       onError: (_) {/* non-fatal */},
@@ -143,8 +162,14 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
     });
   }
 
-  void _mergeRewards(Map<String, dynamic> data) {
-    final points = (data['points'] as num?)?.toInt() ?? state.points;
+  void _mergeRewards() {
+    final data = _latestRewards;
+    // Progress counters come from /users/{uid}; anything the rewards doc
+    // also carries wins on key clashes.
+    final progressSource = <String, dynamic>{..._latestUser, ...data};
+    final points = (data['points'] as num?)?.toInt() ??
+        (_latestUser['points'] as num?)?.toInt() ??
+        state.points;
     final earnedIds = ((data['badges'] as List?) ?? const [])
         .map((e) => e.toString())
         .toSet();
@@ -179,7 +204,7 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
       } else {
         locked.add(LockedBadge(
           info: info,
-          currentProgress: _progressForBadge(def, data, points),
+          currentProgress: _progressForBadge(def, progressSource, points),
         ));
       }
     }

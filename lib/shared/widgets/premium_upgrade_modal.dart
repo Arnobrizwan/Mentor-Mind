@@ -6,6 +6,8 @@ import 'package:mentor_minds/core/constants/app_colors.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/observability/analytics_service.dart';
 import 'package:mentor_minds/core/routes/app_router.dart';
+import 'package:mentor_minds/core/theme/brand_colors.dart';
+import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
 import 'package:mentor_minds/application/viewmodels/profile/profile_viewmodel.dart';
 
 /// SHRD-01 — shared premium upgrade bottom sheet.
@@ -16,7 +18,7 @@ class PremiumUpgradeModal extends ConsumerWidget {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.kSurface,
+      backgroundColor: context.brand.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -26,6 +28,9 @@ class PremiumUpgradeModal extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // All copy + pricing comes from /config/subscription (Remote Config) so
+    // the price shown here can never diverge from the profile upgrade card.
+    final config = ref.watch(currentSubscriptionConfigProvider);
     return SafeArea(
       top: false,
       child: Padding(
@@ -39,7 +44,7 @@ class PremiumUpgradeModal extends ConsumerWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
+                  color: context.brand.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -59,18 +64,16 @@ class PremiumUpgradeModal extends ConsumerWidget {
                   const Icon(Icons.star_rounded, color: AppColors.kGold, size: 32),
                   const SizedBox(height: 12),
                   Text(
-                    'Upgrade to Premium',
+                    config.headline,
                     style: AppTextStyles.headingLarge.copyWith(
                       color: Colors.white,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _feature('Unlimited AI messages per day'),
-                  _feature('Unlimited diagram uploads'),
-                  _feature('Priority answers'),
+                  for (final feature in config.features) _feature(feature),
                   const SizedBox(height: 4),
                   Text(
-                    '\$4.99 / month (USD)',
+                    '${config.currencySymbol}${config.monthlyPriceBdt} / month',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: Colors.white.withValues(alpha: 0.9),
                     ),
@@ -98,7 +101,7 @@ class PremiumUpgradeModal extends ConsumerWidget {
                       .logUpgradeCompleted();
                 }
               },
-              child: const Text('Upgrade Now'),
+              child: Text(config.ctaLabel),
             ),
             const SizedBox(height: 8),
             TextButton(

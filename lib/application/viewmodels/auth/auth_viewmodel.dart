@@ -347,10 +347,19 @@ class AuthViewModel extends StateNotifier<AuthState> {
     }
   }
 
+  // Older builds stored 'o_level'/'a_level' in prefs; the canonical format
+  // used by /users docs, materials filters, and the tutor callable is
+  // 'O Level'/'A Level'. Normalize on read so legacy installs self-heal.
+  static String _normalizeLevel(String level) => switch (level) {
+        'o_level' => 'O Level',
+        'a_level' => 'A Level',
+        _ => level,
+      };
+
   Future<(String, List<String>)> _readOnboardingSelection() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final level = prefs.getString('onboarding_level') ?? '';
+      final level = _normalizeLevel(prefs.getString('onboarding_level') ?? '');
       final raw = prefs.getString('onboarding_subjects');
       if (raw == null || raw.isEmpty) return (level, const <String>[]);
       final decoded = jsonDecode(raw);

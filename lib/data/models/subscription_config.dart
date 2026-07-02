@@ -48,9 +48,11 @@ class SubscriptionConfig {
             defaults.monthlyPriceBdt,
         currencySymbol:
             (data['currencySymbol'] as String?) ?? defaults.currencySymbol,
-        features: ((data['features'] as List?) ?? const [])
-            .map((e) => e.toString())
-            .toList(growable: false),
+        features: data['features'] == null
+            ? defaults.features
+            : (data['features'] as List)
+                .map((e) => e.toString())
+                .toList(growable: false),
         headline: (data['headline'] as String?) ?? defaults.headline,
         ctaLabelFormat:
             (data['ctaLabelFormat'] as String?) ?? defaults.ctaLabelFormat,

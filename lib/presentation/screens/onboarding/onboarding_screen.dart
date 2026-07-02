@@ -215,29 +215,25 @@ class _SelectLevelPage extends ConsumerWidget {
                         .animate(delay: 60.ms)
                         .fade(duration: 400.ms),
                     const SizedBox(height: AppSpacing.xxl - 4),
+                    // Levels come from /config/curriculum and are stored in the
+                    // canonical display format ('O Level' / 'A Level') — the
+                    // same value every other screen and the tutor callable use.
                     Row(
                       children: [
-                        Expanded(
-                          child: _LevelCard(
-                            emoji: '📘',
-                            title: 'O-Level',
-                            subtitle: 'Grades 9–10',
-                            badge: 'Cambridge / Edexcel',
-                            isSelected: state.selectedLevel == 'o_level',
-                            onTap: () => vm.setLevel('o_level'),
+                        for (final (index, level)
+                            in ref.watch(currentCurriculumConfigProvider).levels.indexed) ...[
+                          if (index > 0) const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: _LevelCard(
+                              emoji: index.isEven ? '📘' : '📗',
+                              title: level,
+                              subtitle: index.isEven ? 'Grades 9–10' : 'Grades 11–12',
+                              badge: 'Cambridge / Edexcel',
+                              isSelected: state.selectedLevel == level,
+                              onTap: () => vm.setLevel(level),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: _LevelCard(
-                            emoji: '📗',
-                            title: 'A-Level',
-                            subtitle: 'Grades 11–12',
-                            badge: 'Cambridge / Edexcel',
-                            isSelected: state.selectedLevel == 'a_level',
-                            onTap: () => vm.setLevel('a_level'),
-                          ),
-                        ),
+                        ],
                       ],
                     )
                         .animate(delay: 120.ms)
