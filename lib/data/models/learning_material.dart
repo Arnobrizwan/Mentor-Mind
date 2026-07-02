@@ -151,7 +151,13 @@ class LearningMaterial {
           ? (data['title'] as String).trim()
           : 'Untitled',
       subject: (data['subject'] as String?) ?? 'General',
-      level: (data['level'] as String?) ?? 'O Level',
+      // Legacy docs stored 'Both' (capitalized); 'both' is the canonical
+      // all-levels sentinel used by the repository filters.
+      level: switch (data['level'] as String?) {
+        null => 'O Level',
+        'Both' => 'both',
+        final l => l,
+      },
       fileUrl: (data['fileUrl'] as String?) ??
           (data['url'] as String?) ??
           '',

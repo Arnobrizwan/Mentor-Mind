@@ -1,10 +1,11 @@
 import 'dart:async';
 
-import 'package:cloud_firestore/cloud_firestore.dart' show DocumentSnapshot;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:mentor_minds/data/models/learning_material.dart';
+import 'package:mentor_minds/data/repositories/auth_repository.dart';
 import 'package:mentor_minds/data/repositories/materials_repository.dart';
+import 'package:mentor_minds/data/repositories/users_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Filter sentinel values — lowercase, as specified
@@ -89,17 +90,17 @@ class MaterialsState {
 
 class MaterialsViewModel extends StateNotifier<MaterialsState> {
   MaterialsViewModel(this._materialsRepo) : super(const MaterialsState()) {
-    loadMaterials(reset: true);
+    _resubscribe(reset: true);
   }
 
   final MaterialsRepository _materialsRepo;
 
-  // D-02 cursor-pagination exception: DocumentSnapshot is the Firestore cursor
-  // type required for paginating getMaterials(). It is stored only within the
-  // viewmodel (never surfaced to the UI layer) and passed back to the repo on
-  // subsequent page loads. The alternative (storing a page-index int) would
-  // require a skip-based query which Firestore does not support.
-  DocumentSnapshot? _lastDoc;
+  // Live browse: a Firestore snapshot stream with a growing limit stands in
+  // for cursor pagination — new/edited/deleted materials appear without a
+  // manual refresh (spec: live data everywhere), and "load more" simply
+  // widens the window.
+  StreamSubscription<List<LearningMaterial>>? _sub;
+  int _limit = kPageSize;
 
   Timer? _searchDebounce;
 
@@ -107,9 +108,10 @@ class MaterialsViewModel extends StateNotifier<MaterialsState> {
   // Load / paginate
   // -------------------------------------------------------------------------
 
-  Future<void> loadMaterials({bool reset = false}) async {
+  void _resubscribe({bool reset = false}) {
+    _sub?.cancel();
     if (reset) {
-      _lastDoc = null;
+      _limit = kPageSize;
       state = state.copyWith(
         isLoading: true,
         isLoadingMore: false,
@@ -118,47 +120,47 @@ class MaterialsViewModel extends StateNotifier<MaterialsState> {
         hasMore: true,
         clearError: true,
       );
-    } else {
-      if (state.isLoading || state.isLoadingMore || !state.hasMore) {
-        return;
-      }
-      state = state.copyWith(isLoadingMore: true);
     }
 
-    try {
-      final result = await _materialsRepo.getMaterials(
-        subject: state.selectedSubject == kSubjectAll
-            ? null
-            : state.selectedSubject,
-        level: state.selectedLevel == kLevelBoth ? null : state.selectedLevel,
-        type: state.selectedType,
-        startAfter: _lastDoc,
-        limit: kPageSize,
-      );
-
-      _lastDoc = result.lastDoc;
-
-      final newItems = result.items;
-      final merged = reset ? newItems : [...state.materials, ...newItems];
-
-      state = state.copyWith(
-        isLoading: false,
-        isLoadingMore: false,
-        materials: merged,
-        filteredMaterials: _applySearch(merged, state.searchQuery),
-        hasMore: newItems.length == kPageSize,
-      );
-    } catch (_) {
-      state = state.copyWith(
-        isLoading: false,
-        isLoadingMore: false,
-        error: 'Could not load materials. Pull to refresh.',
-      );
-    }
+    _sub = _materialsRepo
+        .streamMaterials(
+      subject:
+          state.selectedSubject == kSubjectAll ? null : state.selectedSubject,
+      level: state.selectedLevel == kLevelBoth ? null : state.selectedLevel,
+      type: state.selectedType,
+      limit: _limit,
+    )
+        .listen(
+      (items) {
+        if (!mounted) return;
+        state = state.copyWith(
+          isLoading: false,
+          isLoadingMore: false,
+          materials: items,
+          filteredMaterials: _applySearch(items, state.searchQuery),
+          hasMore: items.length >= _limit,
+          clearError: true,
+        );
+      },
+      onError: (_) {
+        if (!mounted) return;
+        state = state.copyWith(
+          isLoading: false,
+          isLoadingMore: false,
+          error: 'Could not load materials. Pull to refresh.',
+        );
+      },
+    );
   }
 
-  Future<void> loadMore() => loadMaterials(reset: false);
-  Future<void> refresh() => loadMaterials(reset: true);
+  Future<void> loadMore() async {
+    if (state.isLoading || state.isLoadingMore || !state.hasMore) return;
+    state = state.copyWith(isLoadingMore: true);
+    _limit += kPageSize;
+    _resubscribe();
+  }
+
+  Future<void> refresh() async => _resubscribe(reset: true);
 
   // -------------------------------------------------------------------------
   // Filter setters — each triggers a fresh paginated query
@@ -167,13 +169,13 @@ class MaterialsViewModel extends StateNotifier<MaterialsState> {
   void setSubject(String subject) {
     if (subject == state.selectedSubject) return;
     state = state.copyWith(selectedSubject: subject);
-    loadMaterials(reset: true);
+    _resubscribe(reset: true);
   }
 
   void setLevel(String level) {
     if (level == state.selectedLevel) return;
     state = state.copyWith(selectedLevel: level);
-    loadMaterials(reset: true);
+    _resubscribe(reset: true);
   }
 
   void toggleType(MaterialType type) {
@@ -182,7 +184,7 @@ class MaterialsViewModel extends StateNotifier<MaterialsState> {
       selectedType: next,
       clearSelectedType: next == null,
     );
-    loadMaterials(reset: true);
+    _resubscribe(reset: true);
   }
 
   void clearAllFilters() {
@@ -192,7 +194,7 @@ class MaterialsViewModel extends StateNotifier<MaterialsState> {
       searchQuery: '',
       clearSelectedType: true,
     );
-    loadMaterials(reset: true);
+    _resubscribe(reset: true);
   }
 
   // -------------------------------------------------------------------------
@@ -249,6 +251,7 @@ class MaterialsViewModel extends StateNotifier<MaterialsState> {
 
   @override
   void dispose() {
+    _sub?.cancel();
     _searchDebounce?.cancel();
     super.dispose();
   }
@@ -258,3 +261,13 @@ final materialsViewModelProvider =
     StateNotifierProvider.autoDispose<MaterialsViewModel, MaterialsState>(
   (ref) => MaterialsViewModel(ref.read(materialsRepositoryProvider)),
 );
+
+// Role of the signed-in user — gates the teacher/admin upload entry on the
+// materials screen (server rules enforce the real permission).
+final materialsUserRoleProvider =
+    FutureProvider.autoDispose<String?>((ref) async {
+  final uid = ref.watch(authRepositoryProvider).currentUser?.uid;
+  if (uid == null) return null;
+  final doc = await ref.watch(usersRepositoryProvider).getUserDocRaw(uid);
+  return doc?['role'] as String?;
+});

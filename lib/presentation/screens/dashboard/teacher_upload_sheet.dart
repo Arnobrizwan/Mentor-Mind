@@ -179,12 +179,14 @@ class _TeacherUploadSheetState extends ConsumerState<TeacherUploadSheet> {
                     child: DropdownButtonFormField<String>(
                       initialValue: _level,
                       decoration: const InputDecoration(labelText: 'Level'),
+                      // 'both' (lowercase) is the repository's no-filter
+                      // sentinel — 'Both' would never match a level filter.
                       items: const [
                         DropdownMenuItem(
                             value: 'O Level', child: Text('O Level')),
                         DropdownMenuItem(
                             value: 'A Level', child: Text('A Level')),
-                        DropdownMenuItem(value: 'Both', child: Text('Both')),
+                        DropdownMenuItem(value: 'both', child: Text('Both')),
                       ],
                       onChanged: _saving
                           ? null

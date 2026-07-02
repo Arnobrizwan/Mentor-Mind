@@ -40,7 +40,9 @@ class MaterialsRepository {
       q = q.where('subject', isEqualTo: subject);
     }
     if (level != null && level != 'both') {
-      q = q.where('level', isEqualTo: level);
+      // Materials published for 'both' levels must appear under either
+      // specific level filter.
+      q = q.where('level', whereIn: [level, 'both']);
     }
     if (type != null) {
       q = q.where('type', isEqualTo: type.name);
@@ -80,7 +82,9 @@ class MaterialsRepository {
       q = q.where('subject', isEqualTo: subject);
     }
     if (level != null && level != 'both') {
-      q = q.where('level', isEqualTo: level);
+      // Materials published for 'both' levels must appear under either
+      // specific level filter.
+      q = q.where('level', whereIn: [level, 'both']);
     }
     if (type != null) {
       q = q.where('type', isEqualTo: type.name);

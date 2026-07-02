@@ -6,6 +6,7 @@ import 'package:flutter/material.dart' hide MaterialType;
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
 import 'package:mentor_minds/application/viewmodels/materials/materials_viewmodel.dart';
@@ -15,6 +16,8 @@ import 'package:mentor_minds/core/theme/app_radius.dart';
 import 'package:mentor_minds/core/theme/app_spacing.dart';
 import 'package:mentor_minds/core/theme/brand_colors.dart';
 import 'package:mentor_minds/data/models/learning_material.dart';
+import 'package:mentor_minds/data/repositories/auth_repository.dart';
+import 'package:mentor_minds/presentation/screens/dashboard/teacher_upload_sheet.dart';
 import 'package:mentor_minds/shared/widgets/empty_state.dart';
 import 'package:mentor_minds/shared/widgets/pill_button.dart';
 import 'package:mentor_minds/shared/widgets/skeleton_block.dart';
@@ -83,19 +86,21 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
     );
   }
 
-  void _handleOpen(LearningMaterial m) {
-    // url_launcher swap-in: replace the snackbar with
-    //   await launchUrl(Uri.parse(m.fileUrl), mode: LaunchMode.externalApplication);
+  Future<void> _handleOpen(LearningMaterial m) async {
     final url = m.fileUrl;
-    final message = url.isEmpty
-        ? 'This material has no file attached yet.'
-        : '${m.type.ctaLabel}: $url';
+    final uri = url.isEmpty ? null : Uri.tryParse(url);
+    if (uri != null && await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      return;
+    }
+    if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
           content: Text(
-            message,
+            url.isEmpty
+                ? 'This material has no file attached yet.'
+                : "Couldn't open this material.",
             style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
           ),
           backgroundColor: context.brand.textDark,
@@ -107,14 +112,55 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
       );
   }
 
+  Future<void> _openUploadSheet(List<String> subjects) async {
+    final uid = ref.read(authRepositoryProvider).currentUser?.uid;
+    if (uid == null) return;
+    final brand = context.brand;
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: brand.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: AppRadius.xlRadius),
+      ),
+      builder: (_) => TeacherUploadSheet(
+        uploaderUid: uid,
+        availableSubjects: subjects,
+      ),
+    );
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: brand.primary,
+          content: const Text('Material published.'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final brand = context.brand;
     final state = ref.watch(materialsViewModelProvider);
     final curriculum = ref.watch(currentCurriculumConfigProvider);
 
+    final role = ref.watch(materialsUserRoleProvider).valueOrNull;
+    final canUpload = role == 'teacher' || role == 'admin';
+
     return Scaffold(
       backgroundColor: brand.background,
+      // Spec: teachers/admins get an upload entry on the Learning Materials
+      // screen (the same sheet the teacher dashboard uses).
+      floatingActionButton: canUpload
+          ? FloatingActionButton.extended(
+              onPressed: () => _openUploadSheet(curriculum.subjects),
+              backgroundColor: brand.primary,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.upload_file_rounded),
+              label: const Text('Upload'),
+            )
+          : null,
       body: RefreshIndicator(
         color: brand.primary,
         onRefresh: () =>
@@ -133,6 +179,7 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
                 subjectFilters: curriculum.materialsSubjectFilters,
                 subjectShortLabels: curriculum.subjectShortLabels,
                 levelBothSentinel: curriculum.materialsLevelBothSentinel,
+                levels: curriculum.levels,
                 onSelectLevel: (l) => ref
                     .read(materialsViewModelProvider.notifier)
                     .setLevel(l),
@@ -151,6 +198,21 @@ class _MaterialsScreenState extends ConsumerState<MaterialsScreen> {
             ),
             if (state.isLoading)
               const _ShimmerGrid()
+            else if (state.error != null && state.materials.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: EmptyState(
+                    variant: EmptyStateVariant.error,
+                    title: "Couldn't load materials",
+                    message: 'Check your connection and try again.',
+                    actionLabel: 'Retry',
+                    onAction: () => ref
+                        .read(materialsViewModelProvider.notifier)
+                        .refresh(),
+                  ),
+                ),
+              )
             else if (state.filteredMaterials.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
@@ -325,6 +387,7 @@ class _FiltersHeaderDelegate extends SliverPersistentHeaderDelegate {
   final List<String> subjectFilters;
   final Map<String, String> subjectShortLabels;
   final String levelBothSentinel;
+  final List<String> levels;
   final ValueChanged<String> onSelectLevel;
   final ValueChanged<String> onSelectSubject;
   final ValueChanged<MaterialType> onToggleType;
@@ -342,6 +405,7 @@ class _FiltersHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.subjectFilters,
     required this.subjectShortLabels,
     required this.levelBothSentinel,
+    required this.levels,
     required this.onSelectLevel,
     required this.onSelectSubject,
     required this.onToggleType,
@@ -378,18 +442,14 @@ class _FiltersHeaderDelegate extends SliverPersistentHeaderDelegate {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               children: [
-                _LevelPill(
-                  label: 'O-Level',
-                  active: selectedLevel == 'O Level',
-                  onTap: () => onSelectLevel('O Level'),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                _LevelPill(
-                  label: 'A-Level',
-                  active: selectedLevel == 'A Level',
-                  onTap: () => onSelectLevel('A Level'),
-                ),
-                const SizedBox(width: AppSpacing.sm),
+                for (final level in levels) ...[
+                  _LevelPill(
+                    label: level,
+                    active: selectedLevel == level,
+                    onTap: () => onSelectLevel(level),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                ],
                 _LevelPill(
                   label: 'Both',
                   active: selectedLevel == levelBothSentinel,
