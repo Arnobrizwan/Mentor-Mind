@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:mentor_minds/application/viewmodels/config/remote_config_providers.dart';
 import 'package:mentor_minds/core/constants/app_text_styles.dart';
 import 'package:mentor_minds/core/theme/app_spacing.dart';
 import 'package:mentor_minds/core/theme/brand_colors.dart';
@@ -10,13 +12,10 @@ import 'package:mentor_minds/core/theme/brand_colors.dart';
 // ---------------------------------------------------------------------------
 // LegalScreen — shared scaffold for Help & FAQ, Privacy Policy, and Terms.
 //
-// Content is bundled with the app (no network round-trip) so these screens
-// always work offline and on first launch. If we ever want admin-editable
-// copy, we can switch the body to read from /config/legal_* — interface stays
-// the same.
-//
-// Markdown is rendered with flutter_markdown (already in pubspec). External
-// links inside the body are launched via url_launcher.
+// The markdown templates are bundled with the app (offline-safe), but every
+// business value inside them — daily message quota, reset timezone, streak
+// grace period, support email — is interpolated live from /config/* so the
+// copy can never contradict what the backend actually enforces.
 // ---------------------------------------------------------------------------
 
 enum LegalDoc { helpFaq, privacy, terms }
@@ -27,21 +26,29 @@ extension LegalDocX on LegalDoc {
         LegalDoc.privacy => 'Privacy Policy',
         LegalDoc.terms => 'Terms of Service',
       };
-
-  String get body => switch (this) {
-        LegalDoc.helpFaq => _helpFaqBody,
-        LegalDoc.privacy => _privacyBody,
-        LegalDoc.terms => _termsBody,
-      };
 }
 
-class LegalScreen extends StatelessWidget {
+class LegalScreen extends ConsumerWidget {
   final LegalDoc doc;
   const LegalScreen({super.key, required this.doc});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final brand = context.brand;
+    final quotas = ref.watch(currentQuotasConfigProvider);
+    final gamification = ref.watch(currentGamificationConfigProvider);
+    final support = ref.watch(currentSupportConfigProvider);
+    final body = switch (doc) {
+      LegalDoc.helpFaq => _helpFaqBody(
+          dailyTextLimit: quotas.dailyTextLimit,
+          dailyImageLimit: quotas.dailyImageLimit,
+          timezone: quotas.timezone,
+          streakGraceDays: gamification.streakGraceDays,
+          supportEmail: support.helpEmail,
+        ),
+      LegalDoc.privacy => _privacyBody(supportEmail: support.helpEmail),
+      LegalDoc.terms => _termsBody(supportEmail: support.helpEmail),
+    };
     return Scaffold(
       backgroundColor: brand.background,
       appBar: AppBar(
@@ -63,7 +70,7 @@ class LegalScreen extends StatelessWidget {
           AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xl,
         ),
         child: Markdown(
-          data: doc.body,
+          data: body,
           padding: EdgeInsets.zero,
           styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
             h1: AppTextStyles.headingLarge.copyWith(color: brand.textDark),
@@ -102,7 +109,17 @@ class LegalScreen extends StatelessWidget {
 // app for minors so guardian-readability matters.
 // ---------------------------------------------------------------------------
 
-const _helpFaqBody = '''
+String _helpFaqBody({
+  required int dailyTextLimit,
+  required int dailyImageLimit,
+  required String timezone,
+  required int streakGraceDays,
+  required String supportEmail,
+}) {
+  final graceCopy = streakGraceDays == 1
+      ? 'a 1-day grace period'
+      : 'a $streakGraceDays-day grace period';
+  return '''
 # Hi! 👋
 
 This screen answers the most common questions. If you can't find what you need, tap the support email at the bottom.
@@ -113,11 +130,11 @@ This screen answers the most common questions. If you can't find what you need, 
 Tap **AI Tutor** in the bottom navigation bar (or **Ask AI** on the dashboard). Pick your subject + level, type a question, and MentorBot will reply with a step-by-step answer aligned to Cambridge / Edexcel syllabi.
 
 **Why do I get a "daily limit reached" message?**
-Free accounts can send up to 30 messages per day to MentorBot. The counter resets at midnight in your time zone. Premium accounts have unlimited messages.
+Free accounts can send up to $dailyTextLimit messages per day to MentorBot. The counter resets at midnight ($timezone time). Premium accounts have unlimited messages.
 
 **What does Premium include?**
 - Unlimited AI Tutor messages
-- Diagram / image analysis (snap a textbook page, ask a question)
+- Unlimited diagram / image analysis (snap a textbook page, ask a question)
 - Search across all your past chat sessions
 - No daily-limit interruptions
 
@@ -134,11 +151,12 @@ Teachers and admins publish materials. You'll see new uploads on the dashboard a
 **How do I earn points?**
 - Daily login: +5 pts
 - Each tutor session you finish: +10 pts
-- Daily challenge attempts: +15 pts
+- Five questions in one session: +15 pts
+- Daily challenge: +25 pts
 - Subject-mastery milestones unlock badges automatically
 
 **Why isn't my streak counting?**
-Streaks need an active day — at least one tutor message or daily challenge attempt. Missing one day breaks the streak (you get a 1-day grace period).
+Streaks need an active day — at least one tutor message or daily challenge attempt. Missing one day breaks the streak (you get $graceCopy).
 
 ## Account
 
@@ -150,10 +168,11 @@ Teacher accounts require admin approval. You'll see a gold banner on your dashbo
 
 ## Still stuck?
 
-Email us at **support@mentorminds.app**. Include your role (student / teacher), the device you're using, and what you tried. We respond within one school day.
+Email us at **$supportEmail**. Include your role (student / teacher), the device you're using, and what you tried. We respond within one school day.
 ''';
+}
 
-const _privacyBody = '''
+String _privacyBody({required String supportEmail}) => '''
 # Privacy Policy
 
 _Last updated: May 2026_
@@ -170,7 +189,7 @@ We do **not** collect: location, contacts, photos library (we only read photos y
 
 ## How we use it
 
-- To answer your questions through the AI tutor (your messages are sent to Groq, our LLM provider, with no personally identifying tags).
+- To answer your questions through the AI tutor (your messages are sent to our AI provider — Google Gemini — with no personally identifying tags).
 - To show your dashboard, streak, points, and badges.
 - To send you push notifications you opted into.
 - For aggregate, de-identified analytics — how many students used the tutor today, which subjects are popular — never tied to your name.
@@ -185,7 +204,7 @@ We do **not** collect: location, contacts, photos library (we only read photos y
 
 We **do not** sell your data. We share data only with:
 
-- **Groq** — to process your tutor questions. They process; they do not retain or train on your messages on the free tier we use.
+- **Google Gemini** — to process your tutor questions.
 - **Google Firebase** — our hosting + analytics provider.
 - **Stripe** — only if you start a Premium subscription. Stripe handles payment data; we never see your card number.
 
@@ -196,18 +215,18 @@ You can:
 - View your data: Profile → Edit profile.
 - Edit your data: same screen.
 - Delete your data: Profile → Account → Delete account. This is permanent and irreversible.
-- Export your data: email **support@mentorminds.app** and we'll send a JSON archive within 30 days.
+- Export your data: email **$supportEmail** and we'll send a JSON archive within 30 days.
 
 ## For parents / guardians
 
-If your child uses MentorMinds and you'd like a copy of their data or want it deleted, email **support@mentorminds.app** with proof of guardianship.
+If your child uses MentorMinds and you'd like a copy of their data or want it deleted, email **$supportEmail** with proof of guardianship.
 
 ## Contact
 
-Privacy questions go to **privacy@mentorminds.app**. Other questions: **support@mentorminds.app**.
+Privacy questions go to **privacy@mentorminds.app**. Other questions: **$supportEmail**.
 ''';
 
-const _termsBody = '''
+String _termsBody({required String supportEmail}) => '''
 # Terms of Service
 
 _Last updated: May 2026_
@@ -221,7 +240,7 @@ MentorMinds is intended for students aged 13+ preparing for O-Level / A-Level ex
 ## 2. Your account
 
 - One person, one account. Don't share your password.
-- Tell us at **support@mentorminds.app** if you think someone else has accessed your account.
+- Tell us at **$supportEmail** if you think someone else has accessed your account.
 - Teacher accounts require admin approval before you can publish materials or send announcements.
 
 ## 3. Acceptable use
@@ -247,7 +266,7 @@ Premium subscriptions renew monthly through Stripe Checkout. You can cancel anyt
 
 ## 5. AI-generated content
 
-MentorBot answers are produced by an AI model (Llama 3.3 70B via Groq). They aim for accuracy but can be wrong. **Always verify against your textbook or teacher before exam day.** We're not liable for grade outcomes that depend solely on AI output.
+MentorBot answers are produced by an AI model (Google Gemini). They aim for accuracy but can be wrong. **Always verify against your textbook or teacher before exam day.** We're not liable for grade outcomes that depend solely on AI output.
 
 ## 6. Intellectual property
 
@@ -265,5 +284,5 @@ We may update these terms. Material changes will trigger an in-app notice. Conti
 
 ## 9. Contact
 
-Questions: **support@mentorminds.app**.
+Questions: **$supportEmail**.
 ''';
