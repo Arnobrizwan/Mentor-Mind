@@ -55,7 +55,7 @@ class PremiumUpgradeModal extends ConsumerWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 gradient: const LinearGradient(
-                  colors: [AppColors.kPrimary, Color(0xFF0D2660)],
+                  colors: [AppColors.kPrimary, Color(0xFF3E7D74)],
                 ),
               ),
               child: Column(

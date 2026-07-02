@@ -59,4 +59,4 @@ const _subjectColors = <String, Color>{
 };
 
 Color _colorForSubject(String s) =>
-    _subjectColors[s] ?? const Color(0xFF1A3C8F); // AppColors.kPrimary
+    _subjectColors[s] ?? const Color(0xFF66A39B); // AppColors.kPrimary

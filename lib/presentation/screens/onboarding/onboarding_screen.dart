@@ -403,7 +403,7 @@ class _IllustrationPlaceholder extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1E4BB5), Color(0xFF1A3C8F)],
+          colors: [Color(0xFF71AFA8), Color(0xFF3E7D74)],
         ),
       ),
       child: Center(
