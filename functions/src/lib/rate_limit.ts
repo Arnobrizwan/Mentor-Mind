@@ -13,7 +13,7 @@
 // CRITICAL — Pitfall P-2: NEVER call the LLM inside this transaction. Plan 03-06's
 // mentorBotChat handler calls the LLM AFTER the transaction commits.
 
-import * as admin from 'firebase-admin';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { defineString } from 'firebase-functions/params';
 import { db } from './admin';
 import { resourceExhausted, unavailable } from './errors';
@@ -39,7 +39,7 @@ export interface RateLimitResult {
 interface UsageDoc {
   messageCount?: number;
   imageCount?: number;
-  burstWindow?: admin.firestore.Timestamp[];
+  burstWindow?: Timestamp[];
 }
 
 interface QuotaDoc {
@@ -95,7 +95,7 @@ export async function checkAndIncrement(
 
     const messageCount = usage.messageCount ?? 0;
     const imageCount = usage.imageCount ?? 0;
-    const burstWindow: admin.firestore.Timestamp[] = usage.burstWindow ?? [];
+    const burstWindow: Timestamp[] = usage.burstWindow ?? [];
 
     // --- Burst check (applies to premium too) ---
     const prunedBurst = burstWindow.filter(
@@ -140,14 +140,14 @@ export async function checkAndIncrement(
     }
 
     // --- WRITES (all reads done above) ---
-    const nowTs = admin.firestore.Timestamp.now(); // Safe inside tx; serverTimestamp() is NOT.
+    const nowTs = Timestamp.now(); // Safe inside tx; serverTimestamp() is NOT.
     tx.set(
       usageRef,
       {
-        messageCount: admin.firestore.FieldValue.increment(
+        messageCount: FieldValue.increment(
           kind === 'text' ? 1 : 0,
         ),
-        imageCount: admin.firestore.FieldValue.increment(
+        imageCount: FieldValue.increment(
           kind === 'image' ? 1 : 0,
         ),
         burstWindow: [...prunedBurst, nowTs], // literal array, not arrayUnion (P-5)
@@ -157,7 +157,7 @@ export async function checkAndIncrement(
     tx.set(
       quotaRef,
       {
-        calls: admin.firestore.FieldValue.increment(1),
+        calls: FieldValue.increment(1),
         ceiling,
         monthLabel: mKey,
       },

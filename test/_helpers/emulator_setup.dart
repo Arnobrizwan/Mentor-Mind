@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 
 // ---------------------------------------------------------------------------
 // emulator_setup.dart — Configure Firebase SDKs to talk to the Local Emulator
@@ -28,8 +29,15 @@ const bool kUseEmulator =
 // ports. No-op when USE_EMULATOR is false or absent.
 Future<void> configureEmulators() async {
   if (!kUseEmulator) return;
-  FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
-  await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
-  await FirebaseStorage.instance.useStorageEmulator('localhost', 9199);
-  FirebaseFunctions.instance.useFunctionsEmulator('localhost', 5001);
+  // Android emulator reaches the host via 10.0.2.2; iOS Simulator/desktop use
+  // localhost (the device loopback == host loopback there).
+  final String host =
+      defaultTargetPlatform == TargetPlatform.android ? '10.0.2.2' : 'localhost';
+  FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);
+  await FirebaseAuth.instance.useAuthEmulator(host, 9099);
+  await FirebaseStorage.instance.useStorageEmulator(host, 9199);
+  FirebaseFunctions.instance.useFunctionsEmulator(host, 5001);
+  // Callables are pinned to region asia-south1; redirect that instance too.
+  FirebaseFunctions.instanceFor(region: 'asia-south1')
+      .useFunctionsEmulator(host, 5001);
 }

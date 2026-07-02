@@ -1,6 +1,7 @@
 import { onCall } from "firebase-functions/https";
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { db } from "./lib/admin";
 import {
   activeModelId,
@@ -144,7 +145,7 @@ export const mentorBotChat = onCall(
         const cached = idempotencySnap.data() ?? {};
         const cachedCreatedAt: unknown = cached["createdAt"];
         const createdAtMs =
-          cachedCreatedAt instanceof admin.firestore.Timestamp
+          cachedCreatedAt instanceof Timestamp
             ? cachedCreatedAt.toMillis()
             : Date.now();
         const idempCachedPrompt = (cached["promptTokens"] as number) ?? 0;
@@ -161,7 +162,7 @@ export const mentorBotChat = onCall(
         try {
           await idempLogRef.set(
             {
-              calls: admin.firestore.FieldValue.increment(1),
+              calls: FieldValue.increment(1),
               dateLabel: idempDateKey,
             },
             { merge: true }
@@ -238,7 +239,7 @@ export const mentorBotChat = onCall(
       });
 
       // ---------------------- PERSIST USER + ASSISTANT MESSAGE DOCS ----------------------
-      const nowTs = admin.firestore.Timestamp.now();
+      const nowTs = Timestamp.now();
       const userMessageRef = db
         .collection("sessions")
         .doc(sessionId)
@@ -271,9 +272,9 @@ export const mentorBotChat = onCall(
           uid,
           ...(subject ? { subject } : {}),
           ...(level ? { level } : {}),
-          startedAt: admin.firestore.FieldValue.serverTimestamp(),
+          startedAt: FieldValue.serverTimestamp(),
           lastMessageAt: nowTs,
-          messageCount: admin.firestore.FieldValue.increment(2),
+          messageCount: FieldValue.increment(2),
           lastClientRequestId: clientRequestId,
         },
         { merge: true }
@@ -293,12 +294,12 @@ export const mentorBotChat = onCall(
       try {
         await usageLogRef.set(
           {
-            calls: admin.firestore.FieldValue.increment(1),
-            promptTokens: admin.firestore.FieldValue.increment(promptTokens),
+            calls: FieldValue.increment(1),
+            promptTokens: FieldValue.increment(promptTokens),
             completionTokens:
-              admin.firestore.FieldValue.increment(completionTokens),
+              FieldValue.increment(completionTokens),
             estimatedCostUsd:
-              admin.firestore.FieldValue.increment(estimatedCostUsd),
+              FieldValue.increment(estimatedCostUsd),
             dateLabel: usageLogDateKey,
           },
           { merge: true }

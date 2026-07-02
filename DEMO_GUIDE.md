@@ -6,6 +6,17 @@ MentorMinds is a feature-hardened study platform tailored specifically for O-Lev
 
 ---
 
+## 🎬 Recorded Showcase Video
+
+A ~2.5-minute end-to-end walkthrough recorded on an Android emulator against the Firebase Local Emulator Suite (sign-in → dashboard → live MentorBot answer → materials → rewards → profile):
+
+- ▶️ **Video:** [`docs/showcase/MentorMinds_Showcase.mp4`](docs/showcase/MentorMinds_Showcase.mp4)
+- 📊 **Slide deck (video embedded + link):** [`docs/showcase/MentorMinds_Showcase.pptx`](docs/showcase/MentorMinds_Showcase.pptx)
+
+Regenerate it any time with the `integration_test/showcase_test.dart` tour (see the README).
+
+---
+
 ## Demo Prerequisites & Setup
 
 Before starting the demo, ensure the local development environment is configured:
