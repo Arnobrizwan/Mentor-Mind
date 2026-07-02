@@ -25,9 +25,23 @@ const args = process.argv.slice(2);
 const projectArg = args.find((a) => a.startsWith('--project='));
 const projectId = projectArg ? projectArg.split('=')[1] : undefined;
 
+// Emulator mode: when FIRESTORE_EMULATOR_HOST is set the Admin SDK talks to
+// the local emulator and needs no credentials at all. Also point Auth at its
+// emulator if the caller didn't already.
+const emulatorMode = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
+if (emulatorMode && !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099';
+}
+
 // Prefer service-account.json in this directory; fall back to ADC.
 const saPath = path.join(__dirname, 'service-account.json');
-if (fs.existsSync(saPath)) {
+if (emulatorMode) {
+  admin.initializeApp({ projectId: projectId || 'mentor-mind-aa765' });
+  console.log(
+    `Emulator mode: Firestore=${process.env.FIRESTORE_EMULATOR_HOST}, ` +
+      `Auth=${process.env.FIREBASE_AUTH_EMULATOR_HOST}`,
+  );
+} else if (fs.existsSync(saPath)) {
   const sa = require(saPath);
   admin.initializeApp({
     credential: admin.credential.cert(sa),
@@ -56,6 +70,13 @@ function hoursAgo(n) {
   const d = new Date();
   d.setHours(d.getHours() - n);
   return Timestamp.fromDate(d);
+}
+
+// Dhaka (UTC+6) date key — mirrors functions/src/lib/quota.ts getDhakaDateKey.
+// Usage docs and the daily challenge doc are keyed by this.
+function dhakaDateKey(date = new Date()) {
+  const dhaka = new Date(date.getTime() + 6 * 60 * 60 * 1000);
+  return dhaka.toISOString().slice(0, 10);
 }
 
 // ---------------------------------------------------------------------------
@@ -775,6 +796,12 @@ const testUsers = [
       isApproved: true,
       badges: ['first_login'],
       points: 12,
+      // Badge-progress counters (server-maintained in production; seeded so
+      // the locked-badge progress bars on the Rewards screen render).
+      streakDays: 3,
+      sessionsCompleted: 6,
+      totalQuestions: 74,
+      diagramUploads: 0,
       questionsPerSubject: {
         Mathematics: 38,
         Physics: 22,
@@ -802,6 +829,10 @@ const testUsers = [
       isApproved: true,
       badges: ['first_login', 'streak_3'],
       points: 140,
+      streakDays: 9,
+      sessionsCompleted: 18,
+      totalQuestions: 195,
+      diagramUploads: 7,
       questionsPerSubject: {
         Mathematics: 72,
         Physics: 55,
@@ -892,6 +923,123 @@ const testUsers = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// Seed data — leaderboard filler students (users + rewards docs only).
+// The Rewards screen ranks /users by points; these give the board depth.
+// ---------------------------------------------------------------------------
+
+const leaderboardUsers = [
+  { id: 'seed_lb_naila',  name: 'Naila Rahman',   points: 480, subjects: ['Mathematics'] },
+  { id: 'seed_lb_tanvir', name: 'Tanvir Hasan',   points: 415, subjects: ['Physics'] },
+  { id: 'seed_lb_ishita', name: 'Ishita Chowdhury', points: 360, subjects: ['Chemistry'] },
+  { id: 'seed_lb_rafi',   name: 'Rafi Karim',     points: 290, subjects: ['Biology'] },
+  { id: 'seed_lb_mim',    name: 'Mim Akter',      points: 245, subjects: ['English'] },
+  { id: 'seed_lb_sabbir', name: 'Sabbir Ahmed',   points: 180, subjects: ['ICT'] },
+  { id: 'seed_lb_priya',  name: 'Priya Das',      points: 120, subjects: ['Economics'] },
+  { id: 'seed_lb_arman',  name: 'Arman Hossain',  points: 65,  subjects: ['Geography'] },
+];
+
+async function seedLeaderboardUsers() {
+  for (const u of leaderboardUsers) {
+    await db.collection('users').doc(u.id).set({
+      uid: u.id,
+      name: u.name,
+      displayName: u.name,
+      role: 'student',
+      subscriptionType: 'free',
+      subjects: u.subjects,
+      level: 'O Level',
+      isApproved: true,
+      points: u.points,
+      emailVerified: true,
+      createdAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    await db.collection('rewards').doc(u.id).set({
+      userId: u.id,
+      points: u.points,
+      badges: ['first_login'],
+    }, { merge: true });
+  }
+  return leaderboardUsers.length;
+}
+
+// Today's daily challenge — same doc path/shape publishDailyChallenge writes.
+async function seedDailyChallenge() {
+  const dateKey = dhakaDateKey();
+  await db.collection('daily_challenges').doc(dateKey).set({
+    dateKey,
+    subject: 'Mathematics',
+    question: 'Solve for x: 2x² − 5x + 2 = 0. Show your working for full marks.',
+    pointsReward: 25,
+    publishedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return dateKey;
+}
+
+// Today's usage doc — drives the quota banner and daily-goal UI.
+async function seedUsageFor(uid, messageCount, imageCount) {
+  const key = dhakaDateKey();
+  await db
+    .collection('users').doc(uid)
+    .collection('usage').doc(key)
+    .set({ messageCount, imageCount, burstWindow: [] }, { merge: true });
+}
+
+// Realistic Q&A messages under sessions/{id}/messages. Docs carry both
+// `content` (client model) and `text` (cloud-function writer) field names.
+const seedAnswers = {
+  Mathematics:
+    '**Step 1 — Factorise.** Find two numbers whose product is (2)(6) = 12 ' +
+    'and whose sum is −5... \n\n```\nx² − 5x + 6 = 0\n(x − 2)(x − 3) = 0\n```\n\n' +
+    '**Step 2 — Solve.** $x = 2$ or $x = 3$.\n\n**Topic:** Cambridge IGCSE Math 0580 / Topic 2.5.',
+  Physics:
+    '**Formula first.** $F = ma$ — the resultant force on a body equals mass × acceleration.\n\n' +
+    '**Example.** A 2 kg trolley pushed with 6 N: $a = F/m = 6/2 = 3\\ m/s^2$.\n\n' +
+    '**Topic:** Cambridge IGCSE Physics 0625 / Topic 1.5 (Dynamics).',
+  Chemistry:
+    '**Balance it.**\n\n```\n2H₂ + O₂ → 2H₂O\n```\n\nHydrogen and oxygen atoms now match on ' +
+    'both sides (4 H, 2 O). State symbols: $2H_2(g) + O_2(g) \\rightarrow 2H_2O(l)$.\n\n' +
+    '**Topic:** Cambridge IGCSE Chemistry 0620 / Topic 4.',
+  Biology:
+    '**Definition.** Photosynthesis converts light energy into chemical energy stored in glucose.\n\n' +
+    '**Word equation.**\n```\ncarbon dioxide + water →(light, chlorophyll)→ glucose + oxygen\n```\n\n' +
+    '**Topic:** Cambridge IGCSE Biology 0610 / Topic 6 (Plant nutrition).',
+  English:
+    '**PEEL structure.** Point → Evidence → Explanation → Link. Start with a clear thesis, quote ' +
+    'with line references, name the device (metaphor, anaphora), then explain its effect.\n\n' +
+    '**Topic:** Cambridge O Level English 1123 / Paper 1.',
+};
+
+async function seedMessagesFor(uid, sessions) {
+  let count = 0;
+  for (let i = 0; i < sessions.length; i++) {
+    const s = sessions[i];
+    const sessionId = `seed_${uid}_${i}`;
+    const askedAt = new Date(Date.now() - s.hoursAgo * 60 * 60 * 1000);
+    const answer = seedAnswers[s.subject] || seedAnswers.Mathematics;
+    const messagesRef = db
+      .collection('sessions').doc(sessionId).collection('messages');
+    await messagesRef.doc(`seed_q_${i}`).set({
+      role: 'user',
+      content: s.question,
+      text: s.question,
+      createdAt: Timestamp.fromDate(askedAt),
+      promptVersion: '3',
+    });
+    await messagesRef.doc(`seed_a_${i}`).set({
+      role: 'assistant',
+      content: answer,
+      text: answer,
+      createdAt: Timestamp.fromDate(new Date(askedAt.getTime() + 8000)),
+      promptVersion: '3',
+      promptTokens: 220,
+      completionTokens: 180,
+    });
+    count += 2;
+  }
+  return count;
+}
+
 async function seedUser(u) {
   let uid;
   try {
@@ -927,6 +1075,10 @@ async function seedUser(u) {
     isApproved: u.profile.isApproved,
     badges: u.profile.badges,
     points: u.profile.points,
+    streakDays: u.profile.streakDays || 0,
+    sessionsCompleted: u.profile.sessionsCompleted || 0,
+    totalQuestions: u.profile.totalQuestions || 0,
+    diagramUploads: u.profile.diagramUploads || 0,
     questionsPerSubject: u.profile.questionsPerSubject || {},
     emailVerified: true,
     createdAt: FieldValue.serverTimestamp(),
@@ -1016,6 +1168,12 @@ async function run() {
     if (ns > 0) {
       console.log(`    └─ ${ns} session${ns === 1 ? '' : 's'} seeded`);
       totalSessions += ns;
+      const nm = await seedMessagesFor(uid, u.sessions);
+      console.log(`    └─ ${nm} chat messages seeded`);
+      // Today's usage → quota banner + daily-goal progress render non-zero.
+      await seedUsageFor(uid, u.profile.subscriptionType === 'premium' ? 12 : 7,
+        u.profile.subscriptionType === 'premium' ? 2 : 0);
+      console.log(`    └─ usage doc for ${dhakaDateKey()} seeded`);
     }
     const nu = await seedUploadsFor(uid, u.uploads);
     if (nu > 0) {
@@ -1023,6 +1181,12 @@ async function run() {
       totalUploads += nu;
     }
   }
+
+  const lb = await seedLeaderboardUsers();
+  console.log(`\n  ✓ ${lb} leaderboard filler students seeded`);
+
+  const challengeKey = await seedDailyChallenge();
+  console.log(`  ✓ daily challenge for ${challengeKey} seeded`);
   if (totalSessions > 0) {
     console.log(`  ${totalSessions} session document${totalSessions === 1 ? '' : 's'} written under /sessions.`);
   }

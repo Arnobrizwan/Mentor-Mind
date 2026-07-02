@@ -12,10 +12,17 @@ Email **verified** on all accounts so verification screens are skipped. Password
 |---|---|---|---|---|---|
 | Student (free) | `student@mentorminds.test` | `Student1!` | free | O Level | Subjects: Math, Physics, Chemistry · 12 pts · 1 badge · **30 text msgs/day** (server-enforced) |
 | Student (premium) | `premium@mentorminds.test` | `Premium1!` | **premium** | A Level | Subjects: Math, Physics, Biology, English · 140 pts · 2 badges · unlimited chat |
+
+**Badge-progress counters** are seeded on the two student accounts so the locked-badge progress bars on the Rewards screen render non-zero (these are server-maintained in production):
+
+| Account | `streakDays` | `sessionsCompleted` | `totalQuestions` | `diagramUploads` |
+|---|---|---|---|---|
+| `student@mentorminds.test` | 3 | 6 | 74 | 0 |
+| `premium@mentorminds.test` | 9 | 18 | 195 | 7 |
 | Teacher (approved) | `teacher@mentorminds.test` | `Teacher1!` | free | A Level | Subjects: Chemistry, Biology · `isApproved: true` |
 | Admin | `admin@mentorminds.test` | `Admin1!` | premium | — | Full admin; can write materials/notifications via security rules |
 
-Re-running `node seed.js` preserves existing UIDs and just updates password + profile fields. The `/users/{uid}` + `/rewards/{uid}` documents are merged so existing user-generated data (sessions, usage history) is left alone.
+Re-running `node seed.js` preserves existing UIDs and just updates password + profile fields. The `/users/{uid}` + `/rewards/{uid}` documents are merged. Note: the script now also (re)writes seeded chat messages and **today's** usage doc for each account (see "Chat messages & usage" below) so the demo UI reads non-zero on a fresh project.
 
 ---
 
@@ -102,6 +109,46 @@ Marking a notification `read: true` in Firestore drops the count in real time.
 
 ---
 
+## 🏆 Leaderboard filler students (8)
+
+Collections: **`/users`** + **`/rewards`** — 8 extra `student` accounts (no Auth login) that exist only to give the Rewards → Leaderboard tab depth. IDs are `seed_lb_*`, each with `first_login` badge and a fixed point total:
+
+| ID | Name | Points | Subject |
+|---|---|---|---|
+| `seed_lb_naila` | Naila Rahman | 480 | Mathematics |
+| `seed_lb_tanvir` | Tanvir Hasan | 415 | Physics |
+| `seed_lb_ishita` | Ishita Chowdhury | 360 | Chemistry |
+| `seed_lb_rafi` | Rafi Karim | 290 | Biology |
+| `seed_lb_mim` | Mim Akter | 245 | English |
+| `seed_lb_sabbir` | Sabbir Ahmed | 180 | ICT |
+| `seed_lb_priya` | Priya Das | 120 | Economics |
+| `seed_lb_arman` | Arman Hossain | 65 | Geography |
+
+The premium account (140 pts) sorts between `seed_lb_priya` and `seed_lb_sabbir` on the board.
+
+---
+
+## 🎯 Daily challenge (1)
+
+Collection: **`/daily_challenges`** — one doc keyed by the **Dhaka (UTC+6) date** (`dhakaDateKey()`, mirrors `functions/src/lib/quota.ts`). Same path/shape `publishDailyChallenge` writes in production, so the dashboard's Daily Challenge card renders on a fresh project:
+
+| Field | Value |
+|---|---|
+| `subject` | Mathematics |
+| `question` | Solve for x: 2x² − 5x + 2 = 0. Show your working for full marks. |
+| `pointsReward` | 25 |
+
+---
+
+## 💬 Chat messages & usage
+
+For every seeded account that has sessions, the script also writes:
+
+- **`/sessions/{id}/messages`** — a realistic user question + a Markdown/LaTeX MentorBot answer per session (`seed_q_*` / `seed_a_*`). Docs carry both `content` (client model) and `text` (cloud-function writer) so either reader works. Answers are subject-specific (Math / Physics / Chemistry / Biology / English) and cite the Cambridge/Edexcel topic.
+- **`/users/{uid}/usage/{dhakaDateKey}`** — today's usage doc (`messageCount`, `imageCount`, `burstWindow: []`) so the quota banner and daily-goal progress read non-zero. Premium seeds 12 msgs / 2 images; free seeds 7 msgs / 0 images.
+
+---
+
 ## 🧪 Quick test scenarios
 
 1. **Sign in as `student@mentorminds.test` / `Student1!`**
@@ -131,12 +178,16 @@ Marking a notification `read: true` in Firestore drops the count in real time.
 
 ```bash
 cd tool/seed
-node seed.js
+node seed.js                 # live project (service-account.json or ADC)
+npm run seed:emulator        # against the local Firebase emulator suite
 ```
+
+**Emulator mode:** when `FIRESTORE_EMULATOR_HOST` is set, the Admin SDK talks to the local emulator and needs **no credentials** (it also points Auth at `localhost:9099` if unset). `npm run seed:emulator` sets both hosts for you.
 
 The script is idempotent:
 - Auth users: looked up by email, password + profile updated
 - Materials / notifications: `.set()` by fixed doc ID — overwrites, no duplicates
-- User-generated docs (`/sessions/{id}`, `/users/{uid}/usage/{date}`): untouched
+- Leaderboard fillers (`seed_lb_*`), daily challenge, seeded messages, and today's usage doc: `.set({ merge: true })` by fixed ID — overwrites in place, no duplicates
+- Historical usage docs for other dates: untouched (only **today's** Dhaka-date usage doc is written)
 
 If you ever want a clean slate, delete the test users from Auth console + delete the collections, then re-run.

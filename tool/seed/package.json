@@ -4,7 +4,8 @@
   "private": true,
   "description": "Firestore seed data for MentorMinds dev/demo.",
   "scripts": {
-    "seed": "node seed.js"
+    "seed": "node seed.js",
+    "seed:emulator": "FIRESTORE_EMULATOR_HOST=${FIRESTORE_EMULATOR_HOST:-localhost:8080} FIREBASE_AUTH_EMULATOR_HOST=${FIREBASE_AUTH_EMULATOR_HOST:-localhost:9099} node seed.js"
   },
   "dependencies": {
     "firebase-admin": "^13.0.1"
