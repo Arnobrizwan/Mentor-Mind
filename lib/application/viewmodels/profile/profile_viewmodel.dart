@@ -131,6 +131,16 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
     });
   }
 
+  /// Re-subscribes the profile stream after a load error (the initial bind
+  /// guard in [loadProfile] would otherwise treat the dead stream as live).
+  void retryLoad() {
+    final uid = _boundUid;
+    if (uid == null) return;
+    _userSub?.cancel();
+    _userSub = null;
+    loadProfile(uid);
+  }
+
   /// PAY-06 — open Stripe Checkout in external browser (Safari).
   Future<String?> startPremiumCheckout() async {
     try {

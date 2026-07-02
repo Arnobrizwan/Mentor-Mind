@@ -20,6 +20,7 @@ import 'package:mentor_minds/core/theme/app_spacing.dart';
 import 'package:mentor_minds/core/theme/brand_colors.dart';
 import 'package:mentor_minds/data/models/profile_stats.dart';
 import 'package:mentor_minds/data/models/profile_user.dart';
+import 'package:mentor_minds/shared/widgets/empty_state.dart';
 import 'package:mentor_minds/shared/widgets/pill_button.dart';
 import 'package:mentor_minds/shared/widgets/skeleton_block.dart';
 
@@ -33,7 +34,9 @@ class ProfileScreen extends ConsumerWidget {
 
     ref.listen<ProfileState>(profileViewModelProvider, (prev, next) {
       final err = next.error;
-      if (err != null && err != prev?.error) {
+      // With no profile loaded the inline error view owns the error (a
+      // snackbar+clear here would flip the screen back to the shimmer).
+      if (err != null && err != prev?.error && next.user != null) {
         _showSnack(context, err, isError: true);
         ref.read(profileViewModelProvider.notifier).clearError();
       }
@@ -44,9 +47,22 @@ class ProfileScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: brand.background,
       body: SafeArea(
-        child: state.isLoading || state.user == null
-            ? const _ProfileShimmer()
-            : _ProfileBody(state: state, allSubjects: allSubjects),
+        // A stream error before the first user emission would otherwise leave
+        // the shimmer up forever — surface it with a retry instead.
+        child: state.user == null && !state.isLoading && state.error != null
+            ? Center(
+                child: EmptyState(
+                  variant: EmptyStateVariant.error,
+                  title: "Couldn't load your profile",
+                  message: 'Check your connection and try again.',
+                  actionLabel: 'Retry',
+                  onAction: () =>
+                      ref.read(profileViewModelProvider.notifier).retryLoad(),
+                ),
+              )
+            : state.isLoading || state.user == null
+                ? const _ProfileShimmer()
+                : _ProfileBody(state: state, allSubjects: allSubjects),
       ),
     );
   }
@@ -1331,7 +1347,7 @@ class _LevelSheet extends ConsumerWidget {
             style: AppTextStyles.headingMedium.copyWith(color: brand.textDark),
           ),
           const SizedBox(height: AppSpacing.md),
-          for (final l in const ['O Level', 'A Level'])
+          for (final l in ref.watch(currentCurriculumConfigProvider).levels)
             ListTile(
               onTap: () => _pick(context, ref, l),
               leading: Icon(
