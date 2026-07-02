@@ -12,7 +12,9 @@
     "build:watch": "tsc --watch",
     "lint": "eslint --ext .ts src/",
     "serve": "npm run build && firebase emulators:start --only functions",
-    "test": "jest"
+    "test": "jest --testPathIgnorePatterns=rules",
+    "test:all": "jest",
+    "test:rules": "firebase emulators:exec --only firestore \"npx jest --testPathPattern=rules\""
   },
   "dependencies": {
     "groq-sdk": "^0.27.0",

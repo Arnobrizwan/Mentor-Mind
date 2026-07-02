@@ -85,7 +85,9 @@ jest.mock('../lib/rate_limit', () => ({
 }));
 
 jest.mock('../lib/tutor_ai', () => ({
+  activeModelId: () => 'gemini-2.5-flash',
   MODEL_CONFIG: {
+    geminiModelId: 'gemini-2.5-flash',
     modelId: 'llama-3.3-70b-versatile',
     visionModelId: 'meta-llama/llama-4-scout-17b-16e-instruct',
     timeoutSeconds: 60,

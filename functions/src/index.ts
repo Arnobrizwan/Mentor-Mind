@@ -3,6 +3,7 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { db } from "./lib/admin";
 import {
+  activeModelId,
   makeTutorAIClient,
   MODEL_CONFIG,
   SYSTEM_PROMPT_VERSION,
@@ -323,7 +324,7 @@ export const mentorBotChat = onCall(
         completionTokens,
         estimatedCostUsd,
         durationMs,
-        modelId: MODEL_CONFIG.modelId,
+        modelId: activeModelId(Boolean(imageInline)),
         mode,
       });
 

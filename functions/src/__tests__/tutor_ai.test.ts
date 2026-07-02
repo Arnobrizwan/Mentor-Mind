@@ -1,6 +1,10 @@
 import {
+  activeModelId,
+  GeminiTutorAIClient,
+  GroqTutorAIClient,
   makeTutorAIClient,
   MODEL_CONFIG,
+  resolveTutorAIProvider,
   SYSTEM_PROMPT,
   SYSTEM_PROMPT_VERSION,
 } from '../lib/tutor_ai';
@@ -69,12 +73,40 @@ describe('makeTutorAIClient factory', () => {
     ).resolves.toHaveProperty('text');
   });
 
-  it("mode='prod' returns a GroqTutorAIClient instance (constructor only — does not call Groq)", () => {
-    // GroqTutorAIClient construction is side-effect-free; the Groq client is
-    // only instantiated inside generate() once GROQ_API_KEY is read. Safe to
-    // instantiate in unit tests.
+  it("mode='prod' returns a GeminiTutorAIClient by default (spec: Gemini API)", () => {
+    // Client construction is side-effect-free; the API key is only read
+    // inside generate(). Safe to instantiate in unit tests.
+    delete process.env['TUTOR_AI_PROVIDER'];
     const client = makeTutorAIClient('prod');
-    expect(client).toBeDefined();
+    expect(client).toBeInstanceOf(GeminiTutorAIClient);
     expect(typeof client.generate).toBe('function');
+  });
+
+  it("TUTOR_AI_PROVIDER=groq falls back to GroqTutorAIClient", () => {
+    process.env['TUTOR_AI_PROVIDER'] = 'groq';
+    try {
+      expect(resolveTutorAIProvider()).toBe('groq');
+      expect(makeTutorAIClient('prod')).toBeInstanceOf(GroqTutorAIClient);
+    } finally {
+      delete process.env['TUTOR_AI_PROVIDER'];
+    }
+  });
+});
+
+describe('activeModelId', () => {
+  it('returns the Gemini model for text and image on the default provider', () => {
+    delete process.env['TUTOR_AI_PROVIDER'];
+    expect(activeModelId(false)).toBe(MODEL_CONFIG.geminiModelId);
+    expect(activeModelId(true)).toBe(MODEL_CONFIG.geminiModelId);
+  });
+
+  it('returns text/vision Llama models under the groq fallback', () => {
+    process.env['TUTOR_AI_PROVIDER'] = 'groq';
+    try {
+      expect(activeModelId(false)).toBe(MODEL_CONFIG.modelId);
+      expect(activeModelId(true)).toBe(MODEL_CONFIG.visionModelId);
+    } finally {
+      delete process.env['TUTOR_AI_PROVIDER'];
+    }
   });
 });

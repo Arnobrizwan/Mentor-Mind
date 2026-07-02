@@ -33,33 +33,59 @@ import {
 
 const PROJECT_ID = 'mentor-mind-aa765-rules-test';
 
-let testEnv: RulesTestEnvironment;
+// Emulator coordinates — honour FIRESTORE_EMULATOR_HOST when set (the same
+// variable firebase emulators:exec exports), falling back to localhost:8080.
+const emulatorHostEnv = process.env.FIRESTORE_EMULATOR_HOST ?? '';
+const [emulatorHost, emulatorPortRaw] = emulatorHostEnv.split(':');
+const EMULATOR_HOST = emulatorHost || 'localhost';
+const EMULATOR_PORT = Number(emulatorPortRaw) || 8080;
+
+let testEnv: RulesTestEnvironment | undefined;
 
 beforeAll(async () => {
   setLogLevel('error'); // mute the noisy default
   const rulesPath = path.resolve(__dirname, '../../../firestore.rules');
-  testEnv = await initializeTestEnvironment({
-    projectId: PROJECT_ID,
-    firestore: {
-      rules: fs.readFileSync(rulesPath, 'utf8'),
-      host: 'localhost',
-      port: 8080,
-    },
-  });
+  try {
+    testEnv = await initializeTestEnvironment({
+      projectId: PROJECT_ID,
+      firestore: {
+        rules: fs.readFileSync(rulesPath, 'utf8'),
+        host: EMULATOR_HOST,
+        port: EMULATOR_PORT,
+      },
+    });
+  } catch (err) {
+    // No emulator running — every test below will fail fast with a clear
+    // message instead of 12 confusing "testEnv is undefined" errors.
+    testEnv = undefined;
+  }
 });
 
+// Fails the calling test with an actionable message when the Firestore
+// emulator is not reachable; returns the initialized env otherwise.
+function requireEnv(): RulesTestEnvironment {
+  if (!testEnv) {
+    throw new Error(
+      `Firestore emulator not reachable at ${EMULATOR_HOST}:${EMULATOR_PORT}. ` +
+        'Start it with: firebase emulators:start --only firestore ' +
+        '(or run: npm run test:rules)',
+    );
+  }
+  return testEnv;
+}
+
 afterEach(async () => {
-  await testEnv.clearFirestore();
+  await testEnv?.clearFirestore();
 });
 
 afterAll(async () => {
-  await testEnv.cleanup();
+  await testEnv?.cleanup();
 });
 
 describe('AI-08: /users/{uid}/usage/{date} client access (D-17)', () => {
   it('1. Owner CAN read their own usage doc', async () => {
     // Seed via admin context (bypasses rules)
-    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await requireEnv().withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore();
       await setDoc(doc(db, 'users/alice/usage/2026-05-19'), {
         messageCount: 5,
@@ -67,44 +93,44 @@ describe('AI-08: /users/{uid}/usage/{date} client access (D-17)', () => {
         burstWindow: [],
       });
     });
-    const aliceDb = testEnv.authenticatedContext('alice').firestore();
+    const aliceDb = requireEnv().authenticatedContext('alice').firestore();
     await assertSucceeds(getDoc(doc(aliceDb, 'users/alice/usage/2026-05-19')));
   });
 
   it('2. Owner CANNOT write to their own usage doc (admin-only)', async () => {
-    const aliceDb = testEnv.authenticatedContext('alice').firestore();
+    const aliceDb = requireEnv().authenticatedContext('alice').firestore();
     await assertFails(
       setDoc(doc(aliceDb, 'users/alice/usage/2026-05-19'), { messageCount: 0 }),
     );
   });
 
   it('3. Other user CANNOT read alice usage doc', async () => {
-    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await requireEnv().withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore();
       await setDoc(doc(db, 'users/alice/usage/2026-05-19'), {
         messageCount: 5,
       });
     });
-    const bobDb = testEnv.authenticatedContext('bob').firestore();
+    const bobDb = requireEnv().authenticatedContext('bob').firestore();
     await assertFails(getDoc(doc(bobDb, 'users/alice/usage/2026-05-19')));
   });
 });
 
 describe('AI-08: /system/quota_* client access (D-17)', () => {
   it('4. Client CANNOT read /system/quota_2026-05', async () => {
-    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await requireEnv().withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore();
       await setDoc(doc(db, 'system/quota_2026-05'), {
         calls: 100,
         ceiling: 10000,
       });
     });
-    const aliceDb = testEnv.authenticatedContext('alice').firestore();
+    const aliceDb = requireEnv().authenticatedContext('alice').firestore();
     await assertFails(getDoc(doc(aliceDb, 'system/quota_2026-05')));
   });
 
   it('5. Client CANNOT write /system/quota_2026-05', async () => {
-    const aliceDb = testEnv.authenticatedContext('alice').firestore();
+    const aliceDb = requireEnv().authenticatedContext('alice').firestore();
     await assertFails(
       setDoc(doc(aliceDb, 'system/quota_2026-05'), { ceiling: 999999 }),
     );
@@ -113,19 +139,19 @@ describe('AI-08: /system/quota_* client access (D-17)', () => {
 
 describe('AI-08: /system/usage_log_* client access (D-17)', () => {
   it('6. Client CANNOT read /system/usage_log_2026-05-19', async () => {
-    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await requireEnv().withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore();
       await setDoc(doc(db, 'system/usage_log_2026-05-19'), {
         calls: 50,
         promptTokens: 10_000,
       });
     });
-    const aliceDb = testEnv.authenticatedContext('alice').firestore();
+    const aliceDb = requireEnv().authenticatedContext('alice').firestore();
     await assertFails(getDoc(doc(aliceDb, 'system/usage_log_2026-05-19')));
   });
 
   it('7. Client CANNOT write /system/usage_log_2026-05-19', async () => {
-    const aliceDb = testEnv.authenticatedContext('alice').firestore();
+    const aliceDb = requireEnv().authenticatedContext('alice').firestore();
     await assertFails(
       setDoc(doc(aliceDb, 'system/usage_log_2026-05-19'), { calls: 0 }),
     );
@@ -134,7 +160,7 @@ describe('AI-08: /system/usage_log_* client access (D-17)', () => {
 
 describe('REWD-05/06: gamification lockdown (Phase 4)', () => {
   beforeEach(async () => {
-    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await requireEnv().withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore();
       await setDoc(doc(db, 'users/alice'), {
         uid: 'alice',
@@ -151,7 +177,7 @@ describe('REWD-05/06: gamification lockdown (Phase 4)', () => {
   });
 
   it('8. Owner CANNOT increment points on /users/{uid}', async () => {
-    const aliceDb = testEnv.authenticatedContext('alice').firestore();
+    const aliceDb = requireEnv().authenticatedContext('alice').firestore();
     await assertFails(
       updateDoc(doc(aliceDb, 'users/alice'), {
         points: 9999,
@@ -160,14 +186,14 @@ describe('REWD-05/06: gamification lockdown (Phase 4)', () => {
   });
 
   it('9. Owner CANNOT write /rewards/{uid}', async () => {
-    const aliceDb = testEnv.authenticatedContext('alice').firestore();
+    const aliceDb = requireEnv().authenticatedContext('alice').firestore();
     await assertFails(
       setDoc(doc(aliceDb, 'rewards/alice'), { points: 9999 }),
     );
   });
 
   it('10. Owner CANNOT write /rewards/{uid}/ledger/{id}', async () => {
-    const aliceDb = testEnv.authenticatedContext('alice').firestore();
+    const aliceDb = requireEnv().authenticatedContext('alice').firestore();
     await assertFails(
       setDoc(doc(aliceDb, 'rewards/alice/ledger/fake'), {
         type: 'cheat',
@@ -177,7 +203,7 @@ describe('REWD-05/06: gamification lockdown (Phase 4)', () => {
   });
 
   it('11. Owner CAN read /rewards/{uid}/ledger/{id}', async () => {
-    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await requireEnv().withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore();
       await setDoc(doc(db, 'rewards/alice/ledger/entry1'), {
         type: 'daily_login',
@@ -185,21 +211,21 @@ describe('REWD-05/06: gamification lockdown (Phase 4)', () => {
         awardedAt: new Date(),
       });
     });
-    const aliceDb = testEnv.authenticatedContext('alice').firestore();
+    const aliceDb = requireEnv().authenticatedContext('alice').firestore();
     await assertSucceeds(
       getDoc(doc(aliceDb, 'rewards/alice/ledger/entry1')),
     );
   });
 
   it('12. Owner CANNOT write session messages (server-only)', async () => {
-    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await requireEnv().withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore();
       await setDoc(doc(db, 'sessions/s1'), {
         uid: 'alice',
         messageCount: 0,
       });
     });
-    const aliceDb = testEnv.authenticatedContext('alice').firestore();
+    const aliceDb = requireEnv().authenticatedContext('alice').firestore();
     await assertFails(
       setDoc(doc(aliceDb, 'sessions/s1/messages/m1'), {
         role: 'user',

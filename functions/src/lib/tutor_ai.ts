@@ -1,20 +1,20 @@
-// Tutor AI client — Groq + Llama 3.3 70B Versatile via groq-sdk.
+// Tutor AI client — Gemini API (primary, per project spec) with Groq + Llama
+// 3.3 70B as an env-selectable fallback (TUTOR_AI_PROVIDER=groq).
 //
-// Why Groq (vs Gemini AI Studio, the previous candidate):
-//   1. Free tier does NOT train on user prompts (Groq policy, May 2026) —
-//      important for a student app where minors send homework questions.
-//   2. Free tier limits: 6,000 RPD, 12K TPM, 100K TPD — more headroom than
-//      Gemini AI Studio's post-Dec-2025 cuts (1,500 RPD on Flash).
-//   3. Sub-second p50 inference; tutor UX matters.
-//   4. Llama 3.3 70B is competitive with GPT-4o-mini / Gemini Flash on
-//      mathematics, physics, chemistry, biology Q&A — the actual use case.
+// Provider selection:
+//   - Default: Gemini (generativelanguage.googleapis.com, GEMINI_API_KEY).
+//     The project SRS/SDD specify the Gemini API for MentorBot; Gemini is
+//     natively multimodal so text and diagram questions use one model.
+//     Called over REST with Node's global fetch — no extra SDK dependency.
+//   - TUTOR_AI_PROVIDER=groq: Groq + Llama 3.3 70B (GROQ_API_KEY). Kept as a
+//     fallback for free-tier quota headroom / no-training-on-prompts policy.
 //
 // Migration history (the file path used to be `lib/gemini.ts`):
 //   - Phase 3 originally used @google-cloud/vertexai (Gemini via Vertex AI
 //     in us-central1 — paid tier, IAM-gated, ADC-based).
-//   - Briefly considered Gemini AI Studio (@google/genai with API key),
-//     reverted after web-verifying that Google trains on free-tier prompts.
-//   - Now: Groq + Llama 3.3 70B, OpenAI-compatible API, plain API key.
+//   - Interim: Groq + Llama 3.3 70B, OpenAI-compatible API, plain API key.
+//   - Now: Gemini AI Studio API by default (spec alignment), Groq retained
+//     behind TUTOR_AI_PROVIDER=groq.
 //
 // Architecture invariants from earlier phases (do NOT regress):
 //   - TutorAIClient interface + FakeTutorAIClient + makeTutorAIClient factory.
@@ -183,6 +183,9 @@ Stay within this style. Calibrate depth to the student's level.
 // decoding variant) or to a paid model. No other code change needed.
 
 export const MODEL_CONFIG = {
+  // Gemini (default provider) — natively multimodal, one model for text+vision.
+  geminiModelId: 'gemini-2.5-flash',
+  // Groq fallback (TUTOR_AI_PROVIDER=groq)
   modelId: 'llama-3.3-70b-versatile',
   visionModelId: 'meta-llama/llama-4-scout-17b-16e-instruct',
   timeoutSeconds: 60,
@@ -264,6 +267,81 @@ export class GroqTutorAIClient implements TutorAIClient {
 }
 
 // ---------------------------------------------------------------------------
+// GeminiTutorAIClient — default production impl calling the Gemini API over
+// REST (Node 22 global fetch; no SDK dependency). API key from GEMINI_API_KEY,
+// sourced from functions/.env at deploy time — never reaches the client app.
+// ---------------------------------------------------------------------------
+
+interface GeminiGenerateContentResponse {
+  candidates?: Array<{
+    content?: { parts?: Array<{ text?: string }> };
+  }>;
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+  };
+}
+
+export class GeminiTutorAIClient implements TutorAIClient {
+  async generate(opts: {
+    prompt: string;
+    image?: { buffer: Buffer; mimeType: string };
+    modelConfig: ModelConfig;
+  }): Promise<{ text: string; promptTokens: number; completionTokens: number }> {
+    const apiKey = process.env['GEMINI_API_KEY'];
+    if (!apiKey) {
+      throw new Error(
+        'GEMINI_API_KEY env var not set. Obtain a key at https://aistudio.google.com/apikey and add it to functions/.env before deploy.',
+      );
+    }
+
+    const model = opts.modelConfig.geminiModelId;
+    const parts: Array<Record<string, unknown>> = [{ text: opts.prompt }];
+    if (opts.image) {
+      parts.push({
+        inlineData: {
+          mimeType: opts.image.mimeType,
+          data: opts.image.buffer.toString('base64'),
+        },
+      });
+    }
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: [{ role: 'user', parts }],
+          generationConfig: {
+            temperature: opts.modelConfig.temperature,
+            topP: opts.modelConfig.topP,
+            maxOutputTokens: opts.modelConfig.maxOutputTokens,
+          },
+        }),
+      },
+    );
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`Gemini API error ${res.status}: ${body.slice(0, 300)}`);
+    }
+
+    const data = (await res.json()) as GeminiGenerateContentResponse;
+    const text = (data.candidates?.[0]?.content?.parts ?? [])
+      .map((p) => p.text ?? '')
+      .join('');
+    const promptTokens = data.usageMetadata?.promptTokenCount ?? 0;
+    const completionTokens = data.usageMetadata?.candidatesTokenCount ?? 0;
+    return { text, promptTokens, completionTokens };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // FakeTutorAIClient — inline canned-response impl for unit + integration tests
 // ---------------------------------------------------------------------------
 
@@ -276,10 +354,28 @@ const fakeTutorAIClient: TutorAIClient = {
 };
 
 // ---------------------------------------------------------------------------
-// Factory — selected via TUTOR_AI_CLIENT_MODE env var (fake | prod)
+// Factory — mode via TUTOR_AI_CLIENT_MODE (fake | prod); prod provider via
+// TUTOR_AI_PROVIDER (gemini default per spec | groq fallback).
 // ---------------------------------------------------------------------------
+
+export type TutorAIProvider = 'gemini' | 'groq';
+
+export function resolveTutorAIProvider(): TutorAIProvider {
+  return process.env['TUTOR_AI_PROVIDER'] === 'groq' ? 'groq' : 'gemini';
+}
+
+// The model id a prod call will use — recorded in logs/message docs so answer
+// quality can be audited per model.
+export function activeModelId(hasImage: boolean): string {
+  if (resolveTutorAIProvider() === 'groq') {
+    return hasImage ? MODEL_CONFIG.visionModelId : MODEL_CONFIG.modelId;
+  }
+  return MODEL_CONFIG.geminiModelId;
+}
 
 export function makeTutorAIClient(mode: 'prod' | 'fake'): TutorAIClient {
   if (mode === 'fake') return fakeTutorAIClient;
-  return new GroqTutorAIClient();
+  return resolveTutorAIProvider() === 'groq'
+    ? new GroqTutorAIClient()
+    : new GeminiTutorAIClient();
 }
