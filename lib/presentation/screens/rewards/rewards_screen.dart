@@ -13,8 +13,10 @@ import 'package:mentor_minds/core/theme/app_spacing.dart';
 import 'package:mentor_minds/core/theme/brand_colors.dart';
 import 'package:mentor_minds/data/models/earned_badge.dart';
 import 'package:mentor_minds/data/models/history_entry.dart';
+import 'package:mentor_minds/data/models/leaderboard_entry.dart';
 import 'package:mentor_minds/data/models/locked_badge.dart';
 import 'package:mentor_minds/data/models/milestone.dart';
+import 'package:mentor_minds/shared/widgets/empty_state.dart';
 import 'package:mentor_minds/shared/widgets/skeleton_block.dart';
 
 class RewardsScreen extends ConsumerWidget {
@@ -25,26 +27,39 @@ class RewardsScreen extends ConsumerWidget {
     final brand = context.brand;
     final state = ref.watch(rewardsViewModelProvider);
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         backgroundColor: brand.background,
         body: SafeArea(
           child: state.isLoading
               ? const _RewardsShimmer()
-              : Column(
-                  children: [
-                    _Header(state: state),
-                    const _TabBar(),
-                    Expanded(
-                      child: TabBarView(
-                        children: [
-                          _BadgesTab(state: state),
-                          _HistoryTab(state: state),
-                        ],
+              : state.error != null && state.earned.isEmpty && state.points == 0
+                  ? Center(
+                      child: EmptyState(
+                        variant: EmptyStateVariant.error,
+                        title: "Couldn't load rewards",
+                        message: 'Check your connection and try again.',
+                        actionLabel: 'Retry',
+                        onAction: () => ref
+                            .read(rewardsViewModelProvider.notifier)
+                            .refresh(),
                       ),
+                    )
+                  : Column(
+                      children: [
+                        _Header(state: state),
+                        const _TabBar(),
+                        Expanded(
+                          child: TabBarView(
+                            children: [
+                              _BadgesTab(state: state),
+                              const _LeaderboardTab(),
+                              _HistoryTab(state: state),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
         ),
       ),
     );
@@ -95,6 +110,13 @@ class _Header extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.xs + 2),
           _PointsCountUp(points: state.points),
+          if (state.streak > 0) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              '🔥 ${state.streak}-day streak',
+              style: AppTextStyles.labelMedium.copyWith(color: brand.gold),
+            ),
+          ],
           const SizedBox(height: AppSpacing.lg + 2),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -271,6 +293,7 @@ class _TabBar extends StatelessWidget {
         ),
         tabs: const [
           Tab(text: 'Badges'),
+          Tab(text: 'Leaderboard'),
           Tab(text: 'History'),
         ],
       ),
@@ -641,7 +664,152 @@ void _openBadgeSheet(
 }
 
 // ---------------------------------------------------------------------------
-// History tab (leaderboard removed — REWD-07)
+// Leaderboard tab — top-10 by points, current user highlighted. When the
+// current user is outside the top list their own row is appended (spec:
+// "leaderboard ranked by points" on the Rewards screen).
+// ---------------------------------------------------------------------------
+
+class _LeaderboardTab extends ConsumerWidget {
+  const _LeaderboardTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final brand = context.brand;
+    final board = ref.watch(leaderboardProvider);
+
+    return RefreshIndicator(
+      color: brand.accent,
+      onRefresh: () async => ref.invalidate(leaderboardProvider),
+      child: board.when(
+        loading: () => ListView.separated(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          itemCount: 6,
+          separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+          itemBuilder: (_, __) =>
+              const SkeletonBlock(height: 56, radius: AppRadius.mdRadius),
+        ),
+        error: (_, __) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            _EmptyPanel(
+              icon: '📶',
+              text: "Couldn't load the leaderboard.\nPull down to try again.",
+            ),
+          ],
+        ),
+        data: (data) {
+          if (data.top.isEmpty) {
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [
+                _EmptyPanel(
+                  icon: '🏆',
+                  text:
+                      'No rankings yet.\nEarn points to appear on the leaderboard!',
+                ),
+              ],
+            );
+          }
+          final rows = [
+            ...data.top,
+            if (data.currentUserRow != null) data.currentUserRow!,
+          ];
+          return ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xxl,
+            ),
+            itemCount: rows.length,
+            separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+            itemBuilder: (_, i) => _LeaderboardRow(entry: rows[i]),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _LeaderboardRow extends StatelessWidget {
+  final LeaderboardEntry entry;
+  const _LeaderboardRow({required this.entry});
+
+  @override
+  Widget build(BuildContext context) {
+    final brand = context.brand;
+    final medal = switch (entry.rank) {
+      1 => '🥇',
+      2 => '🥈',
+      3 => '🥉',
+      _ => null,
+    };
+    return Semantics(
+      label:
+          'Rank ${entry.rank}: ${entry.name}, ${entry.points} points'
+          '${entry.isCurrentUser ? ' (you)' : ''}',
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md + 2,
+          vertical: AppSpacing.sm + 2,
+        ),
+        decoration: BoxDecoration(
+          color: entry.isCurrentUser
+              ? brand.accent.withValues(alpha: 0.12)
+              : brand.surface,
+          borderRadius: AppRadius.mdBorder,
+          border: Border.all(
+            color: entry.isCurrentUser ? brand.accent : brand.border,
+            width: entry.isCurrentUser ? 1.4 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 36,
+              child: Text(
+                medal ?? '#${entry.rank}',
+                style: AppTextStyles.labelLarge.copyWith(
+                  color: medal != null ? null : brand.textMuted,
+                ),
+              ),
+            ),
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: brand.primary.withValues(alpha: 0.12),
+              foregroundImage: entry.avatarUrl != null
+                  ? NetworkImage(entry.avatarUrl!)
+                  : null,
+              child: Text(
+                entry.name.isEmpty ? '?' : entry.name[0].toUpperCase(),
+                style: AppTextStyles.labelMedium.copyWith(color: brand.primary),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Text(
+                entry.isCurrentUser ? '${entry.name} (you)' : entry.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: brand.textDark,
+                  fontWeight:
+                      entry.isCurrentUser ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              '${entry.points} pts',
+              style: AppTextStyles.labelMedium.copyWith(color: brand.gold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// History tab (leaderboard restored as its own tab)
 // ---------------------------------------------------------------------------
 
 class _HistoryTab extends StatelessWidget {

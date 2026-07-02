@@ -8,6 +8,7 @@ import 'package:mentor_minds/data/models/earned_badge.dart';
 import 'package:mentor_minds/data/models/gamification_config.dart';
 import 'package:mentor_minds/data/models/history_entry.dart';
 import 'package:mentor_minds/data/models/points_history.dart';
+import 'package:mentor_minds/data/models/leaderboard_entry.dart';
 import 'package:mentor_minds/data/models/locked_badge.dart';
 import 'package:mentor_minds/data/models/milestone.dart';
 import 'package:mentor_minds/data/repositories/auth_repository.dart';
@@ -28,6 +29,7 @@ class RewardsState {
   final bool isLoading;
   final String? error;
   final int points;
+  final int streak;
   final List<EarnedBadge> earned;
   final List<LockedBadge> locked;
   final List<HistoryEntry> history;
@@ -37,6 +39,7 @@ class RewardsState {
     this.isLoading = true,
     this.error,
     this.points = 0,
+    this.streak = 0,
     this.earned = const [],
     this.locked = const [],
     this.history = const [],
@@ -47,6 +50,7 @@ class RewardsState {
     bool? isLoading,
     String? error,
     int? points,
+    int? streak,
     List<EarnedBadge>? earned,
     List<LockedBadge>? locked,
     List<HistoryEntry>? history,
@@ -57,6 +61,7 @@ class RewardsState {
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
       points: points ?? this.points,
+      streak: streak ?? this.streak,
       earned: earned ?? this.earned,
       locked: locked ?? this.locked,
       history: history ?? this.history,
@@ -219,6 +224,7 @@ class RewardsViewModel extends StateNotifier<RewardsState> {
     state = state.copyWith(
       isLoading: false,
       points: points,
+      streak: (progressSource['streakDays'] as num?)?.toInt() ?? state.streak,
       earned: earned,
       locked: locked,
       nextMilestone: _computeMilestone(points),
@@ -270,4 +276,17 @@ final rewardsViewModelProvider =
     ref.read(usersRepositoryProvider),
     ref.read(rewardsRepositoryProvider),
   ),
+);
+
+// Top-10 leaderboard by points (spec: Rewards screen shows the leaderboard).
+// One-shot future — refresh by invalidating the provider (pull-to-refresh).
+final leaderboardProvider = FutureProvider.autoDispose<
+    ({List<LeaderboardEntry> top, LeaderboardEntry? currentUserRow})>(
+  (ref) async {
+    final uid = ref.watch(authRepositoryProvider).currentUser?.uid;
+    if (uid == null) {
+      return (top: const <LeaderboardEntry>[], currentUserRow: null);
+    }
+    return ref.watch(usersRepositoryProvider).getLeaderboard(uid);
+  },
 );
