@@ -20,6 +20,7 @@ import 'package:mentor_minds/core/theme/app_radius.dart';
 import 'package:mentor_minds/core/theme/app_spacing.dart';
 import 'package:mentor_minds/core/theme/brand_colors.dart';
 import 'package:mentor_minds/data/models/chat_message.dart';
+import 'package:mentor_minds/shared/widgets/math_markdown.dart';
 import 'package:mentor_minds/shared/widgets/pill_button.dart';
 import 'package:mentor_minds/shared/widgets/premium_upgrade_modal.dart';
 
@@ -289,7 +290,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
               canSend: canSend,
               isSending: state.isStreaming,
               onSend: _onSend,
-              onAttach: _onAttachImage,
+              onAttach: state.isPremium ? _onAttachImage : null,
             ),
         ],
       ),
@@ -1014,7 +1015,7 @@ class _AiBubble extends StatelessWidget {
                     if (isStreamingEmpty)
                       const _TypingDots()
                     else
-                      MarkdownBody(
+                      MathMarkdownBody(
                         data: message.content,
                         selectable: true,
                         styleSheet: _markdownStyle(context),
@@ -1314,7 +1315,10 @@ class _InputBar extends StatelessWidget {
   final bool canSend;
   final bool isSending;
   final VoidCallback onSend;
-  final VoidCallback onAttach;
+
+  // Diagram upload is a Premium feature (UC09) — null hides the control for
+  // free students entirely.
+  final VoidCallback? onAttach;
 
   const _InputBar({
     required this.controller,
@@ -1322,7 +1326,7 @@ class _InputBar extends StatelessWidget {
     required this.canSend,
     required this.isSending,
     required this.onSend,
-    required this.onAttach,
+    this.onAttach,
   });
 
   @override
@@ -1342,12 +1346,13 @@ class _InputBar extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              IconButton(
-                onPressed: onAttach,
-                splashRadius: 22,
-                tooltip: 'Attach image',
-                icon: Icon(Icons.image_outlined, color: brand.textMuted),
-              ),
+              if (onAttach != null)
+                IconButton(
+                  onPressed: onAttach,
+                  splashRadius: 22,
+                  tooltip: 'Attach a diagram (Premium)',
+                  icon: Icon(Icons.image_outlined, color: brand.textMuted),
+                ),
               Expanded(
                 child: Container(
                   padding:
