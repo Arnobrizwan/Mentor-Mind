@@ -69,10 +69,20 @@ void main() {
     const bool useEmulator =
         bool.fromEnvironment('USE_EMULATOR', defaultValue: false);
     if (useEmulator) {
-      FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
-      await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
-      await FirebaseStorage.instance.useStorageEmulator('localhost', 9199);
-      FirebaseFunctions.instance.useFunctionsEmulator('localhost', 5001);
+      // The Android emulator reaches the host machine via 10.0.2.2, not
+      // localhost (which is the emulated device's own loopback). iOS Simulator
+      // and desktop share the host loopback, so localhost is correct there.
+      final String emuHost =
+          defaultTargetPlatform == TargetPlatform.android ? '10.0.2.2' : 'localhost';
+      FirebaseFirestore.instance.useFirestoreEmulator(emuHost, 8080);
+      await FirebaseAuth.instance.useAuthEmulator(emuHost, 9099);
+      await FirebaseStorage.instance.useStorageEmulator(emuHost, 9199);
+      // Callables are pinned to region asia-south1 (see firebase_functions_provider),
+      // so the emulator redirect MUST target that same instance — the default
+      // (us-central1) instance is never used by the app.
+      FirebaseFunctions.instance.useFunctionsEmulator(emuHost, 5001);
+      FirebaseFunctions.instanceFor(region: 'asia-south1')
+          .useFunctionsEmulator(emuHost, 5001);
     }
 
     // NOTF-01 — FCM background handler must register before runApp, but the rest

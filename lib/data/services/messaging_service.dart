@@ -255,7 +255,11 @@ class MessagingService {
 
   Future<void> _initLocalNotifications() async {
     const ios = DarwinInitializationSettings();
-    const init = InitializationSettings(iOS: ios);
+    // Android requires an explicit init settings block (defaults to the app
+    // launcher icon for the small-icon slot); omitting it throws
+    // "Android settings must be set when targeting Android platform".
+    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const init = InitializationSettings(iOS: ios, android: android);
     await _local.initialize(
       init,
       onDidReceiveNotificationResponse: (response) {

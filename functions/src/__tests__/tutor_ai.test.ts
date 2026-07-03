@@ -45,23 +45,38 @@ describe('tutor_ai module exports', () => {
 describe('FakeTutorAIClient (via makeTutorAIClient("fake"))', () => {
   const client = makeTutorAIClient('fake');
 
-  it('generate returns the canned response shape', async () => {
+  it('generate returns a non-empty canned response with positive token counts', async () => {
     const result = await client.generate({
       prompt: 'Hello',
       modelConfig: MODEL_CONFIG,
     });
-    expect(result.text).toBe('Fake MentorBot response for testing.');
-    expect(result.promptTokens).toBe(10);
-    expect(result.completionTokens).toBe(20);
+    expect(typeof result.text).toBe('string');
+    expect(result.text.length).toBeGreaterThan(0);
+    expect(result.promptTokens).toBeGreaterThan(0);
+    expect(result.completionTokens).toBeGreaterThan(0);
   });
 
-  it('generate ignores the image option (canned response unchanged)', async () => {
+  it('selects a subject-appropriate canned answer by keyword', async () => {
+    const quad = await client.generate({
+      prompt: 'Solve the quadratic 2x² + 5x − 3 = 0',
+      modelConfig: MODEL_CONFIG,
+    });
+    expect(quad.text).toContain('Factorise');
+
+    const bio = await client.generate({
+      prompt: 'Explain photosynthesis',
+      modelConfig: MODEL_CONFIG,
+    });
+    expect(bio.text.toLowerCase()).toContain('photosynthesis');
+  });
+
+  it('generate accepts the image option and still returns text', async () => {
     const result = await client.generate({
       prompt: 'Describe this image',
       image: { buffer: Buffer.from('fake-image-bytes'), mimeType: 'image/jpeg' },
       modelConfig: MODEL_CONFIG,
     });
-    expect(result.text).toBe('Fake MentorBot response for testing.');
+    expect(result.text.length).toBeGreaterThan(0);
   });
 });
 

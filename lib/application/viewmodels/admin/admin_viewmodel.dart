@@ -144,7 +144,9 @@ class AdminViewModel extends StateNotifier<AdminState> {
       return;
     }
     try {
-      final token = await _authRepo.currentUser?.getIdTokenResult();
+      // Force a token refresh so freshly-set custom claims (role=admin) are
+      // present — a token minted at sign-in may not carry them yet.
+      final token = await _authRepo.currentUser?.getIdTokenResult(true);
       final claims = token?.claims;
       final claimAdmin = claims != null && claims['role'] == 'admin';
       final userDoc = await _usersRepo.getUserDocRaw(uid);
@@ -157,10 +159,11 @@ class AdminViewModel extends StateNotifier<AdminState> {
       );
       if (ok) {
         _attachLiveStreams();
-        await Future.wait([
-          loadUsers(reset: true),
-          loadUsageAnalytics(),
-        ]);
+        // Load per-tab data in the background so the console's first paint is
+        // immediate — eagerly awaiting users + 14-day analytics here janked the
+        // main thread hard enough to ANR on constrained emulators.
+        unawaited(loadUsers(reset: true));
+        unawaited(loadUsageAnalytics());
       }
     } catch (e) {
       state = state.copyWith(

@@ -345,12 +345,84 @@ export class GeminiTutorAIClient implements TutorAIClient {
 // FakeTutorAIClient — inline canned-response impl for unit + integration tests
 // ---------------------------------------------------------------------------
 
+// Canned but realistic, exam-style answers. Selected by keyword so an offline
+// showcase / integration run produces watchable, on-brand MentorBot output
+// without a live LLM key. Unit tests only assert the shape (non-empty text +
+// token counts), so richer copy here is safe.
+const QUADRATIC_ANSWER = `**Step 1 — Factorise.** Find two numbers whose product is (2)(−3) = −6 and whose sum is 5. Those are 6 and −1.
+
+\`\`\`
+2x² + 6x − x − 3 = 0
+2x(x + 3) − 1(x + 3) = 0
+(2x − 1)(x + 3) = 0
+\`\`\`
+
+**Step 2 — Solve each bracket.** \`x = 1/2\` or \`x = −3\`.
+
+**Topic:** Cambridge IGCSE Math 0580 / Topic 2.5 (Quadratic equations).`;
+
+const PHOTOSYNTHESIS_ANSWER = `**Definition.** Photosynthesis is how green plants convert light energy into chemical energy stored in glucose.
+
+**Word + symbol equation.**
+\`\`\`
+carbon dioxide + water  →(light, chlorophyll)→  glucose + oxygen
+6 CO₂ + 6 H₂O          →(light, chlorophyll)→  C₆H₁₂O₆ + 6 O₂
+\`\`\`
+
+**Mechanism (two stages).**
+- **Light-dependent** — thylakoid membrane; water is split (photolysis) → O₂ released, ATP + NADPH formed.
+- **Light-independent (Calvin cycle)** — stroma; CO₂ fixed onto RuBP, reduced with ATP + NADPH → glucose.
+
+**Limiting factors.** Light intensity, CO₂ concentration, temperature.
+
+**Topic:** Cambridge IGCSE Biology 0610 / Topic 6 (Plant nutrition).`;
+
+const NEWTON_ANSWER = `**Forces along the incline.** With no friction, only the component of gravity along the slope drives the motion:
+
+\`F = mg sinθ\`
+
+**Substitute** (g = 9.81 m/s², θ = 30°):
+
+\`\`\`
+F = (2)(9.81) sin(30°) = 9.81 N
+a = F / m = 9.81 / 2 = 4.905 m/s²
+\`\`\`
+
+**Topic:** Edexcel A-Level Physics 9PH0 / Topic 3 (Dynamics).`;
+
+const GENERIC_ANSWER = `Great question — here's how I'd approach it.
+
+**1. Identify what's being asked.** Pin down the command word (state / explain / calculate / evaluate) so the depth matches the mark scheme.
+
+**2. Recall the key idea.** Write the relevant definition or formula first, then the values you know.
+
+**3. Work through it step by step**, showing each line of reasoning so an examiner can follow the method marks.
+
+**4. State the answer clearly** with correct units, and link it back to the syllabus topic.
+
+Send me the specific problem — subject, level and the exact wording — and I'll give you the full worked solution in this style.`;
+
+function cannedAnswer(prompt: string): string {
+  const p = prompt.toLowerCase();
+  if (p.includes('quadratic') || p.includes('2x²') || p.includes('2x^2') || /solve.*x/.test(p)) {
+    return QUADRATIC_ANSWER;
+  }
+  if (p.includes('photosynth')) return PHOTOSYNTHESIS_ANSWER;
+  if (p.includes('incline') || p.includes('acceleration') || p.includes('newton')) {
+    return NEWTON_ANSWER;
+  }
+  return GENERIC_ANSWER;
+}
+
 const fakeTutorAIClient: TutorAIClient = {
-  generate: async (_opts) => ({
-    text: 'Fake MentorBot response for testing.',
-    promptTokens: 10,
-    completionTokens: 20,
-  }),
+  generate: async (opts) => {
+    const text = cannedAnswer(opts.prompt);
+    return {
+      text,
+      promptTokens: Math.max(10, Math.round(opts.prompt.length / 4)),
+      completionTokens: Math.round(text.length / 4),
+    };
+  },
 };
 
 // ---------------------------------------------------------------------------
