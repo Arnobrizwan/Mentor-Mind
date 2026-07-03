@@ -1,20 +1,19 @@
 // Showcase walkthrough — drives the real app against the Firebase Local
-// Emulator Suite so a screen recording captures a watchable ~3-minute product
-// tour. Run with the emulator suite up + a device/emulator, then start a
-// screen recording and launch this test. On Android:
+// Emulator Suite so a screen recording captures a watchable per-role product
+// tour. One run tours ONE role, selected via --dart-define=ROLE=<role>, so the
+// four role segments can be recorded separately and concatenated into a single
+// ~3-minute all-roles showcase.
 //
-//   adb shell screenrecord --time-limit 180 /sdcard/demo.mp4 &   # start recording
+//   ROLE ∈ { student | premium | teacher | admin }
+//
+//   adb shell screenrecord --time-limit 179 /sdcard/demo.mp4 &   # start recording
 //   flutter test integration_test/showcase_test.dart \
-//     --dart-define=USE_EMULATOR=true \
-//     --dart-define=GEMINI_API_KEY=demo -d emulator-5554
+//     --dart-define=USE_EMULATOR=true --dart-define=GEMINI_API_KEY=demo \
+//     --dart-define=ROLE=teacher -d emulator-5554
 //
-// Signs in as the pre-seeded student (student@mentorminds.test / Student1!),
-// asks MentorBot two real questions (answered by the functions emulator in
-// TUTOR_AI_CLIENT_MODE=fake), then tours every feature. Because each feature is
-// a full-screen route reached from the dashboard bottom-nav (no persistent nav
-// bar), the tour returns to the dashboard via the back arrow between sections.
-// Every step is wrapped so a missing widget never aborts the tour (keeps the
-// camera rolling).
+// setUpAll pre-authenticates the matching seeded account so the splash routes
+// straight to that role's home (avoids a login-time ANR on a loaded emulator).
+// Every step is wrapped so a missing widget never aborts the tour.
 
 @Tags(<String>['emulator', 'integration'])
 library;
@@ -30,8 +29,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../test/_helpers/emulator_setup.dart';
 
-const _email = 'student@mentorminds.test';
-const _password = 'Student1!';
+const _role = String.fromEnvironment('ROLE', defaultValue: 'student');
+
+// Seeded credentials (tool/seed/seed.js).
+const _accounts = <String, List<String>>{
+  'student': ['student@mentorminds.test', 'Student1!'],
+  'premium': ['premium@mentorminds.test', 'Premium1!'],
+  'teacher': ['teacher@mentorminds.test', 'Teacher1!'],
+  'admin': ['admin@mentorminds.test', 'Admin1!'],
+};
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -41,25 +47,21 @@ void main() {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     await configureEmulators();
-    // Make the tour deterministic and avoid a login-time ANR on a loaded
-    // emulator: mark onboarding done and pre-authenticate the seeded student so
-    // the splash routes straight to the student dashboard. The login form drive
-    // below stays as a harmless fallback if a session isn't present.
+    final creds = _accounts[_role] ?? _accounts['student']!;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboarding_complete', true);
     try {
       await FirebaseAuth.instance
-          .signInWithEmailAndPassword(email: _email, password: _password);
+          .signInWithEmailAndPassword(email: creds[0], password: creds[1]);
     } catch (_) {
-      // Fall back to driving the login form on-screen.
+      // Falls through — the tour degrades gracefully if sign-in fails.
     }
   });
 
-  testWidgets('MentorMinds showcase tour', (tester) async {
+  testWidgets('MentorMinds showcase tour ($_role)', (tester) async {
     // Hold on the current screen for [seconds] of real wall-clock while
-    // continuously pumping frames so animations render and the recorder
-    // captures motion. Deliberately does NOT use pumpAndSettle(): the dashboard
-    // has looping animations that never settle, which would hang the tour.
+    // pumping frames so animations render (never pumpAndSettle: the dashboard
+    // has looping animations that would hang the tour).
     Future<void> hold([int seconds = 3]) async {
       final deadline = DateTime.now().add(Duration(seconds: seconds));
       while (DateTime.now().isBefore(deadline)) {
@@ -68,7 +70,7 @@ void main() {
       }
     }
 
-    // Tap a dashboard bottom-nav destination by its label.
+    // Tap a bottom-nav destination by its label.
     Future<void> tapNav(String label, [int settle = 4]) async {
       final dest = find.descendant(
         of: find.byType(NavigationBar),
@@ -81,7 +83,16 @@ void main() {
       }
     }
 
-    // Return to the dashboard from a feature screen via its back arrow.
+    // Tap any visible text label (used for in-screen tabs like Badges).
+    Future<void> tapText(String label, [int settle = 3]) async {
+      final f = find.text(label);
+      if (f.evaluate().isNotEmpty) {
+        await tester.tap(f.first);
+        await hold(settle);
+      }
+    }
+
+    // Return to the previous screen via the app-bar back arrow.
     Future<void> goBack([int settle = 3]) async {
       final back = find.byIcon(Icons.arrow_back_rounded);
       if (back.evaluate().isNotEmpty) {
@@ -99,13 +110,13 @@ void main() {
     }
 
     // Ask MentorBot a question and dwell while the answer renders.
-    Future<void> askMentorBot(String question, [int wait = 11]) async {
+    Future<void> askMentorBot(String question, [int wait = 12]) async {
       final input = find.byType(TextField);
       if (input.evaluate().isEmpty) return;
       await tester.tap(input.last);
       await hold(1);
       await tester.enterText(input.last, question);
-      await hold(3); // let the typed question sit on screen
+      await hold(3);
       final send = find.byIcon(Icons.arrow_upward_rounded);
       if (send.evaluate().isNotEmpty) {
         await tester.tap(send.last);
@@ -114,79 +125,87 @@ void main() {
       await scrollDown(-200, 4);
     }
 
-    // ---- Boot + splash --------------------------------------------------
+    // ---- Boot: splash routes to the role's home ------------------------
     app.main();
-    await hold(6);
+    await hold(9); // generous settle so heavy role screens finish first paint
 
-    // ---- Sign in as seeded student -------------------------------------
-    final fields = find.byType(TextFormField);
-    if (fields.evaluate().length >= 2) {
-      await tester.enterText(fields.at(0), _email);
+    if (_role == 'teacher') {
+      // Teacher home: approval status, subject materials, recent uploads.
+      await scrollDown(-220, 3);
+      await scrollDown(-220, 3);
       await hold(2);
-      await tester.enterText(fields.at(1), _password);
+      await tapNav('Library', 4); // materials in their subjects
+      await scrollDown(-260, 3);
       await hold(2);
-      // Dismiss the soft keyboard so the Sign In button (below the fields) is
-      // no longer covered — otherwise the tap lands on the keyboard and misses.
-      FocusManager.instance.primaryFocus?.unfocus();
-      await hold(2);
-      final signIn = find.text('Sign In');
-      if (signIn.evaluate().isNotEmpty) {
-        await tester.ensureVisible(signIn.first);
-        await hold(1);
-        await tester.tap(signIn.first);
+      await goBack(3);
+      await tapNav('Inbox', 4);
+      await hold(3);
+      await scrollDown(-200, 3);
+      await goBack(3);
+      await tapNav('Profile', 4);
+      await scrollDown(-200, 3);
+      await hold(3);
+      await goBack(3);
+    } else if (_role == 'admin') {
+      // Admin console — heavy first paint (users + 14d analytics); let it fully
+      // settle before touring the tabs (IndexedStack, no back navigation).
+      await hold(12);
+      for (final tab in const [
+        'Dashboard',
+        'Users',
+        'Content',
+        'Notifications',
+        'Analytics',
+        'Config',
+      ]) {
+        await tapNav(tab, 5);
+        await scrollDown(-200, 2);
+        await hold(2);
       }
+    } else if (_role == 'premium') {
+      // Premium student (Parvez, A-Level) — richer dashboard, unlimited AI.
+      // (The working AI answer is demonstrated in the student segment; here we
+      // showcase the premium account's distinct dashboard, tutor access and
+      // profile without re-sending a question.)
+      await scrollDown(-240, 3);
+      await scrollDown(-240, 3);
+      await hold(2);
+      await tapNav('AI Tutor', 4);
+      await hold(4); // premium tutor: no daily-limit banner, image attach
+      await goBack(3);
+      await tapNav('Rewards', 4);
+      await scrollDown(-220, 3);
+      await goBack(3);
+      await tapNav('Profile', 4);
+      await scrollDown(-200, 3);
+      await hold(3);
+      await goBack(3);
+    } else {
+      // Student (default): dashboard → AI answer → materials → rewards → profile.
+      await scrollDown(-240, 3);
+      await scrollDown(-240, 3);
+      await hold(2);
+      await tapNav('AI Tutor', 4);
+      await hold(4);
+      await askMentorBot('Solve the quadratic 2x² + 5x − 3 = 0', 12);
+      await hold(3);
+      await scrollDown(-200, 3);
+      await hold(3);
+      await goBack(3);
+      await tapNav('Materials', 4);
+      await scrollDown(-260, 3);
+      await hold(2);
+      await goBack(3);
+      await tapNav('Rewards', 4);
+      await scrollDown(-220, 2);
+      await tapText('Badges', 3);
+      await tapText('Leaderboard', 3);
+      await goBack(3);
+      await tapNav('Profile', 4);
+      await scrollDown(-200, 3);
+      await hold(2);
+      await goBack(3);
+      await hold(3);
     }
-    await hold(9); // land on dashboard, let streams populate
-
-    // ---- Dashboard: hero, streak, subject rings, carousels --------------
-    await scrollDown(-240, 3);
-    await scrollDown(-240, 3);
-    await scrollDown(-240, 3);
-    await hold(3);
-    await tester.drag(find.byType(Scrollable).first, const Offset(0, 900));
-    await hold(4);
-
-    // ---- AI Tutor: ask a real question, watch MentorBot answer -----------
-    await tapNav('AI Tutor', 4);
-    await hold(5); // MentorBot welcome + suggested prompts
-    await askMentorBot('Solve the quadratic 2x² + 5x − 3 = 0', 12);
-    // Linger on the richly-formatted worked solution (markdown + code block).
-    await hold(4);
-    await scrollDown(-200, 3);
-    await hold(4);
-    await scrollDown(200, 3);
-    await hold(3);
-    await goBack(3);
-
-    // ---- Materials: browse the curriculum library -----------------------
-    await tapNav('Materials', 4);
-    await hold(2);
-    await scrollDown(-260, 3);
-    await scrollDown(-260, 3);
-    await hold(3);
-    await goBack(3);
-
-    // ---- Rewards: points, badges, leaderboard ---------------------------
-    await tapNav('Rewards', 4);
-    await scrollDown(-240, 3);
-    await hold(2);
-    for (final t in const ['Badges', 'Leaderboard']) {
-      final tab = find.text(t);
-      if (tab.evaluate().isNotEmpty) {
-        await tester.tap(tab.first);
-        await hold(3);
-        await scrollDown(-220, 3);
-      }
-    }
-    await goBack(3);
-
-    // ---- Profile: identity, level, settings -----------------------------
-    await tapNav('Profile', 4);
-    await scrollDown(-220, 3);
-    await hold(3);
-    await goBack(3);
-
-    // ---- Close the loop on the dashboard --------------------------------
-    await hold(5);
   });
 }

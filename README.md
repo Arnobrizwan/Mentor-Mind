@@ -4,12 +4,17 @@ AI-powered tutoring app for **O/A Level students in Bangladesh** (Cambridge / CA
 
 ## 🎬 Showcase Video
 
-A ~2.5-minute walkthrough recorded live on an Android emulator (running against the Firebase Local Emulator Suite):
+Walkthroughs recorded live on an Android emulator (running against the Firebase Local Emulator Suite):
 
-- ▶️ **Video:** [`docs/showcase/MentorMinds_Showcase.mp4`](docs/showcase/MentorMinds_Showcase.mp4)
+- ▶️ **Roles video (~3 min):** [`docs/showcase/MentorMinds_Roles.mp4`](docs/showcase/MentorMinds_Roles.mp4) — **Student** and **Teacher** roles, each with a title card.
+- ▶️ **Student deep-dive (~2.5 min):** [`docs/showcase/MentorMinds_Showcase.mp4`](docs/showcase/MentorMinds_Showcase.mp4)
 - 📊 **Slide deck (video embedded + link):** [`docs/showcase/MentorMinds_Showcase.pptx`](docs/showcase/MentorMinds_Showcase.pptx)
 
-**Tour:** sign-in → dashboard (streak, points, subject progress, daily challenge) → **MentorBot** answering an exam question with a fully worked, syllabus-cited solution → materials library → rewards (badges + leaderboard) → profile.
+**Student tour:** sign-in → dashboard (streak, points, subject progress, daily challenge) → **MentorBot** answering an exam question with a fully worked, syllabus-cited solution → materials library → rewards (badges + leaderboard) → profile.
+
+**Teacher tour:** teacher dashboard (approval status, subject materials, uploads) → library → inbox → profile.
+
+> Each role runs via `--dart-define=ROLE=<student|premium|teacher|admin>` against the seeded accounts. The **premium** and **admin** roles are recordable the same way but are load-heavy on a small emulator (the admin console eagerly fetches the users list + 14-day analytics on mount, and the premium account's profile stream can time out) — they record reliably on a real device or a 4 GB+ emulator with error dialogs suppressed (`adb shell settings put global hide_error_dialogs 1`).
 
 > The video is committed to the repo, so the links above resolve directly on GitHub and in local clones.
 
