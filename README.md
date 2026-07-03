@@ -6,7 +6,7 @@ AI-powered tutoring app for **O/A Level students in Bangladesh** (Cambridge / CA
 
 Walkthroughs recorded live on an Android emulator (running against the Firebase Local Emulator Suite):
 
-- ▶️ **Roles video (~3 min):** [`docs/showcase/MentorMinds_Roles.mp4`](docs/showcase/MentorMinds_Roles.mp4) — **Student** and **Teacher** roles, each with a title card.
+- ▶️ **Roles video (~3 min):** [`docs/showcase/MentorMinds_Roles.mp4`](docs/showcase/MentorMinds_Roles.mp4) — **Student**, **Premium Student**, and **Teacher** roles, each with a title card.
 - ▶️ **Student deep-dive (~2.5 min):** [`docs/showcase/MentorMinds_Showcase.mp4`](docs/showcase/MentorMinds_Showcase.mp4)
 - 📊 **Slide deck (video embedded + link):** [`docs/showcase/MentorMinds_Showcase.pptx`](docs/showcase/MentorMinds_Showcase.pptx)
 
@@ -14,7 +14,9 @@ Walkthroughs recorded live on an Android emulator (running against the Firebase 
 
 **Teacher tour:** teacher dashboard (approval status, subject materials, uploads) → library → inbox → profile.
 
-> Each role runs via `--dart-define=ROLE=<student|premium|teacher|admin>` against the seeded accounts. The **premium** and **admin** roles are recordable the same way but are load-heavy on a small emulator (the admin console eagerly fetches the users list + 14-day analytics on mount, and the premium account's profile stream can time out) — they record reliably on a real device or a 4 GB+ emulator with error dialogs suppressed (`adb shell settings put global hide_error_dialogs 1`).
+**Premium tour:** the premium account (A-Level, "Premium Member — all features unlocked") dashboard → AI tutor → rewards → profile.
+
+> Each role runs via `--dart-define=ROLE=<student|premium|teacher|admin>` against the seeded accounts. The **admin** console is load-heavy on a small emulator — `admin_viewmodel` now loads its tabs lazily (it used to eagerly fetch the users list + 14-day analytics on mount, which ANR'd/crashed the app); it still needs a real device or a 4 GB+ emulator with error dialogs suppressed (`adb shell settings put global hide_error_dialogs 1`) for the tab data to populate reliably.
 
 > The video is committed to the repo, so the links above resolve directly on GitHub and in local clones.
 
